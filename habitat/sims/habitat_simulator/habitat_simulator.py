@@ -589,9 +589,9 @@ class RearrangementSim(HabitatSim):
         self.objid_to_sim_object_mapping = {}
 
         if objects is not None:
-            object_template = objects["object_template"]
+            object_template = "data/test_assets/objects/chair" #objects["object_handle"]
             object_pos = objects["position"]
-            object_rot = objects["rotation"]
+            #object_rot = objects["rotation"]
 
             object_template_id = obj_attr_mgr.load_object_configs(
                 object_template
@@ -604,11 +604,11 @@ class RearrangementSim(HabitatSim):
             self.objid_to_sim_object_mapping[objects["object_id"]] = object_id
 
             self.set_translation(object_pos, object_id)
-            if isinstance(object_rot, list):
-                object_rot = quat_from_coeffs(object_rot)
+            #if isinstance(object_rot, list):
+            #    object_rot = quat_from_coeffs(object_rot)
 
-            object_rot = quat_to_magnum(object_rot)
-            self.set_rotation(object_rot, object_id)
+            #object_rot = quat_to_magnum(object_rot)
+            #self.set_rotation(object_rot, object_id)
 
             self.set_object_motion_type(MotionType.STATIC, object_id)
 

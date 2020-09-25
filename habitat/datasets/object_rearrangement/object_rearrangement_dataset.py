@@ -53,9 +53,6 @@ class RearrangementDatasetV1(Dataset):
     ) -> None:
 
         deserialized = json.loads(json_str)
-        # self.instruction_vocab = VocabDict(
-        #     word_list=deserialized["instruction_vocab"]["word_list"]
-        # )
 
         for episode in deserialized["episodes"]:
             episode = RearrangementEpisode(**episode)
