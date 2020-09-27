@@ -25,7 +25,7 @@ def is_viewer_step(data):
 	return False
 
 
-def handle_step(step, episode, episode_id):
+def handle_step(step, episode, episode_id, timestamp, prev_timestamp):
 
 	if (step.get("event")):
 		if (step["event"] == "setEpisode"):
@@ -53,6 +53,8 @@ def handle_step(step, episode, episode_id):
 			}
 			episode["reference_replay"] = []
 		elif (step["event"] == "handleAction"):
+			step["data"]["timestamp"] = timestamp
+			step["data"]["prev_timestamp"] = prev_timestamp
 			episode["reference_replay"].append(step["data"])
 	return
 
@@ -61,17 +63,22 @@ def handle_step(step, episode, episode_id):
 def convert_to_episode(csv_reader):
 	episode = {}
 	viewer_step = False
+	prev_timestamp = None
 	for row in csv_reader:
 		episode_id = row[0]
 		step = row[1]
 		timestamp = row[2]
 		data = column_to_json(row[3])
 
+		if prev_timestamp is None:
+			prev_timestamp = timestamp
+
 		if not viewer_step:
 			viewer_step = is_viewer_step(data)
 
 		if viewer_step:
-			handle_step(data, episode, 0)
+			handle_step(data, episode, 0, timestamp, prev_timestamp)
+		prev_timestamp = timestamp
 			
 	return episode
 

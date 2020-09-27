@@ -16,6 +16,7 @@ from typing import (
 )
 
 import numpy as np
+import magnum as mn
 from gym import spaces
 from gym.spaces.box import Box
 from numpy import ndarray
@@ -550,6 +551,7 @@ class RearrangementSim(HabitatSim):
     def __init__(self, config: Config) -> None:
         self.did_reset = False
         super().__init__(config=config)
+        #self.gripped_object_id = -1
         self.gripped_object_transformation = np.eye(4)
 
         agent_id = self.habitat_config.DEFAULT_AGENT_ID
@@ -575,7 +577,7 @@ class RearrangementSim(HabitatSim):
         return self._sensor_suite.get_observations(sim_obs)
 
     def _initialize_objects(self):
-        objects = self.habitat_config.objects[0]
+        objects = self.habitat_config.objects
         obj_attr_mgr = self.get_object_template_manager()
 
         # first remove all existing objects
@@ -589,28 +591,34 @@ class RearrangementSim(HabitatSim):
         self.objid_to_sim_object_mapping = {}
 
         if objects is not None:
-            object_template = "data/test_assets/objects/chair" #objects["object_handle"]
-            object_pos = objects["position"]
-            #object_rot = objects["rotation"]
+            for object_ in objects:
+                object_handle = object_["object_template"].split('/')[-1].split('.')[0]
+                object_template = "data/test_assets/objects/{}".format(object_handle)
+                object_pos = object_["position"]
+                # object_rot = objects["rotation"]
 
-            object_template_id = obj_attr_mgr.load_object_configs(
-                object_template
-            )[0]
-            object_attr = obj_attr_mgr.get_template_by_ID(object_template_id)
-            obj_attr_mgr.register_template(object_attr)
+                object_template_id = obj_attr_mgr.load_object_configs(
+                    object_template
+                )[0]
+                object_attr = obj_attr_mgr.get_template_by_ID(object_template_id)
+                obj_attr_mgr.register_template(object_attr)
 
-            object_id = self.add_object_by_handle(object_attr.handle)
-            self.sim_object_to_objid_mapping[object_id] = objects["object_id"]
-            self.objid_to_sim_object_mapping[objects["object_id"]] = object_id
+                object_id = self.add_object_by_handle(object_attr.handle)
 
-            self.set_translation(object_pos, object_id)
-            #if isinstance(object_rot, list):
-            #    object_rot = quat_from_coeffs(object_rot)
+                self.sim_object_to_objid_mapping[object_id] = object_["object_id"]
+                self.objid_to_sim_object_mapping[object_["object_id"]] = object_id
 
-            #object_rot = quat_to_magnum(object_rot)
-            #self.set_rotation(object_rot, object_id)
+                self.set_translation(object_pos, object_id)
+                self.sample_object_state(object_id)
+                object_['object_handle'] = "data/test_assets/objects/{}".format(object_["object_template"].split('/')[-1])
+                # if isinstance(object_rot, list):
+                #    object_rot = quat_from_coeffs(object_rot)
 
-            self.set_object_motion_type(MotionType.STATIC, object_id)
+                # object_rot = quat_to_magnum(object_rot)
+                # self.set_rotation(object_rot, object_id)
+                self.add_object_in_scene(object_id, object_)
+
+                self.set_object_motion_type(MotionType.DYNAMIC, object_id)
 
         # Recompute the navmesh after placing all the objects.
         self.recompute_navmesh(self.pathfinder, self.navmesh_settings, True)
@@ -641,7 +649,7 @@ class RearrangementSim(HabitatSim):
         return self._prev_sim_obs.get("gripped_object_id", -1)
 
     def step(self, action: int):
-        dt = 1 / 100.0
+        dt = 1 / 10.0
         self._num_total_frames += 1
         collided = False
         gripped_object_id = self.gripped_object_id
@@ -652,10 +660,10 @@ class RearrangementSim(HabitatSim):
         if action_spec.name == "grab_or_release_object_under_crosshair":
             ray = self.unproject(action_spec.actuation.crosshair_pos)
             cross_hair_point = ray.direction
-            ref_point = self.body.object.absolute_translation
+            ref_point = self._default_agent.body.object.absolute_translation
 
             nearest_object_id = self.find_nearest_object_under_crosshair(
-                ray.direction, ref_point, self.get_resolution(), action_spec.actuation.amount
+                cross_hair_point, ref_point, self.get_resolution(), action_spec.actuation.amount
             )
 
             # already gripped an object
@@ -676,7 +684,7 @@ class RearrangementSim(HabitatSim):
                 )
                 scene_object = self.get_object_from_scene(gripped_object_id)
                 new_object_id = self.add_object_by_handle(
-                    scene_object["objectHandle"]
+                    scene_object["object_handle"]
                 )
 
                 self.set_translation(new_object_position, new_object_id)
@@ -701,13 +709,12 @@ class RearrangementSim(HabitatSim):
             self._last_state = self._default_agent.get_state()
 
         # step physics by dt
-        super().step_world(dt)
+        # super().step_world(dt)
 
         # obtain observations
         self._prev_sim_obs = self.get_sensor_observations()
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = gripped_object_id
-        self.gripped_object_id = gripped_object_id
 
         observations = self._sensor_suite.get_observations(self._prev_sim_obs)
         return observations
