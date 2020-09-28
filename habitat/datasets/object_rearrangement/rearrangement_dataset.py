@@ -14,7 +14,7 @@ from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.core.utils import not_none_validator
 from habitat.datasets.utils import VocabDict
-from habitat.tasks.object_rearrangement.object_rearrangement import InstructionData, RearrangementEpisode
+from habitat.tasks.object_rearrangement.rearrangement_task import InstructionData, RearrangementEpisode
 
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
