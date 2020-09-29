@@ -138,7 +138,7 @@ class RearrangementSim(HabitatSim):
         return self._prev_sim_obs.get("gripped_object_id", -1)
 
     def step(self, action: int):
-        dt = 1 / 10.0
+        dt = 1.0 / 10.0
         self._num_total_frames += 1
         collided = False
         gripped_object_id = self.gripped_object_id
@@ -157,8 +157,10 @@ class RearrangementSim(HabitatSim):
 
             # already gripped an object
             if gripped_object_id != -1:
+                ref_transform = self._default_agent.body.object.transformation
                 ray_hit_info = self.find_floor_position_under_crosshair(
-                    cross_hair_point, ref_point, self.get_resolution(), action_spec.actuation.amount
+                    cross_hair_point, ref_transform,
+                     self.get_resolution(), action_spec.actuation.amount
                 )
 
                 floor_position = ray_hit_info.point
@@ -193,6 +195,8 @@ class RearrangementSim(HabitatSim):
                 )
                 self.remove_object(nearest_object_id)
                 gripped_object_id = nearest_object_id
+        elif action_spec.name == "no_op":
+            super().step_world(action_spec.actuation.amount)
         else:
             collided = self._default_agent.act(action)
             self._last_state = self._default_agent.get_state()

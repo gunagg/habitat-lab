@@ -25,6 +25,8 @@ config.TASK.ACTIONS.MOVE_BACKWARD = Config()
 config.TASK.ACTIONS.MOVE_BACKWARD.TYPE = "MoveBackwardAction"
 config.TASK.ACTIONS.GRAB_RELEASE = Config()
 config.TASK.ACTIONS.GRAB_RELEASE.TYPE = "GrabOrReleaseAction"
+config.TASK.ACTIONS.NO_OP = Config()
+config.TASK.ACTIONS.NO_OP.TYPE = "NoOpAction"
 config.TASK.SUCCESS_DISTANCE = 1.0
 config.TASK.OBJECT_TO_GOAL_DISTANCE = Config()
 config.TASK.OBJECT_TO_GOAL_DISTANCE.TYPE = "ObjectToGoalDistance"
@@ -57,7 +59,7 @@ def step_world_physics(env):
 
 
 def make_video_cv2(
-    observations, cross_hair=None, prefix="", open_vid=True, fps=5, output_path="psiturk_dataset_parser/"
+    observations, cross_hair=None, prefix="", open_vid=True, fps=20, output_path="psiturk_dataset_parser/"
 ):
     sensor_keys = list(observations[0])
     videodims = observations[0][sensor_keys[0]].shape
@@ -89,27 +91,27 @@ def make_video_cv2(
 
 
 def get_habitat_sim_action(data):
-    if data["action"] == 'turnRight':
+    if data["action"] == "turnRight":
         return HabitatSimActions.TURN_RIGHT
-    elif data["action"] == 'turnLeft':
+    elif data["action"] == "turnLeft":
         return HabitatSimActions.TURN_LEFT
-    elif data["action"] == 'moveForward':
+    elif data["action"] == "moveForward":
         return HabitatSimActions.MOVE_FORWARD
-    elif data["action"] == 'moveBackward':
+    elif data["action"] == "moveBackward":
         return HabitatSimActions.MOVE_BACKWARD
-    elif data["action"] == 'lookUp':
+    elif data["action"] == "lookUp":
         return HabitatSimActions.LOOK_UP
-    elif data["action"] == 'lookDown':
+    elif data["action"] == "lookDown":
         return HabitatSimActions.LOOK_DOWN
-    elif data["action"] == 'grabReleaseObject':
+    elif data["action"] == "grabReleaseObject":
         return HabitatSimActions.GRAB_RELEASE
+    elif data["action"] == "stepPhysics":
+        return HabitatSimActions.NO_OP
     return HabitatSimActions.STOP
-
 
 
 def run_reference_replay(config, num_episodes=None):
     with habitat.Env(config) as env:
-        #set_interval(0.1, step_world_physics, env)
         obs = env.reset()
         obs_list = []
 
@@ -121,20 +123,16 @@ def run_reference_replay(config, num_episodes=None):
             env._sim.update_cross_hair()
             obs = env.reset()
             observation_list.append(obs)
-            print('Scene has physiscs {}'.format(env._sim.scene_has_physics()))
+            print('Scene has physiscs {}'.format(config.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
             print("Physics simulation library: {}".format(physics_simulation_library))
 
             for data in env.current_episode.reference_replay:
-                ts = int(data["timestamp"])
-                prev_ts = int(data["prev_timestamp"])
+                if data["action"] != "stepPhysics":
+                    print("Action {} - {}".format(data["action"], env._sim.get_world_time()))
+                else:
+                    print("Action {} - {}".format(data["action"], env._sim.get_world_time()))
 
-                diff = int((ts - prev_ts) / 100)
-                if diff == 0:
-                    env._sim.step_world(1.0 / 10.0)
-                while diff:
-                    env._sim.step_world(1.0 / 10.0)
-                    diff -= 1
                 action = get_habitat_sim_action(data)
                 observations = env.step(action)
                 observation_list.append(observations)

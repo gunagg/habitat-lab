@@ -40,6 +40,8 @@ class RearrangementSimV0ActionSpaceConfiguration(
             HabitatSimActions.extend_action_space("GRAB_RELEASE")
         if not HabitatSimActions.has_action("MOVE_BACKWARD"):
             HabitatSimActions.extend_action_space("MOVE_BACKWARD")
+        if not HabitatSimActions.has_action("NO_OP"):
+            HabitatSimActions.extend_action_space("NO_OP")
 
     def get(self):
         config = super().get()
@@ -47,6 +49,10 @@ class RearrangementSimV0ActionSpaceConfiguration(
             HabitatSimActions.MOVE_BACKWARD: habitat_sim.ActionSpec(
                 "move_backward",
                 habitat_sim.ActuationSpec(amount=self.config.FORWARD_STEP_SIZE),
+            ),
+            HabitatSimActions.NO_OP: habitat_sim.ActionSpec(
+                "no_op",
+                habitat_sim.ActuationSpec(amount=0.1),
             ),
             HabitatSimActions.GRAB_RELEASE: habitat_sim.ActionSpec(
                 "grab_or_release_object_under_crosshair",
@@ -78,3 +84,14 @@ class MoveBackwardAction(SimulatorTaskAction):
         ``step``.
         """
         return self._sim.step(HabitatSimActions.MOVE_BACKWARD)
+
+
+@registry.register_task_action
+class NoOpAction(SimulatorTaskAction):
+    name: str = "NO_OP"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        return self._sim.step(HabitatSimActions.NO_OP)
