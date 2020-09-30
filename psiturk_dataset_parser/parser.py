@@ -85,9 +85,6 @@ def convert_to_episode(csv_reader):
 
         if viewer_step:
             is_viewer_step_finished = handle_step(data, episode, 0, timestamp, prev_timestamp)
-
-            if is_viewer_step_finished:
-                break
         prev_timestamp = timestamp
 
     return episode
@@ -105,10 +102,10 @@ def replay_to_episode(replay_path, output_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--replay-file", type=str, default="psiturk_dataset_parser/demo.csv"
+        "--replay-file", type=str, default="replays/demo_1.csv"
     )
     parser.add_argument(
-        "--output-file", type=str, default="psiturk_dataset_parser/demo.json"
+        "--output-file", type=str, default="replays/demo_1.json"
     )
     args = parser.parse_args()
     print(args)

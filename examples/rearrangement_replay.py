@@ -1,3 +1,4 @@
+import argparse
 import cv2
 import habitat
 
@@ -59,7 +60,7 @@ def step_world_physics(env):
 
 
 def make_video_cv2(
-    observations, cross_hair=None, prefix="", open_vid=True, fps=20, output_path="psiturk_dataset_parser/"
+    observations, cross_hair=None, prefix="", open_vid=True, fps=20, output_path="./"
 ):
     sensor_keys = list(observations[0])
     videodims = observations[0][sensor_keys[0]].shape
@@ -110,8 +111,8 @@ def get_habitat_sim_action(data):
     return HabitatSimActions.STOP
 
 
-def run_reference_replay(config, num_episodes=None):
-    with habitat.Env(config) as env:
+def run_reference_replay(cfg, num_episodes=None):
+    with habitat.Env(cfg) as env:
         obs = env.reset()
         obs_list = []
 
@@ -123,9 +124,10 @@ def run_reference_replay(config, num_episodes=None):
             env._sim.update_cross_hair()
             obs = env.reset()
             observation_list.append(obs)
-            print('Scene has physiscs {}'.format(config.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
+            print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
             print("Physics simulation library: {}".format(physics_simulation_library))
+            print("Episode length: {}".format(len(env.current_episode.reference_replay)))
 
             for data in env.current_episode.reference_replay:
                 if data["action"] != "stepPhysics":
@@ -141,15 +143,21 @@ def run_reference_replay(config, num_episodes=None):
 
 
 def main():
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     "--task-config", type=str, default="configs/tasks/object_rearrangement.yaml"
-    # )
-    # args = parser.parse_args()
-    # config = config
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--replay-episode", type=str, default="replays/demo_1.json.gz"
+    )
+    parser.add_argument(
+        "--output-prefix", type=str, default="demo"
+    )
+    args = parser.parse_args()
+    cfg = config
+    cfg.defrost()
+    cfg.DATASET.DATA_PATH = args.replay_episode
+    cfg.freeze()
 
-    observations = run_reference_replay(config, num_episodes=1)
-    make_video_cv2(observations[0], prefix="demo")
+    observations = run_reference_replay(cfg, num_episodes=1)
+    make_video_cv2(observations[0], prefix=args.output_prefix)
 
 if __name__ == "__main__":
     main()
