@@ -30,7 +30,7 @@ def handle_step(step, episode, episode_id, timestamp, prev_timestamp):
 
     if step.get("event"):
         if step["event"] == "setEpisode":
-            data = step["data"]["episode"]
+            data = copy.deepcopy(step["data"]["episode"])
             episode["episode_id"] = episode_id
             episode["scene_id"] = data["sceneID"]
             episode["start_position"] = data["startState"]["position"]
@@ -49,8 +49,11 @@ def handle_step(step, episode, episode_id, timestamp, prev_timestamp):
             episode["instruction"] = {
                 "instruction_text": data["task"]["instruction"]
             }
+            object_receptacle_map = {}
+            if "goals" in data["task"].keys():
+                object_receptacle_map = data["task"]["goals"]["objectToReceptacleMap"]
             episode["goals"] = {
-                "object_receptacle_map": data["task"]["goals"]["objectToReceptacleMap"]
+                "object_receptacle_map": object_receptacle_map
             }
             episode["reference_replay"] = []
         elif step["event"] == "handleAction":
@@ -58,8 +61,19 @@ def handle_step(step, episode, episode_id, timestamp, prev_timestamp):
             step["data"]["prev_timestamp"] = prev_timestamp
             episode["reference_replay"].append(step["data"])
         elif (step["event"] == "stepPhysics"):
-            step["data"]["action"] = "stepPhysics"
-            episode["reference_replay"].append(step["data"])
+            data = copy.deepcopy(step["data"])
+            data["action"] = "stepPhysics"
+            data["object_states"] = []
+            for object_state in step["data"]["objectStates"]:
+                data["object_states"].append({
+                    "object_id": object_state["objectId"],
+                    "translation": object_state["translation"],
+                    "rotation": object_state["rotation"],
+                    "motion_type": object_state["motionType"],
+                })
+            data.pop("objectStates")
+            data.pop("step")
+            episode["reference_replay"].append(data)
     elif step.get("type"):
         if step["type"] == "finishStep":
             return True

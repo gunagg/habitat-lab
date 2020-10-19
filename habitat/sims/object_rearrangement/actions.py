@@ -94,4 +94,4 @@ class NoOpAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.NO_OP)
+        return self._sim.step(HabitatSimActions.NO_OP, data=kwargs["data"])

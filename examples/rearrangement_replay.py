@@ -1,6 +1,7 @@
 import argparse
 import cv2
 import habitat
+import time
 
 from habitat import Config
 from habitat_sim.utils import viz_utils as vut
@@ -43,20 +44,6 @@ config.DATASET.DATA_PATH = (
     "data/datasets/object_rearrangement/v1/{split}/{split}.json.gz"
 )
 config.freeze()
-
-
-def call_at_interval(period, callback, args):
-    while True:
-        sleep(period)
-        callback(*args)
-
-
-def set_interval(period, callback, *args):
-    Thread(target=call_at_interval, args=(period, callback, args)).start()
-
-
-def step_world_physics(env):
-    env._sim.step_world(1.0/10.0)
 
 
 def make_video_cv2(
@@ -128,16 +115,17 @@ def run_reference_replay(cfg, num_episodes=None):
             physics_simulation_library = env._sim.get_physics_simulation_library()
             print("Physics simulation library: {}".format(physics_simulation_library))
             print("Episode length: {}".format(len(env.current_episode.reference_replay)))
-
+            i = 0
             for data in env.current_episode.reference_replay:
                 if data["action"] != "stepPhysics":
-                    print("Action {} - {}".format(data["action"], env._sim.get_world_time()))
+                    print("Action {} - {} - {}".format(data["action"], env._sim.get_world_time(), i))
                 else:
-                    print("Action {} - {}".format(data["action"], env._sim.get_world_time()))
+                    print("Action {} - {} - {}".format(data["action"], env._sim.get_world_time(), i))
 
                 action = get_habitat_sim_action(data)
-                observations = env.step(action)
+                observations = env.step(action=action, data=data)
                 observation_list.append(observations)
+                i+=1
             obs_list.append(observation_list)
         return obs_list
 
