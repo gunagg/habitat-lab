@@ -983,6 +983,8 @@ class MoveForwardAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+            return self._sim.step_from_replay(HabitatSimActions.MOVE_FORWARD, replay_data=kwargs["replay_data"])
         return self._sim.step(HabitatSimActions.MOVE_FORWARD)
 
 
@@ -992,6 +994,11 @@ class TurnLeftAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+            return self._sim.step_from_replay(
+                HabitatSimActions.TURN_LEFT,
+                replay_data=kwargs["replay_data"]
+            )
         return self._sim.step(HabitatSimActions.TURN_LEFT)
 
 
@@ -1001,6 +1008,11 @@ class TurnRightAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+            return self._sim.step_from_replay(
+                HabitatSimActions.TURN_RIGHT,
+                replay_data=kwargs["replay_data"]
+            )
         return self._sim.step(HabitatSimActions.TURN_RIGHT)
 
 
@@ -1025,6 +1037,11 @@ class LookUpAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+            return self._sim.step_from_replay(
+                HabitatSimActions.LOOK_UP,
+                replay_data=kwargs["replay_data"]
+            )
         return self._sim.step(HabitatSimActions.LOOK_UP)
 
 
@@ -1034,6 +1051,11 @@ class LookDownAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+            return self._sim.step_from_replay(
+                HabitatSimActions.LOOK_DOWN,
+                replay_data=kwargs["replay_data"]
+            )
         return self._sim.step(HabitatSimActions.LOOK_DOWN)
 
 

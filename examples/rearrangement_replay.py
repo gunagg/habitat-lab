@@ -118,12 +118,12 @@ def run_reference_replay(cfg, num_episodes=None):
             i = 0
             for data in env.current_episode.reference_replay:
                 if data["action"] != "stepPhysics":
-                    print("Action {} - {} - {}".format(data["action"], env._sim.get_world_time(), i))
+                    print("Action {} - {}".format(data["action"], i))
                 else:
-                    print("Action {} - {} - {}".format(data["action"], env._sim.get_world_time(), i))
+                    print("Action {} - {}".format(data["action"], i))
 
                 action = get_habitat_sim_action(data)
-                observations = env.step(action=action, data=data)
+                observations = env.step(action=action, replay_data=data)
                 observation_list.append(observations)
                 i+=1
             obs_list.append(observation_list)

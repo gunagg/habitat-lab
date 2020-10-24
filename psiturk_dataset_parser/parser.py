@@ -26,9 +26,54 @@ def is_viewer_step(data):
     return False
 
 
-def handle_step(step, episode, episode_id, timestamp, prev_timestamp):
+def parse_replay_data_for_action(action, data):
+    replay_data = {}
+    replay_data["action"] = action
+    if action == "grabReleaseObject":
+        replay_data["is_grab_action"] = data["actionData"]["grabAction"]
+        replay_data["is_release_action"] = data["actionData"]["releaseAction"]
+        replay_data["object_under_cross_hair"] = data["actionData"]["objectUnderCrosshair"]
+        replay_data["gripped_object_id"] = data["actionData"]["grippedObjectId"]
+
+        action_data = {}
+
+        if replay_data["is_release_action"]:
+            action_data["new_object_translation"] = data["actionData"]["actionMeta"]["newObjectTranslation"]
+            action_data["new_object_id"] = data["actionData"]["actionMeta"]["newObjectId"]
+            action_data["object_handle"] = data["actionData"]["actionMeta"]["objectHandle"]
+            action_data["gripped_object_id"] = data["actionData"]["actionMeta"]["grippedObjectId"]
+        elif replay_data["is_grab_action"]:
+            action_data["gripped_object_id"] = data["actionData"]["actionMeta"]["grippedObjectId"]
+
+        replay_data["action_data"] = action_data
+    else:
+        replay_data["collision"] = data["collision"]
+        replay_data["object_under_cross_hair"] = data["objectUnderCrosshair"]
+        replay_data["neares_object_id"] = data["nearestObjectId"]
+        replay_data["gripped_object_id"] = data["grippedObjectId"]
+
+    return replay_data
+
+
+def parse_replay_data_for_step_physics(data):
+    replay_data = {}
+    replay_data["action"] = "stepPhysics"
+    replay_data["object_under_cross_hair"] = data["objectUnderCrosshair"]
+    replay_data["object_states"] = []
+    for object_state in data["objectStates"]:
+        replay_data["object_states"].append({
+            "object_id": object_state["objectId"],
+            "translation": object_state["translation"],
+            "rotation": object_state["rotation"],
+            "motion_type": object_state["motionType"],
+        })
+    return replay_data
+
+
+def handle_step(step, episode, episode_id):
 
     if step.get("event"):
+
         if step["event"] == "setEpisode":
             data = copy.deepcopy(step["data"]["episode"])
             episode["episode_id"] = episode_id
@@ -56,24 +101,16 @@ def handle_step(step, episode, episode_id, timestamp, prev_timestamp):
                 "object_receptacle_map": object_receptacle_map
             }
             episode["reference_replay"] = []
+
         elif step["event"] == "handleAction":
-            step["data"]["timestamp"] = timestamp
-            step["data"]["prev_timestamp"] = prev_timestamp
-            episode["reference_replay"].append(step["data"])
-        elif (step["event"] == "stepPhysics"):
-            data = copy.deepcopy(step["data"])
-            data["action"] = "stepPhysics"
-            data["object_states"] = []
-            for object_state in step["data"]["objectStates"]:
-                data["object_states"].append({
-                    "object_id": object_state["objectId"],
-                    "translation": object_state["translation"],
-                    "rotation": object_state["rotation"],
-                    "motion_type": object_state["motionType"],
-                })
-            data.pop("objectStates")
-            data.pop("step")
+            # print("handleAction")
+            data = parse_replay_data_for_action(step["data"]["action"], step["data"])
             episode["reference_replay"].append(data)
+
+        elif (step["event"] == "stepPhysics"):
+            data = parse_replay_data_for_step_physics(step["data"])
+            episode["reference_replay"].append(data)
+
     elif step.get("type"):
         if step["type"] == "finishStep":
             return True
@@ -84,22 +121,17 @@ def handle_step(step, episode, episode_id, timestamp, prev_timestamp):
 def convert_to_episode(csv_reader):
     episode = {}
     viewer_step = False
-    prev_timestamp = None
     for row in csv_reader:
         episode_id = row[0]
         step = row[1]
         timestamp = row[2]
         data = column_to_json(row[3])
 
-        if prev_timestamp is None:
-            prev_timestamp = timestamp
-
         if not viewer_step:
             viewer_step = is_viewer_step(data)
 
         if viewer_step:
-            is_viewer_step_finished = handle_step(data, episode, 0, timestamp, prev_timestamp)
-        prev_timestamp = timestamp
+            is_viewer_step_finished = handle_step(data, episode, 0)
 
     return episode
 

@@ -185,8 +185,7 @@ class RearrangementSim(HabitatSim):
         )
         return nearest_object_id
 
-    def draw_bb_around_nearest_object(self):
-        object_id = self.get_object_under_cross_hair()
+    def draw_bb_around_nearest_object(self, object_id):
         if object_id == -1:
             if self.nearest_object_id != -1 and self.gripped_object_id != self.nearest_object_id:
                 self.set_object_bb_draw(False, self.nearest_object_id)
@@ -199,7 +198,7 @@ class RearrangementSim(HabitatSim):
                 self.nearest_object_id = object_id
                 self.set_object_bb_draw(True, self.nearest_object_id, 0)
 
-    def step(self, action: int, data: Dict = {}):
+    def step(self, action: int):
         dt = 1.0 / 10.0
         self._num_total_frames += 1
         collided = False
@@ -260,33 +259,74 @@ class RearrangementSim(HabitatSim):
                 self.remove_object(nearest_object_id)
                 self.gripped_object_id = nearest_object_id
         elif action_spec.name == "no_op":
-            # super().step_world(action_spec.actuation.amount)
-            object_states = data["object_states"]
-            for object_state in object_states:
-                object_id = object_state["object_id"]
-                translation = object_state["translation"]
-                rotation = object_state["rotation"]
-
-                object_translation = mn.Vector3(translation)
-                if isinstance(rotation, list):
-                   object_rot = quat_from_coeffs(rotation)
-
-                object_rot = quat_to_magnum(object_rot)
-                self.set_translation(object_translation, object_id)
-                self.set_rotation(object_rot, object_id)
-
-                trns = self.get_translation(object_id)
-                rot = self.get_rotation(object_id)
+            super().step_world(action_spec.actuation.amount)
         else:
             agent_transform = self._default_agent.body.object.transformation
             data = self.is_agent_colliding(action_spec.name, agent_transform)
             if not data["collision"]:
-                collided = self._default_agent.act(action)
+                self._default_agent.act(action)
+                collided = data["collision"]
                 self._last_state = self._default_agent.get_state()
 
-        # step physics by dt
-        # super().step_world(dt)
-        self.draw_bb_around_nearest_object()
+        object_id = self.get_object_under_cross_hair()
+        self.draw_bb_around_nearest_object(object_id)
+
+        # obtain observations
+        self._prev_sim_obs = self.get_sensor_observations()
+        self._prev_sim_obs["collided"] = collided
+        self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
+
+        observations = self._sensor_suite.get_observations(self._prev_sim_obs)
+        return observations
+        
+    def restore_object_states(self, object_states: Dict = {}):
+        for object_state in object_states:
+            object_id = object_state["object_id"]
+            translation = object_state["translation"]
+            rotation = object_state["rotation"]
+
+            object_translation = mn.Vector3(translation)
+            if isinstance(rotation, list):
+                object_rotation = quat_from_coeffs(rotation)
+
+            object_rotation = quat_to_magnum(object_rotation)
+            self.set_translation(object_translation, object_id)
+            self.set_rotation(object_rotation, object_id)
+    
+    def step_from_replay(self, action: int, replay_data: Dict = {}):
+        dt = 1.0 / 10.0
+        self._num_total_frames += 1
+        collided = False
+
+        agent_config = self._default_agent.agent_config
+        action_spec = agent_config.action_space[action]
+
+        if action_spec.name == "grab_or_release_object_under_crosshair":
+            action_data = replay_data["action_data"]
+            if replay_data["is_release_action"]:
+                # Fetch object handle and drop point from replay
+                new_object_position = mn.Vector3(action_data["new_object_translation"])
+                scene_object = self.get_object_from_scene(action_data["gripped_object_id"])
+                new_object_id = self.add_object_by_handle(
+                    scene_object["object_handle"]
+                )
+                self.set_translation(new_object_position, new_object_id)
+
+                self.update_object_in_scene(new_object_id, action_data["gripped_object_id"])
+                self.gripped_object_id = replay_data["gripped_object_id"]
+            elif replay_data["is_grab_action"]:
+                self.remove_object(action_data["gripped_object_id"])
+                self.gripped_object_id = replay_data["gripped_object_id"]
+        elif action_spec.name == "no_op":
+            self.restore_object_states(replay_data["object_states"])
+        else:
+            agent_transform = self._default_agent.body.object.transformation
+            if not replay_data["collision"]:
+                self._default_agent.act(action)
+                collided = replay_data["collision"]
+            self._last_state = self._default_agent.get_state()
+
+        self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
 
         # obtain observations
         self._prev_sim_obs = self.get_sensor_observations()

@@ -18,24 +18,23 @@ from habitat.core.utils import Singleton
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat_sim.agent.controls.controls import ActuationSpec
 from habitat.sims.habitat_simulator.actions import (
-    HabitatSimV1ActionSpaceConfiguration,
-    HabitatSimActions
+    HabitatSimActions,
+    HabitatSimV1ActionSpaceConfiguration
 )
 
 
 @attr.s(auto_attribs=True, slots=True)
 class GrabReleaseActuationSpec(ActuationSpec):
     visual_sensor_name: str = "rgb"
-    crosshair_pos: List[int] = [128, 128]
+    crosshair_pos: List[int] = [320, 240]
     amount: float = 1.5
 
 
 @registry.register_action_space_configuration(name="RearrangementActions-v0")
-class RearrangementSimV0ActionSpaceConfiguration(
-    HabitatSimV1ActionSpaceConfiguration
-):
+class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
     def __init__(self, config):
-        super().__init__(config)
+        # super().__init__(config)
+        self.config = config
         if not HabitatSimActions.has_action("GRAB_RELEASE"):
             HabitatSimActions.extend_action_space("GRAB_RELEASE")
         if not HabitatSimActions.has_action("MOVE_BACKWARD"):
@@ -44,8 +43,30 @@ class RearrangementSimV0ActionSpaceConfiguration(
             HabitatSimActions.extend_action_space("NO_OP")
 
     def get(self):
-        config = super().get()
+        config = self.config
         new_config = {
+            HabitatSimActions.MOVE_FORWARD: habitat_sim.ActionSpec(
+                "move_forward",
+                habitat_sim.ActuationSpec(
+                    amount=self.config.FORWARD_STEP_SIZE
+                ),
+            ),
+            HabitatSimActions.TURN_LEFT: habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+            ),
+            HabitatSimActions.TURN_RIGHT: habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+            ),
+            HabitatSimActions.LOOK_UP: habitat_sim.ActionSpec(
+                "look_up",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+            ),
+            HabitatSimActions.LOOK_DOWN: habitat_sim.ActionSpec(
+                "look_down",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+            ),
             HabitatSimActions.MOVE_BACKWARD: habitat_sim.ActionSpec(
                 "move_backward",
                 habitat_sim.ActuationSpec(amount=self.config.FORWARD_STEP_SIZE),
@@ -69,9 +90,30 @@ class RearrangementSimV0ActionSpaceConfiguration(
 
 
 @registry.register_task_action
+class NoOpAction(SimulatorTaskAction):
+    name: str = "NO_OP"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+            return self._sim.step_from_replay(
+                HabitatSimActions.NO_OP,
+                replay_data=kwargs["replay_data"]
+            )
+        return self._sim.step(HabitatSimActions.NO_OP, data=kwargs["data"])
+
+
+@registry.register_task_action
 class GrabOrReleaseAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""This method is called from ``Env`` on each ``step``."""
+        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+            return self._sim.step_from_replay(
+                HabitatSimActions.GRAB_RELEASE,
+                replay_data=kwargs["replay_data"]
+            )
         return self._sim.step(HabitatSimActions.GRAB_RELEASE)
 
 
@@ -83,15 +125,10 @@ class MoveBackwardAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.MOVE_BACKWARD)
-
-
-@registry.register_task_action
-class NoOpAction(SimulatorTaskAction):
-    name: str = "NO_OP"
-
-    def step(self, *args: Any, **kwargs: Any):
-        r"""Update ``_metric``, this method is called from ``Env`` on each
-        ``step``.
-        """
-        return self._sim.step(HabitatSimActions.NO_OP, data=kwargs["data"])
+        print("using new action")
+        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+            return self._sim.step_from_replay(
+                HabitatSimActions.MOVE_BACKWARD,
+                replay_data=kwargs["replay_data"]
+            )
+        return self._sim.step(HabitatSimActions.MOVE_BACKWARD, data=kwargs["data"])

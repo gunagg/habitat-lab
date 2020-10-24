@@ -260,9 +260,9 @@ class Env:
         # Support simpler interface as well
         if isinstance(action, (str, int, np.integer)):
             action = {"action": action}
-            if "data" in kwargs.keys():
+            if "replay_data" in kwargs.keys():
                 action["action_args"] = {}
-                action["action_args"]["data"] = kwargs["data"]
+                action["action_args"]["replay_data"] = kwargs["replay_data"]
 
         observations = self.task.step(
             action=action, episode=self.current_episode
