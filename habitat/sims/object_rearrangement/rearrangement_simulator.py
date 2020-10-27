@@ -136,8 +136,8 @@ class RearrangementSim(HabitatSim):
                 return self._scene_objects[index]
         return None
     
-    def is_collision(self, handle, translation):
-        return self.pre_add_contact_test(handle, translation)
+    def is_collision(self, handle, translation, is_navigation_test = False):
+        return self.pre_add_contact_test(handle, translation, is_navigation_test)
 
     def is_agent_colliding(self, action, agentTransform):
         stepSize = 0.25
@@ -151,7 +151,7 @@ class RearrangementSim(HabitatSim):
             filterDiff = filteredPoint - newPosition
             # adding buffer of 0.1 y to avoid collision with navmesh
             finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.1, 0.0)
-            collision = self.is_collision(self.agetn_object_handle, finalPosition)
+            collision = self.is_collision(self.agetn_object_handle, finalPosition, True)
             return {
                 "collision": collision,
                 "position": finalPosition
@@ -166,7 +166,7 @@ class RearrangementSim(HabitatSim):
             filterDiff = filteredPoint - newPosition
             # adding buffer of 0.1 y to avoid collision with navmesh
             finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.1, 0.0)
-            collision = self.is_collision(self.agetn_object_handle, finalPosition)
+            collision = self.is_collision(self.agetn_object_handle, finalPosition, True)
             return {
                 "collision": collision,
                 "position": finalPosition

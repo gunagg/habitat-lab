@@ -1,0 +1,94 @@
+ENVIRONMENT:
+  MAX_EPISODE_STEPS: 5000
+
+TASK:
+  TYPE: Int-v0
+  SUCCESS_DISTANCE: 0.2
+  SENSORS: ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+  POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+    GOAL_FORMAT: "POLAR"
+    DIMENSIONALITY: 2
+  GOAL_SENSOR_UUID: pointgoal_with_gps_compass
+
+  INSTRUCTION: "Place the {} on the {}"
+
+  TYPE: "arrangement"
+
+  OBJECT_HEIGHT:
+    -3.0
+
+  Y_LIMIT: [
+    -4.0,
+    -1.0
+  ]
+  
+  NUM_OBJECTS: 1
+
+  NUM_RECEPTACLES: 1
+
+  OBJECTS: [
+    "mini_soccer_ball",
+    "cracker_box",
+    "tomato_soup_can",
+    "master_chef_can",
+    "toy_airplane",
+    "apple",
+    "mug",
+    "orange",
+    "banana",
+    "mustard_bottle",
+    "gelatine_box",
+    "bleach_cleanser",
+    "sphere",
+    "d_cups",
+    "hammer"
+  ]
+
+  RECEPTACLES: [
+    "plate",
+    "nine_hole_peg_test",
+    "bowl",
+    "colored_wood_blocks",
+    "wood_block"
+  ]
+
+  OBJECT_NAME_MAP:
+    "mini_soccer_ball": "soccer ball"
+    "cracker_box": "cheezit box"
+    "tomato_soup_can": "tomato soup can"
+    "master_chef_can": "masterchef can"
+    "toy_airplane": "toy airplane"
+    "apple": "apple"
+    "gelatin_box": "jello box"
+    "mug": "red mug"
+    "orange": "orange"
+    "banana": "banana"
+    "mustard_bottle": "mustard bottle"
+    "bleach_cleanser": "bleach cleanser"
+    "sphere": "red sphere"
+    "d_cups": "yellow cup"
+    "hammer": "hammer"
+    "plate": "red plate"
+    "nine_hole_peg_test": "nine hole wood block"
+    "bowl": "red bowl"
+    "colored_wood_blocks": "colored wood block"
+    "wood_block": "wood block"
+
+  OBJECTS_RECEPTACLE_MAP:
+    "mini_soccer_ball": ["colored_wood_blocks"]
+    "cracker_box": ["plate"]
+    "tomato_soup_can": ["plate"]
+    "master_chef_can": ["plate"]
+    "toy_airplane": ["colored_wood_blocks"]
+    "apple": ["plate", "bowl"]
+    "banana": ["plate"]
+    "orange": ["plate", "bowl"]
+    "mug": ["plate"]
+    "mustard_bottle": ["plate"]
+    "hammer": ["wood_block"]
+
+DATASET:
+  TYPE: "Interactive"
+  SCENES_DIR: "."
+  SPLIT: test
+  DATA_PATH: ("data/{split}2.json.gz")
