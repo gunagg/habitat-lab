@@ -19,9 +19,9 @@ TASK:
 
   Y_LIMIT: [
     -4.0,
-    -1.0
+    6.0
   ]
-  
+
   NUM_OBJECTS: 1
 
   NUM_RECEPTACLES: 1

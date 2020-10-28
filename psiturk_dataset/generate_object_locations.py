@@ -183,7 +183,6 @@ def rejection_sampling(
     )
 
     while sum(bad_points) > 0 and num_tries > 0:
-        # print(sum(bad_points), num_tries)
 
         for i, bad_point in enumerate(bad_points):
             if bad_point:
@@ -196,6 +195,10 @@ def rejection_sampling(
         num_tries -= 1
     
     print(sum(bad_points), num_tries)
+
+    if sum(bad_points) > 0:
+        print("\n Error generating unique points, try using bigger retries")
+        sys.exit(1)
 
     return points
 
@@ -220,10 +223,10 @@ def generate_points(
     objs_per_rec,
     num_episodes,
     num_targets,
-    number_retries_per_target,
+    number_retries_per_target=1000,
     d_lower_lim=0.5,
-    d_upper_lim=50.0,
-    geodesic_to_euclid_min_ratio=1.1
+    d_upper_lim=30.0,
+    geodesic_to_euclid_min_ratio=0.5
 ):
     # Initialize simulator
     sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
@@ -234,6 +237,9 @@ def generate_points(
     object_to_receptacle_list = get_object_receptacle_list(config["TASK"]["OBJECTS_RECEPTACLE_MAP"])
     object_name_map = dict(config["TASK"]["OBJECT_NAME_MAP"])
     y_limit = config["TASK"]["Y_LIMIT"]
+    x_limit = None
+    if config["TASK"].get("X_LIMIT"):
+        x_limit = config["TASK"]["X_LIMIT"]
     num_points = config["TASK"]["NUM_OBJECTS"] + config["TASK"]["NUM_RECEPTACLES"] + 1
     object_receptacle_pair_index = 0
 
@@ -260,7 +266,8 @@ def generate_points(
         
         points = rejection_sampling(
             sim, np.array(points), d_lower_lim, d_upper_lim,
-            geodesic_to_euclid_min_ratio, ylim=y_limit
+            geodesic_to_euclid_min_ratio, xlim=x_limit, ylim=y_limit,
+            num_tries=number_retries_per_target
         )
 
         # Mark valid points as visited to get unique points
@@ -306,7 +313,7 @@ def write_episode(dataset, output_path):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Generate a new messy scene."
+        description="Generate new episodes."
     )
     parser.add_argument(
         "--task-config",
