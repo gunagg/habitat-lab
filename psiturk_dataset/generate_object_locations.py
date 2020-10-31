@@ -13,6 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import scipy
 import json
+import magnum as mn
 
 import habitat
 from habitat.sims import make_sim
@@ -20,6 +21,11 @@ from habitat.sims import make_sim
 
 ISLAND_RADIUS_LIMIT = 1.5
 VISITED_POINT_DICT = {}
+
+
+def contact_test(sim, object_name, position):
+    object_handle = "./data/test_assets/objects/{}.phys_properties.json".format(object_name)
+    return sim.pre_add_contact_test(object_handle, mn.Vector3(position))
 
 
 def _ratio_sample_rate(ratio: float, ratio_threshold: float) -> float:
@@ -91,7 +97,7 @@ def get_task_config(config, object_name, receptacle_name, object_ids, receptacle
         else:
             object_to_receptacle_map[object_id] = [receptacle_id]
 
-    task["goals"]["objectToRecepacleMap"] = object_to_receptacle_map
+    task["goals"]["objectToReceptacleMap"] = object_to_receptacle_map
     return task
 
 
@@ -132,7 +138,11 @@ def build_object(object_handle, object_id, object_name, is_receptacle, position,
     return object_
 
 
-def get_bad_points(sim, points, d_lower_lim, d_upper_lim, geodesic_to_euclid_min_ratio, xlim=None, ylim=None, zlim=None):
+def get_bad_points(
+    sim, points, d_lower_lim, d_upper_lim,
+    geodesic_to_euclid_min_ratio, xlim=None,
+    ylim=None, zlim=None, object_names=[]
+):
     bad_points = np.zeros(points.shape[0], dtype=bool)
     # Outside X, Y, or Z limits
     if xlim:
@@ -150,6 +160,12 @@ def get_bad_points(sim, points, d_lower_lim, d_upper_lim, geodesic_to_euclid_min
     for i, point in enumerate(points):
         if VISITED_POINT_DICT.get(str(point)) == 1 or is_less_than_island_radius_limit(sim, point):
             bad_points[i] = 1
+        # TODO: make this dynamic
+        if i == 1 and contact_test(sim, object_names[i - 1], point):
+            bad_points[i] = 1
+        if i == 2 and contact_test(sim, object_names[i - 1], point):
+            bad_points[i] = 1
+            
 
     # Too close to another object or receptacle
     for i, point1 in enumerate(points):
@@ -175,11 +191,12 @@ def get_bad_points(sim, points, d_lower_lim, d_upper_lim, geodesic_to_euclid_min
 def rejection_sampling(
     sim, points, d_lower_lim, d_upper_lim,
     geodesic_to_euclid_min_ratio, xlim=None,
-    ylim=None, zlim=None, num_tries=10000
+    ylim=None, zlim=None, num_tries=10000, object_names=[]
 ):
     bad_points = get_bad_points(
         sim, points, d_lower_lim, d_upper_lim,
-        geodesic_to_euclid_min_ratio, xlim, ylim, zlim
+        geodesic_to_euclid_min_ratio, xlim, ylim,
+        zlim, object_names
     )
 
     while sum(bad_points) > 0 and num_tries > 0:
@@ -190,7 +207,8 @@ def rejection_sampling(
 
         bad_points = get_bad_points(
             sim, points, d_lower_lim, d_upper_lim,
-            geodesic_to_euclid_min_ratio, xlim, ylim, zlim
+            geodesic_to_euclid_min_ratio, xlim, ylim,
+            zlim, object_names
         )
         num_tries -= 1
     
@@ -216,7 +234,12 @@ def get_random_rotation():
 
 def is_less_than_island_radius_limit(sim, point):
     return sim.island_radius(point) < ISLAND_RADIUS_LIMIT
-        
+
+
+def add_contact_test_object(sim, object_name):
+    object_handle = "./data/test_assets/objects/{}.phys_properties.json".format(object_name)
+    sim.add_contact_test_object(object_handle)
+
 
 def generate_points(
     config,
@@ -224,9 +247,9 @@ def generate_points(
     num_episodes,
     num_targets,
     number_retries_per_target=1000,
-    d_lower_lim=0.5,
-    d_upper_lim=30.0,
-    geodesic_to_euclid_min_ratio=0.5
+    d_lower_lim=10.0,
+    d_upper_lim=500.0,
+    geodesic_to_euclid_min_ratio=1.1
 ):
     # Initialize simulator
     sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
@@ -253,6 +276,10 @@ def generate_points(
             object_receptacle_pair_index
         )
 
+        # Adding contact test objects to test object positions
+        add_contact_test_object(sim, object_)
+        add_contact_test_object(sim, receptacle)
+
         object_name = object_name_map[object_]
         receptacle_name = object_name_map[receptacle]
 
@@ -264,10 +291,11 @@ def generate_points(
             points.append(point)
             rotations.append(rotation)
         
+        points = np.array(points)
         points = rejection_sampling(
-            sim, np.array(points), d_lower_lim, d_upper_lim,
+            sim, points, d_lower_lim, d_upper_lim,
             geodesic_to_euclid_min_ratio, xlim=x_limit, ylim=y_limit,
-            num_tries=number_retries_per_target
+            num_tries=number_retries_per_target, object_names=[object_, receptacle]
         )
 
         # Mark valid points as visited to get unique points

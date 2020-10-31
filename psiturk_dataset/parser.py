@@ -1,6 +1,7 @@
 import argparse
 import csv
 import copy
+import gzip
 import json
 
 
@@ -13,6 +14,12 @@ def read_csv(path, delimiter=","):
 def write_json(data, path):
     with open(path, 'w') as file:
         file.write(json.dumps(data))
+
+
+def write_gzip(input_path, output_path):
+    with open(input_path, "rb") as input_file:
+        with gzip.open(output_path + ".gz", "wb") as output_file:
+            output_file.writelines(input_file)
 
 
 def column_to_json(col):
@@ -49,7 +56,7 @@ def parse_replay_data_for_action(action, data):
     else:
         replay_data["collision"] = data["collision"]
         replay_data["object_under_cross_hair"] = data["objectUnderCrosshair"]
-        replay_data["neares_object_id"] = data["nearestObjectId"]
+        replay_data["nearest_object_id"] = data["nearestObjectId"]
         replay_data["gripped_object_id"] = data["grippedObjectId"]
 
     return replay_data
@@ -84,7 +91,7 @@ def handle_step(step, episode, episode_id):
             episode["objects"] = []
             for idx in range(len(data["objects"])):
                 object_data = {}
-                object_data["object_id"] = idx
+                object_data["object_id"] = data["objects"][idx]["objectId"]
                 object_data["object_template"] = data["objects"][idx]["objectHandle"]
                 object_data["position"] = data["objects"][idx]["position"]
                 object_data["motion_type"] = data["objects"][idx]["motionType"]
@@ -103,7 +110,6 @@ def handle_step(step, episode, episode_id):
             episode["reference_replay"] = []
 
         elif step["event"] == "handleAction":
-            # print("handleAction")
             data = parse_replay_data_for_action(step["data"]["action"], step["data"])
             episode["reference_replay"].append(data)
 
@@ -143,6 +149,7 @@ def replay_to_episode(replay_path, output_path):
         "episodes": [episode]
     }
     write_json(all_episodes, output_path)
+    write_gzip(output_path, output_path)
 
 
 def main():

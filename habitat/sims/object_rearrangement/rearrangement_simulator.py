@@ -83,16 +83,22 @@ class RearrangementSim(HabitatSim):
                 object_ = self.get_object_from_scene(obj_id)
                 if object_ is not None:
                     self.remove_contact_test_object(object_["object_handle"])
+            self.clear_recycled_object_ids()
 
-        self.sim_object_to_objid_mapping = {}
-        self.objid_to_sim_object_mapping = {}
+        self.sim_objid_to_replay_objid_mapping = {}
+        self.replay_objid_to_sim_objid_mapping = {}
 
         if objects is not None:
+            # Sort objects by object id
+            object_map = {}
             for object_ in objects:
+                object_map[object_["object_id"]] = object_
+
+            for key in sorted(object_map.keys()):
+                object_ = object_map[key]
                 object_handle = object_["object_template"].split('/')[-1].split('.')[0]
                 object_template = "data/test_assets/objects/{}".format(object_handle)
                 object_pos = object_["position"]
-                # object_rot = objects["rotation"]
 
                 object_template_id = obj_attr_mgr.load_object_configs(
                     object_template
@@ -103,8 +109,8 @@ class RearrangementSim(HabitatSim):
                 object_id = self.add_object_by_handle(object_attr.handle)
                 self.add_contact_test_object(object_attr.handle)
 
-                self.sim_object_to_objid_mapping[object_id] = object_["object_id"]
-                self.objid_to_sim_object_mapping[object_["object_id"]] = object_id
+                self.sim_objid_to_replay_objid_mapping[object_id] = object_["object_id"]
+                self.replay_objid_to_sim_objid_mapping[object_["object_id"]] = object_id
 
                 self.set_translation(object_pos, object_id)
                 self.sample_object_state(object_id)
