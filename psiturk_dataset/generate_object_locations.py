@@ -17,6 +17,7 @@ import magnum as mn
 
 import habitat
 from habitat.sims import make_sim
+from habitat_sim.utils.common import quat_from_coeffs
 
 
 ISLAND_RADIUS_LIMIT = 1.5
@@ -26,6 +27,11 @@ VISITED_POINT_DICT = {}
 def contact_test(sim, object_name, position):
     object_handle = "./data/test_assets/objects/{}.phys_properties.json".format(object_name)
     return sim.pre_add_contact_test(object_handle, mn.Vector3(position))
+
+
+def contact_test_rotation(sim, object_name, position, rotation):
+    object_handle = "./data/test_assets/objects/{}.phys_properties.json".format(object_name)
+    return sim.pre_add_contact_test(object_handle, mn.Vector3(position), quat_from_coeffs(rotation))
 
 
 def _ratio_sample_rate(ratio: float, ratio_threshold: float) -> float:
@@ -139,7 +145,7 @@ def build_object(object_handle, object_id, object_name, is_receptacle, position,
 
 
 def get_bad_points(
-    sim, points, d_lower_lim, d_upper_lim,
+    sim, points, rotations, d_lower_lim, d_upper_lim,
     geodesic_to_euclid_min_ratio, xlim=None,
     ylim=None, zlim=None, object_names=[]
 ):
@@ -161,11 +167,10 @@ def get_bad_points(
         if VISITED_POINT_DICT.get(str(point)) == 1 or is_less_than_island_radius_limit(sim, point):
             bad_points[i] = 1
         # TODO: make this dynamic
-        if i == 1 and contact_test(sim, object_names[i - 1], point):
+        if i == 1 and contact_test_rotation(sim, object_names[i - 1], point, rotations[i]):
             bad_points[i] = 1
-        if i == 2 and contact_test(sim, object_names[i - 1], point):
+        if i == 2 and contact_test_rotation(sim, object_names[i - 1], point, rotations[i]):
             bad_points[i] = 1
-            
 
     # Too close to another object or receptacle
     for i, point1 in enumerate(points):
@@ -189,12 +194,12 @@ def get_bad_points(
 
 
 def rejection_sampling(
-    sim, points, d_lower_lim, d_upper_lim,
+    sim, points, rotations, d_lower_lim, d_upper_lim,
     geodesic_to_euclid_min_ratio, xlim=None,
     ylim=None, zlim=None, num_tries=10000, object_names=[]
 ):
     bad_points = get_bad_points(
-        sim, points, d_lower_lim, d_upper_lim,
+        sim, points, rotations, d_lower_lim, d_upper_lim,
         geodesic_to_euclid_min_ratio, xlim, ylim,
         zlim, object_names
     )
@@ -206,7 +211,7 @@ def rejection_sampling(
                 points[i] = sim.sample_navigable_point()
 
         bad_points = get_bad_points(
-            sim, points, d_lower_lim, d_upper_lim,
+            sim, points, rotations, d_lower_lim, d_upper_lim,
             geodesic_to_euclid_min_ratio, xlim, ylim,
             zlim, object_names
         )
@@ -293,7 +298,7 @@ def generate_points(
         
         points = np.array(points)
         points = rejection_sampling(
-            sim, points, d_lower_lim, d_upper_lim,
+            sim, points, rotations, d_lower_lim, d_upper_lim,
             geodesic_to_euclid_min_ratio, xlim=x_limit, ylim=y_limit,
             num_tries=number_retries_per_target, object_names=[object_, receptacle]
         )
