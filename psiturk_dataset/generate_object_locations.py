@@ -5,19 +5,23 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import random
-import sys
+import glob
 import gzip
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import numpy as np
-import scipy
-import json
-import magnum as mn
-
 import habitat
+import json
+import os
+import random
+import scipy
+import sys
+
+import numpy as np
+import magnum as mn
+import matplotlib.pyplot as plt
+
+
 from habitat.sims import make_sim
 from habitat_sim.utils.common import quat_from_coeffs
+from mpl_toolkits.mplot3d import Axes3D
 
 
 ISLAND_RADIUS_LIMIT = 1.5
@@ -246,6 +250,32 @@ def add_contact_test_object(sim, object_name):
     sim.add_contact_test_object(object_handle)
 
 
+def populate_episodes_points(episodes):
+    for episode in episodes["episodes"]:
+        point = str(episode["start_position"])
+        if VISITED_POINT_DICT.get(point):
+            VISITED_POINT_DICT[point] += 1
+            print("Redundant agent position in episode {}".format(episode["episode_id"]))
+        else:
+            VISITED_POINT_DICT[point] = 1
+
+        for object_ in episode["objects"]:
+            point = str(object_["position"])
+            if VISITED_POINT_DICT.get(point):
+                VISITED_POINT_DICT[point] += 1
+                print("Redundant point in episode {}".format(episode["episode_id"]))
+            else:
+                VISITED_POINT_DICT[point] = 1
+
+
+def populate_prev_generated_points(path):
+    for file_path in glob.glob(path + "/*.json"):
+        with open(file_path, "r") as file:
+            data = json.loads(file.read())
+            populate_episodes_points(data)
+    print("Total previously generated points {}".format(len(VISITED_POINT_DICT.keys())))
+
+
 def generate_points(
     config,
     objs_per_rec,
@@ -254,10 +284,14 @@ def generate_points(
     number_retries_per_target=1000,
     d_lower_lim=10.0,
     d_upper_lim=500.0,
-    geodesic_to_euclid_min_ratio=1.1
+    geodesic_to_euclid_min_ratio=1.1,
+    prev_episodes="data/tasks"
 ):
     # Initialize simulator
     sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
+
+    # Populate previously generated points
+    populate_prev_generated_points(prev_episodes)
 
     episode_count = 0
     episodes = []
@@ -269,77 +303,72 @@ def generate_points(
     if config["TASK"].get("X_LIMIT"):
         x_limit = config["TASK"]["X_LIMIT"]
     num_points = config["TASK"]["NUM_OBJECTS"] + config["TASK"]["NUM_RECEPTACLES"] + 1
-    object_receptacle_pair_index = 0
 
     all_points = []
+    num_episodes = num_episodes * len(object_to_receptacle_list)
 
     while episode_count < num_episodes or num_episodes < 0:
-        print("\nEpisode {}\n".format(episode_count))
-        objects = []
-        object_, receptacle = get_object_receptacle_pair(
-            object_to_receptacle_list,
-            object_receptacle_pair_index
-        )
+        for object_, receptacle in object_to_receptacle_list:
+            print("\nEpisode {}\n".format(episode_count))
+            objects = []
 
-        # Adding contact test objects to test object positions
-        add_contact_test_object(sim, object_)
-        add_contact_test_object(sim, receptacle)
+            # Adding contact test objects to test object positions
+            add_contact_test_object(sim, object_)
+            add_contact_test_object(sim, receptacle)
 
-        object_name = object_name_map[object_]
-        receptacle_name = object_name_map[receptacle]
+            object_name = object_name_map[object_]
+            receptacle_name = object_name_map[receptacle]
 
-        points = []
-        rotations = []
-        for idx in range(num_points):
-            point = get_random_point(sim)
-            rotation = get_random_rotation()
-            points.append(point)
-            rotations.append(rotation)
-        
-        points = np.array(points)
-        points = rejection_sampling(
-            sim, points, rotations, d_lower_lim, d_upper_lim,
-            geodesic_to_euclid_min_ratio, xlim=x_limit, ylim=y_limit,
-            num_tries=number_retries_per_target, object_names=[object_, receptacle]
-        )
-
-        # Mark valid points as visited to get unique points
-        for point in points:
-            VISITED_POINT_DICT[str(point)] = 1
-            all_points.append(point.tolist())
+            points = []
+            rotations = []
+            for idx in range(num_points):
+                point = get_random_point(sim)
+                rotation = get_random_rotation()
+                points.append(point)
+                rotations.append(rotation)
             
-        agent_position = points[0].tolist()
-        agent_rotation = rotations[0]
- 
-        target_position = points[1].tolist()
-        target_rotation = rotations[1]
+            points = np.array(points)
+            points = rejection_sampling(
+                sim, points, rotations, d_lower_lim, d_upper_lim,
+                geodesic_to_euclid_min_ratio, xlim=x_limit, ylim=y_limit,
+                num_tries=number_retries_per_target, object_names=[object_, receptacle]
+            )
 
-        source_position = points[2].tolist()
-        source_rotation = rotations[2]
-
-        # Create episode object configs
-        objects.append(build_object(object_, len(objects), object_name, False, source_position, source_rotation))
-        objects.append(build_object(receptacle, len(objects), receptacle_name, True, target_position, target_rotation))
-        
-        # Build episode from object and agent initilization.
-        episode = build_episode(config, episode_count, objects, agent_position,
-            agent_rotation, object_name, receptacle_name)
-        episodes.append(episode)
-        print(episode)
-
-        object_receptacle_pair_index += 1
-        episode_count += 1
+            # Mark valid points as visited to get unique points
+            for point in points:
+                VISITED_POINT_DICT[str(point)] = 1
+                all_points.append(point.tolist())
+                
+            agent_position = points[0].tolist()
+            agent_rotation = rotations[0]
     
-    with open("points.csv", "w") as f:
-        f.write(json.dumps(all_points))
+            target_position = points[1].tolist()
+            target_rotation = rotations[1]
+
+            source_position = points[2].tolist()
+            source_rotation = rotations[2]
+
+            # Create episode object configs
+            objects.append(build_object(object_, len(objects), object_name, False, source_position, source_rotation))
+            objects.append(build_object(receptacle, len(objects), receptacle_name, True, target_position, target_rotation))
+            
+            # Build episode from object and agent initilization.
+            episode = build_episode(config, episode_count, objects, agent_position,
+                agent_rotation, object_name, receptacle_name)
+            episodes.append(episode)
+            print(episode)
+
+            episode_count += 1
+
     dataset = {
         "episodes": episodes
     }
     return dataset
 
 
-def write_episode(dataset, output_path):
-    with open(output_path, "w") as output_file:
+def write_episode(dataset, filename):
+    prefix = "data/tasks/" + filename
+    with open(prefix, "w") as output_file:
         output_file.write(json.dumps(dataset))
 
 
@@ -350,7 +379,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--task-config",
-        default="configs/generate_messyroom.yaml",
+        default="psiturk_dataset/rearrangement.yaml",
         help="Task configuration file for initializing a Habitat environment",
     )
     parser.add_argument(
@@ -362,7 +391,7 @@ if __name__ == "__main__":
         "--num_episodes",
         type=int,
         default=2,
-        help="Number of episodes to generate",
+        help="Number of episodes to generate per object receptacle pair",
     )
     parser.add_argument(
         "-g",
@@ -408,6 +437,11 @@ if __name__ == "__main__":
         default=1,
         help="Number of objects per goal.",
     )
+    parser.add_argument(
+        "--prev_episodes",
+        default="data/tasks",
+        help="Task configuration file for initializing a Habitat environment",
+    )
 
     args = parser.parse_args()
     opts = []
@@ -428,7 +462,8 @@ if __name__ == "__main__":
             args.number_retries_per_target,
             args.d_lower_lim,
             args.d_upper_lim,
-            args.geodesic_to_euclid_min_ratio
+            args.geodesic_to_euclid_min_ratio,
+            args.prev_episodes
         )
         write_episode(dataset, args.output)
     else:

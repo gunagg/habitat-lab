@@ -14,9 +14,6 @@ TASK:
 
   TYPE: "arrangement"
 
-  OBJECT_HEIGHT:
-    -3.0
-
   Y_LIMIT: [
     -6.0,
     1.0
