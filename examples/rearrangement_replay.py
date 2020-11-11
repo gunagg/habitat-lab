@@ -1,6 +1,7 @@
 import argparse
 import cv2
 import habitat
+import json
 import time
 
 from habitat import Config
@@ -78,6 +79,12 @@ def make_video_cv2(
         vut.display_video(video_file)
 
 
+def make_videos(observations_list, output_prefix):
+    for idx in range(len(observations_list)):
+        prefix = output_prefix + "_{}".format(idx)
+        make_video_cv2(observations_list[idx], prefix=prefix)
+
+
 def get_habitat_sim_action(data):
     if data["action"] == "turnRight":
         return HabitatSimActions.TURN_RIGHT
@@ -99,34 +106,44 @@ def get_habitat_sim_action(data):
 
 
 def run_reference_replay(cfg, num_episodes=None):
+    instructions = []
     with habitat.Env(cfg) as env:
-        obs = env.reset()
         obs_list = []
 
         if num_episodes is None:
             num_episodes = len(env.episodes)
 
-        observation_list = []
-        for _ in range(len(env.episodes)):
+        print("Total episodes: {}".format(len(env.episodes)))
+        for ep_id in range(len(env.episodes)):
+            observation_list = []
+
             env._sim.update_cross_hair()
             obs = env.reset()
             observation_list.append(obs)
+
             print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
             print("Physics simulation library: {}".format(physics_simulation_library))
             print("Episode length: {}".format(len(env.current_episode.reference_replay)))
             i = 0
+            data = {
+                "video": "demo_{}.mp4".format(ep_id),
+                "task": env.current_episode.instruction.instruction_text
+            }
+            instructions.append(data)
             for data in env.current_episode.reference_replay:
-                if data["action"] != "stepPhysics":
-                    print("Action {} - {}".format(data["action"], i))
-                else:
-                    print("Action {} - {}".format(data["action"], i))
+                # if data["action"] != "stepPhysics":
+                #     print("Action {} - {}".format(data["action"], i))
+                # else:
+                #     print("Action {} - {}".format(data["action"], i))
 
                 action = get_habitat_sim_action(data)
                 observations = env.step(action=action, replay_data=data)
                 observation_list.append(observations)
                 i+=1
             obs_list.append(observation_list)
+        inst_file = open("instructions.json", "w")
+        inst_file.write(json.dumps(instructions))
         return obs_list
 
 
@@ -145,7 +162,7 @@ def main():
     cfg.freeze()
 
     observations = run_reference_replay(cfg, num_episodes=1)
-    make_video_cv2(observations[0], prefix=args.output_prefix)
+    make_videos(observations, args.output_prefix)
 
 if __name__ == "__main__":
     main()

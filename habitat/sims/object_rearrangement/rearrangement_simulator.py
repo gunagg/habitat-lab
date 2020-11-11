@@ -55,7 +55,7 @@ class RearrangementSim(HabitatSim):
 
     def reconfigure(self, config: Config) -> None:
         super().reconfigure(config)
-        self._initialize_objects()
+        self._initialize_objects(config)
 
     def reset(self):
         sim_obs = super().reset()
@@ -67,11 +67,10 @@ class RearrangementSim(HabitatSim):
         self.grip_offset = np.eye(4)
         return self._sensor_suite.get_observations(sim_obs)
 
-    def _initialize_objects(self):
+    def _initialize_objects(self, sim_config):
         # contact test object for agent
         self.add_contact_test_object(self.agetn_object_handle)
-
-        objects = self.habitat_config.objects
+        objects = sim_config.objects
         obj_attr_mgr = self.get_object_template_manager()
 
         # first remove all existing objects
@@ -84,6 +83,7 @@ class RearrangementSim(HabitatSim):
                 if object_ is not None:
                     self.remove_contact_test_object(object_["object_handle"])
             self.clear_recycled_object_ids()
+            self.clear_scene_objects()
 
         self.sim_objid_to_replay_objid_mapping = {}
         self.replay_objid_to_sim_objid_mapping = {}
@@ -99,6 +99,8 @@ class RearrangementSim(HabitatSim):
                 object_handle = object_["object_template"].split('/')[-1].split('.')[0]
                 object_template = "data/test_assets/objects/{}".format(object_handle)
                 object_pos = object_["position"]
+                rotation = quat_from_coeffs(object_["rotation"])
+                object_rotation = quat_to_magnum(rotation)
 
                 object_template_id = obj_attr_mgr.load_object_configs(
                     object_template
@@ -109,23 +111,25 @@ class RearrangementSim(HabitatSim):
                 object_id = self.add_object_by_handle(object_attr.handle)
                 self.add_contact_test_object(object_attr.handle)
 
-                self.sim_objid_to_replay_objid_mapping[object_id] = object_["object_id"]
-                self.replay_objid_to_sim_objid_mapping[object_["object_id"]] = object_id
-
                 self.set_translation(object_pos, object_id)
-                self.sample_object_state(object_id)
+                self.set_rotation(object_rotation, object_id)
+
                 object_['object_handle'] = "data/test_assets/objects/{}".format(object_["object_template"].split('/')[-1])
                 self.add_object_in_scene(object_id, object_)
 
                 self.set_object_motion_type(MotionType.DYNAMIC, object_id)
-        # Recompute the navmesh after placing all the objects.
-        self.recompute_navmesh(self.pathfinder, self.navmesh_settings, True)
+
+                self.sim_objid_to_replay_objid_mapping[object_id] = object_["object_id"]
+                self.replay_objid_to_sim_objid_mapping[object_["object_id"]] = object_id
 
     def get_resolution(self):
         resolution = self._default_agent.agent_config.sensor_specifications[
             0
         ].resolution
         return mn.Vector2(list(map(int, resolution)))
+
+    def clear_scene_objects(self):
+        self._scene_objects = []
 
     def add_object_in_scene(self, objectId, data):
         data["object_id"] = objectId
@@ -197,6 +201,9 @@ class RearrangementSim(HabitatSim):
                 self.set_object_bb_draw(False, self.nearest_object_id)
                 self.nearest_object_id = object_id
         else:
+            object_ = self.get_object_from_scene(object_id)
+            if object_["is_receptacle"] == True:
+                return
             if self.nearest_object_id != -1 and self.gripped_object_id != self.nearest_object_id:
                 self.set_object_bb_draw(False, self.nearest_object_id)
                 self.nearest_object_id = -1
@@ -284,7 +291,7 @@ class RearrangementSim(HabitatSim):
 
         observations = self._sensor_suite.get_observations(self._prev_sim_obs)
         return observations
-        
+
     def restore_object_states(self, object_states: Dict = {}):
         for object_state in object_states:
             object_id = object_state["object_id"]
@@ -299,6 +306,11 @@ class RearrangementSim(HabitatSim):
             self.set_translation(object_translation, object_id)
             self.set_rotation(object_rotation, object_id)
     
+    def update_drop_point(self):
+        position = self._default_agent.body.object.absolute_translation
+        position = mn.Vector3(position.x, position.y - 0.5, position.z)
+        self.update_drop_point_node(position)
+
     def step_from_replay(self, action: int, replay_data: Dict = {}):
         dt = 1.0 / 10.0
         self._num_total_frames += 1
@@ -333,6 +345,7 @@ class RearrangementSim(HabitatSim):
             self._last_state = self._default_agent.get_state()
 
         self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
+        self.update_drop_point()
 
         # obtain observations
         self._prev_sim_obs = self.get_sensor_observations()

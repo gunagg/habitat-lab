@@ -125,7 +125,6 @@ class MoveBackwardAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        print("using new action")
         if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
             return self._sim.step_from_replay(
                 HabitatSimActions.MOVE_BACKWARD,

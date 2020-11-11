@@ -1,6 +1,7 @@
 import argparse
 import csv
 import copy
+import glob
 import gzip
 import json
 
@@ -94,8 +95,10 @@ def handle_step(step, episode, episode_id):
                 object_data["object_id"] = data["objects"][idx]["objectId"]
                 object_data["object_template"] = data["objects"][idx]["objectHandle"]
                 object_data["position"] = data["objects"][idx]["position"]
+                object_data["rotation"] = data["objects"][idx]["rotation"]
                 object_data["motion_type"] = data["objects"][idx]["motionType"]
                 object_data["object_icon"] = data["objects"][idx]["objectIcon"]
+                object_data["is_receptacle"] = data["objects"][idx]["isReceptacle"]
                 episode["objects"].append(object_data)
 
             episode["instruction"] = {
@@ -143,11 +146,16 @@ def convert_to_episode(csv_reader):
 
 
 def replay_to_episode(replay_path, output_path):
-    reader = read_csv(replay_path)
-    episode = convert_to_episode(reader)
     all_episodes = {
-        "episodes": [episode]
+        "episodes": []
     }
+    for file_path in glob.glob(replay_path + "/*.csv"):
+        print(file_path)
+        reader = read_csv(file_path)
+        episode = convert_to_episode(reader)
+        all_episodes["episodes"].append(episode)
+
+    print("Total episodes: {}".format(len(all_episodes["episodes"])))
     write_json(all_episodes, output_path)
     write_gzip(output_path, output_path)
 
@@ -155,14 +163,13 @@ def replay_to_episode(replay_path, output_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--replay-file", type=str, default="replays/demo_1.csv"
+        "--replay-path", type=str, default="data/hit_data"
     )
     parser.add_argument(
-        "--output-file", type=str, default="replays/demo_1.json"
+        "--output-path", type=str, default="data/episodes/data.json"
     )
     args = parser.parse_args()
-    print(args)
-    replay_to_episode(args.replay_file, args.output_file)
+    replay_to_episode(args.replay_path, args.output_path)
 
 
 if __name__ == '__main__':
