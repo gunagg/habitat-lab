@@ -123,7 +123,7 @@ def build_episode(config, episode_id, objects, agent_position, agent_rotation, o
     object_ids = []
     receptacle_ids = []
     for object_ in objects:
-        if object_["isReceptacle"]:
+        if not object_["isReceptacle"]:
             object_ids.append(object_["objectId"])
         else:
             receptacle_ids.append(object_["objectId"])

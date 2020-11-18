@@ -201,12 +201,12 @@ class RearrangementSim(HabitatSim):
                 self.set_object_bb_draw(False, self.nearest_object_id)
                 self.nearest_object_id = object_id
         else:
-            object_ = self.get_object_from_scene(object_id)
-            if object_["is_receptacle"] == True:
-                return
             if self.nearest_object_id != -1 and self.gripped_object_id != self.nearest_object_id:
                 self.set_object_bb_draw(False, self.nearest_object_id)
                 self.nearest_object_id = -1
+            object_ = self.get_object_from_scene(object_id)
+            if object_["is_receptacle"] == True:
+                return
             if self.nearest_object_id != object_id:
                 self.nearest_object_id = object_id
                 self.set_object_bb_draw(True, self.nearest_object_id, 0)
@@ -321,24 +321,24 @@ class RearrangementSim(HabitatSim):
 
         if action_spec.name == "grab_or_release_object_under_crosshair":
             action_data = replay_data["action_data"]
-            if replay_data["is_release_action"]:
-                # Fetch object handle and drop point from replay
-                new_object_position = mn.Vector3(action_data["new_object_translation"])
-                scene_object = self.get_object_from_scene(action_data["gripped_object_id"])
-                new_object_id = self.add_object_by_handle(
-                    scene_object["object_handle"]
-                )
-                self.set_translation(new_object_position, new_object_id)
+            if action_data["gripped_object_id"] != -1:
+                if replay_data["is_release_action"]:
+                    # Fetch object handle and drop point from replay
+                    new_object_position = mn.Vector3(action_data["new_object_translation"])
+                    scene_object = self.get_object_from_scene(action_data["gripped_object_id"])
+                    new_object_id = self.add_object_by_handle(
+                        scene_object["object_handle"]
+                    )
+                    self.set_translation(new_object_position, new_object_id)
 
-                self.update_object_in_scene(new_object_id, action_data["gripped_object_id"])
-                self.gripped_object_id = replay_data["gripped_object_id"]
-            elif replay_data["is_grab_action"]:
-                self.remove_object(action_data["gripped_object_id"])
-                self.gripped_object_id = replay_data["gripped_object_id"]
+                    self.update_object_in_scene(new_object_id, action_data["gripped_object_id"])
+                    self.gripped_object_id = replay_data["gripped_object_id"]
+                elif replay_data["is_grab_action"]:
+                    self.remove_object(action_data["gripped_object_id"])
+                    self.gripped_object_id = replay_data["gripped_object_id"]
         elif action_spec.name == "no_op":
             self.restore_object_states(replay_data["object_states"])
         else:
-            agent_transform = self._default_agent.body.object.transformation
             if not replay_data["collision"]:
                 self._default_agent.act(action)
                 collided = replay_data["collision"]

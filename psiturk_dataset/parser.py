@@ -78,13 +78,12 @@ def parse_replay_data_for_step_physics(data):
     return replay_data
 
 
-def handle_step(step, episode, episode_id):
+def handle_step(step, episode, unique_id, episode_id):
 
     if step.get("event"):
-
         if step["event"] == "setEpisode":
             data = copy.deepcopy(step["data"]["episode"])
-            episode["episode_id"] = episode_id
+            episode["episode_id"] = unique_id
             episode["scene_id"] = data["sceneID"]
             episode["start_position"] = data["startState"]["position"]
             episode["start_rotation"] = data["startState"]["rotation"]
@@ -131,7 +130,7 @@ def convert_to_episode(csv_reader):
     episode = {}
     viewer_step = False
     for row in csv_reader:
-        episode_id = row[0]
+        unique_id = row[0]
         step = row[1]
         timestamp = row[2]
         data = column_to_json(row[3])
@@ -140,7 +139,7 @@ def convert_to_episode(csv_reader):
             viewer_step = is_viewer_step(data)
 
         if viewer_step:
-            is_viewer_step_finished = handle_step(data, episode, 0)
+            is_viewer_step_finished = handle_step(data, episode, unique_id, 0)
 
     return episode
 

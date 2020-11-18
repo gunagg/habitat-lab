@@ -127,16 +127,17 @@ def run_reference_replay(cfg, num_episodes=None):
             print("Episode length: {}".format(len(env.current_episode.reference_replay)))
             i = 0
             data = {
+                "episodeId": env.current_episode.episode_id,
                 "video": "demo_{}.mp4".format(ep_id),
                 "task": env.current_episode.instruction.instruction_text
             }
             instructions.append(data)
             for data in env.current_episode.reference_replay:
                 # if data["action"] != "stepPhysics":
-                #     print("Action {} - {}".format(data["action"], i))
+                #     cnt += 1
+                #     print("Action: {} - {},  Step: {}".format(data["action"], i, cnt))
                 # else:
                 #     print("Action {} - {}".format(data["action"], i))
-
                 action = get_habitat_sim_action(data)
                 observations = env.step(action=action, replay_data=data)
                 observation_list.append(observations)
