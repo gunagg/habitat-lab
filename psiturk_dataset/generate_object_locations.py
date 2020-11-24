@@ -29,12 +29,14 @@ VISITED_POINT_DICT = {}
 
 
 def contact_test(sim, object_name, position):
-    object_handle = "./data/test_assets/objects/{}.phys_properties.json".format(object_name)
+    object_handle = "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
+    #object_handle = "./data/test_assets/objects/{}.object_config.json".format(object_name)
     return sim.pre_add_contact_test(object_handle, mn.Vector3(position))
 
 
 def contact_test_rotation(sim, object_name, position, rotation):
-    object_handle = "./data/test_assets/objects/{}.phys_properties.json".format(object_name)
+    #object_handle = "./data/test_assets/objects/{}.object_config.json".format(object_name)
+    object_handle = "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
     return sim.pre_add_contact_test(object_handle, mn.Vector3(position), quat_from_coeffs(rotation))
 
 
@@ -137,7 +139,7 @@ def build_episode(config, episode_id, objects, agent_position, agent_rotation, o
 def build_object(object_handle, object_id, object_name, is_receptacle, position, rotation):
     object_ = {
         "object": object_name,
-        "objectHandle": "/data/objects/{}.phys_properties.json".format(object_handle),
+        "objectHandle": "/data/objects/{}.object_config.json".format(object_handle),
         "objectIcon": "/data/test_assets/objects/{}.png".format(object_handle),
         "objectId": object_id,
         "isReceptacle": is_receptacle,
@@ -246,7 +248,8 @@ def is_less_than_island_radius_limit(sim, point):
 
 
 def add_contact_test_object(sim, object_name):
-    object_handle = "./data/test_assets/objects/{}.phys_properties.json".format(object_name)
+    #object_handle = "./data/test_assets/objects/{}.object_config.json".format(object_name)
+    object_handle = "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
     sim.add_contact_test_object(object_handle)
 
 

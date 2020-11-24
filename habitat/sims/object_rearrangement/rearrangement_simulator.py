@@ -42,7 +42,7 @@ class RearrangementSim(HabitatSim):
         super().__init__(config=config)
         self.nearest_object_id = -1
         self.gripped_object_id = -1
-        self.gripped_object_transformation = np.eye(4)
+        self.gripped_object_transformation = None
         self.agetn_object_handle = "cylinderSolid_rings_1_segments_12_halfLen_1_useTexCoords_false_useTangents_false_capEnds_true"
 
         agent_id = self.habitat_config.DEFAULT_AGENT_ID
@@ -114,7 +114,7 @@ class RearrangementSim(HabitatSim):
                 self.set_translation(object_pos, object_id)
                 self.set_rotation(object_rotation, object_id)
 
-                object_['object_handle'] = "data/test_assets/objects/{}".format(object_["object_template"].split('/')[-1])
+                object_['object_handle'] = "data/test_assets/objects/{}.object_config.json".format(object_handle)
                 self.add_object_in_scene(object_id, object_)
 
                 self.set_object_motion_type(MotionType.DYNAMIC, object_id)
@@ -150,7 +150,7 @@ class RearrangementSim(HabitatSim):
         return self.pre_add_contact_test(handle, translation, is_navigation_test)
 
     def is_agent_colliding(self, action, agentTransform):
-        stepSize = 0.25
+        stepSize = self.config.agents[0].action_space.FORWARD_STEP_SIZE
         if action == "move_forward":
             position = agentTransform.backward * (-1 * stepSize)
             newPosition = agentTransform.translation + position
@@ -306,10 +306,17 @@ class RearrangementSim(HabitatSim):
             self.set_translation(object_translation, object_id)
             self.set_rotation(object_rotation, object_id)
     
-    def update_drop_point(self):
-        position = self._default_agent.body.object.absolute_translation
-        position = mn.Vector3(position.x, position.y - 0.5, position.z)
-        self.update_drop_point_node(position)
+    def update_drop_point(self, replay_data=None):
+        if self.gripped_object_id == -1:
+            position = self._default_agent.body.object.absolute_translation
+            position = mn.Vector3(position.x, position.y - 0.5, position.z)
+            self.update_drop_point_node(position)
+        else:
+            #position = self.find_object_position_under_crosshair()
+            if "object_drop_point" in replay_data.keys() and len(replay_data["object_drop_point"]) > 0:
+                position = mn.Vector3(replay_data["object_drop_point"])
+                print("update droppoint: " + str(position))
+                self.update_drop_point_node(position)
 
     def step_from_replay(self, action: int, replay_data: Dict = {}):
         dt = 1.0 / 10.0
@@ -334,6 +341,9 @@ class RearrangementSim(HabitatSim):
                     self.update_object_in_scene(new_object_id, action_data["gripped_object_id"])
                     self.gripped_object_id = replay_data["gripped_object_id"]
                 elif replay_data["is_grab_action"]:
+                    self.gripped_object_transformation = self.get_transformation(
+                        action_data["gripped_object_id"]
+                    )
                     self.remove_object(action_data["gripped_object_id"])
                     self.gripped_object_id = replay_data["gripped_object_id"]
         elif action_spec.name == "no_op":
@@ -345,7 +355,7 @@ class RearrangementSim(HabitatSim):
             self._last_state = self._default_agent.get_state()
 
         self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
-        self.update_drop_point()
+        self.update_drop_point(replay_data)
 
         # obtain observations
         self._prev_sim_obs = self.get_sensor_observations()

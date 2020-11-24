@@ -2,6 +2,7 @@ import argparse
 import cv2
 import habitat
 import json
+import sys
 import time
 
 from habitat import Config
@@ -13,39 +14,6 @@ from threading import Thread
 from time import sleep
 
 config = habitat.get_config("configs/tasks/object_rearrangement.yaml")
-config.defrost()
-config.FORWARD_STEP_SIZE = 0.25
-config.TURN_ANGLE = 10.0
-config.TILT_ANGLE = 10.0
-config.SIMULATOR.TYPE = "RearrangementSim-v0"
-config.SIMULATOR.ACTION_SPACE_CONFIG = "RearrangementActions-v0"
-config.SIMULATOR.CROSSHAIR_POS = [320, 240]
-config.SIMULATOR.GRAB_DISTANCE = 1.5
-config.SIMULATOR.VISUAL_SENSOR = "rgb"
-config.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS = True
-config.TASK.TYPE = "RearrangementTask-v0"
-config.TASK.ACTIONS.MOVE_BACKWARD = Config()
-config.TASK.ACTIONS.MOVE_BACKWARD.TYPE = "MoveBackwardAction"
-config.TASK.ACTIONS.GRAB_RELEASE = Config()
-config.TASK.ACTIONS.GRAB_RELEASE.TYPE = "GrabOrReleaseAction"
-config.TASK.ACTIONS.NO_OP = Config()
-config.TASK.ACTIONS.NO_OP.TYPE = "NoOpAction"
-config.TASK.SUCCESS_DISTANCE = 1.0
-config.TASK.OBJECT_TO_GOAL_DISTANCE = Config()
-config.TASK.OBJECT_TO_GOAL_DISTANCE.TYPE = "ObjectToGoalDistance"
-config.TASK.AGENT_TO_OBJECT_DISTANCE = Config()
-config.TASK.AGENT_TO_OBJECT_DISTANCE.TYPE = "AgentToObjectDistance"
-config.TASK.SENSORS = [
-    "INSTRUCTION_SENSOR",
-]
-config.TASK.INSTRUCTION_SENSOR_UUID = "instruction"
-config.DATASET.TYPE = "RearrangementDataset-v0"
-config.DATASET.SPLIT = "train"
-config.DATASET.DATA_PATH = (
-    "data/datasets/object_rearrangement/v1/{split}/{split}.json.gz"
-)
-config.freeze()
-
 
 def make_video_cv2(
     observations, cross_hair=None, prefix="", open_vid=True, fps=15, output_path="./demos/"
@@ -161,7 +129,7 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.freeze()
-
+    
     observations = run_reference_replay(cfg, num_episodes=1)
     make_videos(observations, args.output_prefix)
 

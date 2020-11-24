@@ -67,6 +67,7 @@ def parse_replay_data_for_step_physics(data):
     replay_data = {}
     replay_data["action"] = "stepPhysics"
     replay_data["object_under_cross_hair"] = data["objectUnderCrosshair"]
+    replay_data["object_drop_point"] = data["objectDropPoint"]
     replay_data["object_states"] = []
     for object_state in data["objectStates"]:
         replay_data["object_states"].append({
