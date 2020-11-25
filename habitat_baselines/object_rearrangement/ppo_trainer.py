@@ -323,8 +323,6 @@ class RearrangementPPOTrainer(BaseRLTrainer):
             )
         )
 
-        sys.exit(1)
-
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,

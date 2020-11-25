@@ -37,6 +37,8 @@ RL:
     use_linear_clip_decay: True
     use_linear_lr_decay: True
     reward_window_size: 50
+  POLICY:
+    name: RearrangementBaselinePolicy
   REWARD_MEASURE: "distance_to_goal"
   SUCCESS_MEASURE: "spl"
   SLACK_REWARD: -0.01

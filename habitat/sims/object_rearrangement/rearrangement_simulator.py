@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import magnum as mn
+import sys
 from gym import spaces
 
 import habitat_sim
@@ -306,16 +307,14 @@ class RearrangementSim(HabitatSim):
             self.set_translation(object_translation, object_id)
             self.set_rotation(object_rotation, object_id)
     
-    def update_drop_point(self, replay_data=None):
-        if self.gripped_object_id == -1:
+    def update_drop_point(self, replay_data=None, show=False):
+        if self.gripped_object_id == -1 or show == False:
             position = self._default_agent.body.object.absolute_translation
             position = mn.Vector3(position.x, position.y - 0.5, position.z)
             self.update_drop_point_node(position)
         else:
-            #position = self.find_object_position_under_crosshair()
             if "object_drop_point" in replay_data.keys() and len(replay_data["object_drop_point"]) > 0:
                 position = mn.Vector3(replay_data["object_drop_point"])
-                print("update droppoint: " + str(position))
                 self.update_drop_point_node(position)
 
     def step_from_replay(self, action: int, replay_data: Dict = {}):
@@ -349,9 +348,22 @@ class RearrangementSim(HabitatSim):
         elif action_spec.name == "no_op":
             self.restore_object_states(replay_data["object_states"])
         else:
-            if not replay_data["collision"]:
-                self._default_agent.act(action)
-                collided = replay_data["collision"]
+            if action_spec.name == "look_up" or action_spec.name == "look_down":
+                sensor_data = replay_data["agent_state"]["sensor_data"]
+                for sensor_key, v in self._default_agent._sensors.items():
+                    rotation = None
+                    if sensor_key in sensor_data.keys():
+                        rotation = sensor_data[sensor_key]["rotation"]
+                    else:
+                        rotation = sensor_data["rgb"]["rotation"]
+                    rotation = quat_from_coeffs(rotation)
+                    agent_rotation = quat_to_magnum(rotation)
+                    v.object.rotation = agent_rotation
+            else:
+                success = self.set_agent_state(
+                    replay_data["agent_state"]["position"], replay_data["agent_state"]["rotation"], reset_sensors=False
+                )
+            collided = replay_data["collision"]
             self._last_state = self._default_agent.get_state()
 
         self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])

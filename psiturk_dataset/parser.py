@@ -59,6 +59,11 @@ def parse_replay_data_for_action(action, data):
         replay_data["object_under_cross_hair"] = data["objectUnderCrosshair"]
         replay_data["nearest_object_id"] = data["nearestObjectId"]
         replay_data["gripped_object_id"] = data["grippedObjectId"]
+    replay_data["agent_state"] = {
+        "position": data["agentState"]["position"],
+        "rotation": data["agentState"]["rotation"],
+        "sensor_data": data["agentState"]["sensorData"]
+    }
 
     return replay_data
 
@@ -68,6 +73,11 @@ def parse_replay_data_for_step_physics(data):
     replay_data["action"] = "stepPhysics"
     replay_data["object_under_cross_hair"] = data["objectUnderCrosshair"]
     replay_data["object_drop_point"] = data["objectDropPoint"]
+    replay_data["agent_state"] = {
+        "position": data["agentState"]["position"],
+        "rotation": data["agentState"]["rotation"],
+        "sensor_data": data["agentState"]["sensorData"]
+    }
     replay_data["object_states"] = []
     for object_state in data["objectStates"]:
         replay_data["object_states"].append({
