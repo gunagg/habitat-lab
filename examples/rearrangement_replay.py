@@ -9,42 +9,12 @@ from habitat import Config
 from habitat_sim.utils import viz_utils as vut
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_sim.utils.common import quat_to_coeffs
+from habitat.utils.visualizations.utils import make_video_cv2
 
 from threading import Thread
 from time import sleep
 
 config = habitat.get_config("configs/tasks/object_rearrangement.yaml")
-
-def make_video_cv2(
-    observations, cross_hair=None, prefix="dummmy", open_vid=True, fps=15, output_path="./demos/"
-):
-    sensor_keys = list(observations[0])
-    videodims = observations[0][sensor_keys[0]].shape
-    videodims = (videodims[1], videodims[0])  # flip to w,h order
-    print(videodims)
-    video_file = output_path + prefix + ".mp4"
-    print("Encoding the video: %s " % video_file)
-    writer = vut.get_fast_video_writer(video_file, fps=fps)
-    for ob in observations:
-        # If in RGB/RGBA format, remove the alpha channel
-        rgb_im_1st_person = cv2.cvtColor(ob["rgb"], cv2.COLOR_RGBA2RGB)
-        if cross_hair is not None:
-            rgb_im_1st_person[
-                cross_hair[0] - 2 : cross_hair[0] + 2,
-                cross_hair[1] - 2 : cross_hair[1] + 2,
-            ] = [255, 0, 0]
-
-        if rgb_im_1st_person.shape[:2] != videodims:
-            rgb_im_1st_person = cv2.resize(
-                rgb_im_1st_person, videodims, interpolation=cv2.INTER_AREA
-            )
-        # write the 1st person observation to video
-        writer.append_data(rgb_im_1st_person)
-    writer.close()
-
-    if open_vid:
-        print("Displaying video")
-        vut.display_video(video_file)
 
 
 def make_videos(observations_list, output_prefix):

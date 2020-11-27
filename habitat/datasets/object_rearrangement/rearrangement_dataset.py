@@ -13,7 +13,7 @@ from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.core.utils import not_none_validator
-from habitat.datasets.utils import VocabDict
+from habitat.datasets.utils import VocabFromText
 from habitat.tasks.object_rearrangement.rearrangement_task import InstructionData, RearrangementEpisode
 
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
@@ -26,7 +26,7 @@ class RearrangementDatasetV1(Dataset):
     """
 
     episodes: List[RearrangementEpisode]
-    instruction_vocab: VocabDict
+    instruction_vocab: VocabFromText
 
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
@@ -53,8 +53,14 @@ class RearrangementDatasetV1(Dataset):
     ) -> None:
 
         deserialized = json.loads(json_str)
+        self.instruction_vocab = VocabFromText(
+            sentences=deserialized["instruction_vocab"]["sentences"]
+        )
 
         for episode in deserialized["episodes"]:
+            instruction_text = episode["instruction"]["instruction_text"]
+            instruction_tokens = self.instruction_vocab.tokenize_and_index(instruction_text)
+            episode["instruction"]["instruction_tokens"] = instruction_tokens
             episode = RearrangementEpisode(**episode)
 
             if scenes_dir is not None:

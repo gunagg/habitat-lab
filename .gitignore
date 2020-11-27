@@ -90,3 +90,6 @@ data
 
 # demos
 demos/
+
+# training logs
+tb/

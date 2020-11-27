@@ -7,6 +7,8 @@
 import numpy as np
 import quaternion  # noqa # pylint: disable=unused-import
 
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
+
 
 def quaternion_to_rotation(q_r, q_i, q_j, q_k):
     r"""
@@ -46,3 +48,23 @@ def compute_pixel_coverage(instance_seg, object_id):
     cand_mask = instance_seg == object_id
     score = cand_mask.sum().astype(np.float64) / cand_mask.size
     return score
+
+
+def get_habitat_sim_action(action):
+    if action == "turnRight":
+        return HabitatSimActions.TURN_RIGHT
+    elif action == "turnLeft":
+        return HabitatSimActions.TURN_LEFT
+    elif action == "moveForward":
+        return HabitatSimActions.MOVE_FORWARD
+    elif action == "moveBackward":
+        return HabitatSimActions.MOVE_BACKWARD
+    elif action == "lookUp":
+        return HabitatSimActions.LOOK_UP
+    elif action == "lookDown":
+        return HabitatSimActions.LOOK_DOWN
+    elif action == "grabReleaseObject":
+        return HabitatSimActions.GRAB_RELEASE
+    elif action == "stepPhysics":
+        return HabitatSimActions.NO_OP
+    return HabitatSimActions.STOP

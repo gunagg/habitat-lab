@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import cv2
 import os
 import textwrap
 from typing import Dict, List, Optional, Tuple
@@ -15,6 +16,7 @@ import tqdm
 from habitat.core.logging import logger
 from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations import maps
+from habitat_sim.utils import viz_utils as vut
 
 cv2 = try_cv2_import()
 
@@ -245,3 +247,35 @@ def append_text_to_image(image: np.ndarray, text: str):
     text_image = blank_image[0 : y + 10, 0:w]
     final = np.concatenate((image, text_image), axis=0)
     return final
+
+
+def make_video_cv2(
+    observations, cross_hair=None, prefix="dummy", open_vid=True, fps=15, output_path="./demos/"
+):
+    sensor_keys = list(observations[0])
+    videodims = observations[0][sensor_keys[0]].shape
+    videodims = (videodims[1], videodims[0])  # flip to w,h order
+    print(videodims)
+    video_file = output_path + prefix + ".mp4"
+    print("Encoding the video: %s " % video_file)
+    writer = vut.get_fast_video_writer(video_file, fps=fps)
+    for ob in observations:
+        # If in RGB/RGBA format, remove the alpha channel
+        rgb_im_1st_person = cv2.cvtColor(ob["rgb"], cv2.COLOR_RGBA2RGB)
+        if cross_hair is not None:
+            rgb_im_1st_person[
+                cross_hair[0] - 2 : cross_hair[0] + 2,
+                cross_hair[1] - 2 : cross_hair[1] + 2,
+            ] = [255, 0, 0]
+
+        if rgb_im_1st_person.shape[:2] != videodims:
+            rgb_im_1st_person = cv2.resize(
+                rgb_im_1st_person, videodims, interpolation=cv2.INTER_AREA
+            )
+        # write the 1st person observation to video
+        writer.append_data(rgb_im_1st_person)
+    writer.close()
+
+    if open_vid:
+        print("Displaying video")
+        vut.display_video(video_file)

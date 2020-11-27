@@ -12,7 +12,7 @@ from habitat_baselines.il.trainers.eqa_cnn_pretrain_trainer import (
 from habitat_baselines.il.trainers.vqa_trainer import VQATrainer
 from habitat_baselines.rl.ddppo import DDPPOTrainer  # noqa: F401
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer, RolloutStorage
-from habitat_baselines.object_rearrangement.ppo_trainer import RearrangementPPOTrainer
+from habitat_baselines.object_rearrangement.il.behavior_cloning_trainer import RearrangementBCTrainer
 
 __all__ = [
     "BaseTrainer",
@@ -22,5 +22,5 @@ __all__ = [
     "RolloutStorage",
     "EQACNNPretrainTrainer",
     "VQATrainer",
-    "RearrangementPPOTrainer",
+    "RearrangementBCTrainer",
 ]

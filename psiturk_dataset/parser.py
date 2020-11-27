@@ -6,6 +6,8 @@ import gzip
 import json
 
 
+instruction_list = []
+
 def read_csv(path, delimiter=","):
     file = open(path, "r")
     reader = csv.reader(file, delimiter=delimiter)
@@ -32,6 +34,10 @@ def is_viewer_step(data):
         if data["type"] == "runStep" and data["step"] == "viewer":
             return True
     return False
+
+
+def append_instruction(instruction):
+    instruction_list.append(instruction)
 
 
 def get_object_states(data):
@@ -92,14 +98,6 @@ def parse_replay_data_for_step_physics(data):
         "sensor_data": data["agentState"]["sensorData"]
     }
     replay_data["object_states"] = get_object_states(data)
-    # replay_data["object_states"] = []
-    # for object_state in data["objectStates"]:
-    #     replay_data["object_states"].append({
-    #         "object_id": object_state["objectId"],
-    #         "translation": object_state["translation"],
-    #         "rotation": object_state["rotation"],
-    #         "motion_type": object_state["motionType"],
-    #     })
     return replay_data
 
 
@@ -125,9 +123,11 @@ def handle_step(step, episode, unique_id, episode_id):
                 object_data["is_receptacle"] = data["objects"][idx]["isReceptacle"]
                 episode["objects"].append(object_data)
 
+            instruction_text = data["task"]["instruction"]
             episode["instruction"] = {
-                "instruction_text": data["task"]["instruction"]
+                "instruction_text": instruction_text
             }
+            append_instruction(instruction_text)
             object_receptacle_map = {}
             if "goals" in data["task"].keys():
                 object_receptacle_map = data["task"]["goals"]["objectToReceptacleMap"]
@@ -178,6 +178,9 @@ def replay_to_episode(replay_path, output_path):
         reader = read_csv(file_path)
         episode = convert_to_episode(reader)
         all_episodes["episodes"].append(episode)
+    all_episodes["instruction_vocab"] = {
+        "sentences": list(set(instruction_list))
+    }
 
     print("Total episodes: {}".format(len(all_episodes["episodes"])))
     write_json(all_episodes, output_path)

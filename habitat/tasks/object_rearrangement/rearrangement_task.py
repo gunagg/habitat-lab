@@ -27,6 +27,7 @@ from habitat.sims.habitat_simulator.actions import (
 @attr.s(auto_attribs=True)
 class InstructionData:
     instruction_text: str
+    instruction_tokens: List[int]
 
 
 @attr.s(auto_attribs=True, kw_only=True)
