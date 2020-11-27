@@ -35,6 +35,7 @@ from habitat_baselines.utils.common import (
     linear_decay,
 )
 from habitat_baselines.utils.env_utils import construct_envs
+from habitat_baselines.object_rearrangement.data.dataset import RearrangementDataset
 
 
 @baseline_registry.register_trainer(name="ppo_object_rearrangement")
@@ -303,6 +304,10 @@ class RearrangementPPOTrainer(BaseRLTrainer):
             capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
             num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
         )
+        
+        print("\nBuilding datatset...")
+        dataset = RearrangementDataset(self.config)
+        print("\Dataset built...")
 
         self.envs = construct_envs(
             self.config, get_env_class(self.config.ENV_NAME)

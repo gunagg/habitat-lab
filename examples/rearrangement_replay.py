@@ -16,7 +16,7 @@ from time import sleep
 config = habitat.get_config("configs/tasks/object_rearrangement.yaml")
 
 def make_video_cv2(
-    observations, cross_hair=None, prefix="", open_vid=True, fps=15, output_path="./demos/"
+    observations, cross_hair=None, prefix="dummmy", open_vid=True, fps=15, output_path="./demos/"
 ):
     sensor_keys = list(observations[0])
     videodims = observations[0][sensor_keys[0]].shape

@@ -34,6 +34,18 @@ def is_viewer_step(data):
     return False
 
 
+def get_object_states(data):
+    object_states = []
+    for object_state in data["objectStates"]:
+        object_states.append({
+            "object_id": object_state["objectId"],
+            "translation": object_state["translation"],
+            "rotation": object_state["rotation"],
+            "motion_type": object_state["motionType"],
+        })
+    return object_states
+
+
 def parse_replay_data_for_action(action, data):
     replay_data = {}
     replay_data["action"] = action
@@ -64,6 +76,7 @@ def parse_replay_data_for_action(action, data):
         "rotation": data["agentState"]["rotation"],
         "sensor_data": data["agentState"]["sensorData"]
     }
+    replay_data["object_states"] = get_object_states(data)
 
     return replay_data
 
@@ -78,14 +91,15 @@ def parse_replay_data_for_step_physics(data):
         "rotation": data["agentState"]["rotation"],
         "sensor_data": data["agentState"]["sensorData"]
     }
-    replay_data["object_states"] = []
-    for object_state in data["objectStates"]:
-        replay_data["object_states"].append({
-            "object_id": object_state["objectId"],
-            "translation": object_state["translation"],
-            "rotation": object_state["rotation"],
-            "motion_type": object_state["motionType"],
-        })
+    replay_data["object_states"] = get_object_states(data)
+    # replay_data["object_states"] = []
+    # for object_state in data["objectStates"]:
+    #     replay_data["object_states"].append({
+    #         "object_id": object_state["objectId"],
+    #         "translation": object_state["translation"],
+    #         "rotation": object_state["rotation"],
+    #         "motion_type": object_state["motionType"],
+    #     })
     return replay_data
 
 

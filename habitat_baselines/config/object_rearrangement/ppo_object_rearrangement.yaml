@@ -17,6 +17,7 @@ CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: 10000
 LOG_INTERVAL: 10
 CHECKPOINT_INTERVAL: 50
+DATASET_PATH: "data/datasets/object_rearrangement/v0/{split}/{split}.db"
 
 RL:
   PPO:
@@ -39,7 +40,7 @@ RL:
     reward_window_size: 50
   POLICY:
     name: RearrangementBaselinePolicy
-  REWARD_MEASURE: "distance_to_goal"
+  REWARD_MEASURE: "object_to_goal_distance"
   SUCCESS_MEASURE: "spl"
   SLACK_REWARD: -0.01
   SUCCESS_REWARD: 1.0

@@ -27,7 +27,7 @@ from habitat.core.simulator import (
 )
 from habitat.core.spaces import Space
 from habitat_sim.nav import NavMeshSettings
-from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum
+from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, quat_to_coeffs, quat_from_magnum
 from habitat_sim.physics import MotionType
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
@@ -44,7 +44,7 @@ class RearrangementSim(HabitatSim):
         self.nearest_object_id = -1
         self.gripped_object_id = -1
         self.gripped_object_transformation = None
-        self.agetn_object_handle = "cylinderSolid_rings_1_segments_12_halfLen_1_useTexCoords_false_useTangents_false_capEnds_true"
+        self.agent_object_handle = "cylinderSolid_rings_1_segments_12_halfLen_1_useTexCoords_false_useTangents_false_capEnds_true"
 
         agent_id = self.habitat_config.DEFAULT_AGENT_ID
         agent_config = self._get_agent_config(agent_id)
@@ -68,12 +68,7 @@ class RearrangementSim(HabitatSim):
         self.grip_offset = np.eye(4)
         return self._sensor_suite.get_observations(sim_obs)
 
-    def _initialize_objects(self, sim_config):
-        # contact test object for agent
-        self.add_contact_test_object(self.agetn_object_handle)
-        objects = sim_config.objects
-        obj_attr_mgr = self.get_object_template_manager()
-
+    def remove_existing_objects(self):
         # first remove all existing objects
         existing_object_ids = self.get_existing_object_ids()
 
@@ -85,6 +80,14 @@ class RearrangementSim(HabitatSim):
                     self.remove_contact_test_object(object_["object_handle"])
             self.clear_recycled_object_ids()
             self.clear_scene_objects()
+
+    def _initialize_objects(self, sim_config):
+        # contact test object for agent
+        self.add_contact_test_object(self.agent_object_handle)
+        objects = sim_config.objects
+        obj_attr_mgr = self.get_object_template_manager()
+
+        self.remove_existing_objects()
 
         self.sim_objid_to_replay_objid_mapping = {}
         self.replay_objid_to_sim_objid_mapping = {}
@@ -147,6 +150,10 @@ class RearrangementSim(HabitatSim):
                 return self._scene_objects[index]
         return None
     
+    def check_object_exists_in_scene(self, object_id):
+        exists = object_id in self.get_existing_object_ids()
+        return exists
+    
     def is_collision(self, handle, translation, is_navigation_test = False):
         return self.pre_add_contact_test(handle, translation, is_navigation_test)
 
@@ -162,7 +169,7 @@ class RearrangementSim(HabitatSim):
             filterDiff = filteredPoint - newPosition
             # adding buffer of 0.1 y to avoid collision with navmesh
             finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.1, 0.0)
-            collision = self.is_collision(self.agetn_object_handle, finalPosition, True)
+            collision = self.is_collision(self.agent_object_handle, finalPosition, True)
             return {
                 "collision": collision,
                 "position": finalPosition
@@ -177,7 +184,7 @@ class RearrangementSim(HabitatSim):
             filterDiff = filteredPoint - newPosition
             # adding buffer of 0.1 y to avoid collision with navmesh
             finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.1, 0.0)
-            collision = self.is_collision(self.agetn_object_handle, finalPosition, True)
+            collision = self.is_collision(self.agent_object_handle, finalPosition, True)
             return {
                 "collision": collision,
                 "position": finalPosition
@@ -294,20 +301,54 @@ class RearrangementSim(HabitatSim):
         return observations
 
     def restore_object_states(self, object_states: Dict = {}):
+        object_ids = []
         for object_state in object_states:
             object_id = object_state["object_id"]
             translation = object_state["translation"]
-            rotation = object_state["rotation"]
+            object_rotation = object_state["rotation"]
 
             object_translation = mn.Vector3(translation)
-            if isinstance(rotation, list):
-                object_rotation = quat_from_coeffs(rotation)
+            if isinstance(object_rotation, list):
+                object_rotation = quat_from_coeffs(object_rotation)
 
             object_rotation = quat_to_magnum(object_rotation)
             self.set_translation(object_translation, object_id)
             self.set_rotation(object_rotation, object_id)
+            object_ids.append(object_id)
+        return object_ids
     
-    def update_drop_point(self, replay_data=None, show=False):
+    def get_current_object_states(self):
+        existing_object_ids = self.get_existing_object_ids()
+        object_states = []
+        for object_id in existing_object_ids:
+            translation = self.get_translation(object_id)
+            rotation = self.get_rotation(object_id)
+            rotation = quat_from_magnum(rotation)
+
+            object_state = {}
+            object_state["object_id"] = object_id
+            object_state["translation"] = np.array(translation).tolist()
+            object_state["rotation"] = quat_to_coeffs(rotation).tolist()
+            object_states.append(object_state)
+        return object_states
+    
+    def restore_sensor_states(self, sensor_data: Dict = {}):
+        for sensor_key, v in self._default_agent._sensors.items():
+            rotation = None
+            if sensor_key in sensor_data.keys():
+                rotation = sensor_data[sensor_key]["rotation"]
+            else:
+                rotation = sensor_data["rgb"]["rotation"]
+            rotation = quat_from_coeffs(rotation)
+            agent_rotation = quat_to_magnum(rotation)
+            v.object.rotation = agent_rotation
+    
+    def add_objects_by_handle(self, objects):
+        for object_ in objects:
+            object_handle = object_["object_handle"]
+            self.add_object_by_handle(object_handle)
+    
+    def update_drop_point(self, replay_data=None):
         if self.gripped_object_id == -1 or show == False:
             position = self._default_agent.body.object.absolute_translation
             position = mn.Vector3(position.x, position.y - 0.5, position.z)
@@ -350,15 +391,7 @@ class RearrangementSim(HabitatSim):
         else:
             if action_spec.name == "look_up" or action_spec.name == "look_down":
                 sensor_data = replay_data["agent_state"]["sensor_data"]
-                for sensor_key, v in self._default_agent._sensors.items():
-                    rotation = None
-                    if sensor_key in sensor_data.keys():
-                        rotation = sensor_data[sensor_key]["rotation"]
-                    else:
-                        rotation = sensor_data["rgb"]["rotation"]
-                    rotation = quat_from_coeffs(rotation)
-                    agent_rotation = quat_to_magnum(rotation)
-                    v.object.rotation = agent_rotation
+                self.restore_sensor_states(sensor_data)
             else:
                 success = self.set_agent_state(
                     replay_data["agent_state"]["position"], replay_data["agent_state"]["rotation"], reset_sensors=False
@@ -367,7 +400,6 @@ class RearrangementSim(HabitatSim):
             self._last_state = self._default_agent.get_state()
 
         self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
-        self.update_drop_point(replay_data)
 
         # obtain observations
         self._prev_sim_obs = self.get_sensor_observations()
@@ -376,3 +408,47 @@ class RearrangementSim(HabitatSim):
 
         observations = self._sensor_suite.get_observations(self._prev_sim_obs)
         return observations
+
+    def get_observations_at(
+        self,
+        position: Optional[List[float]] = None,
+        rotation: Optional[List[float]] = None,
+        sensor_states: Optional[List[Dict]] = None,
+        object_states: Optional[List[Dict]] = None,
+        keep_agent_at_new_pose: bool = False,
+    ) -> Optional[Observations]:
+        current_state = self.get_agent_state()
+        current_object_states = self.get_current_object_states()
+        if position is None or rotation is None:
+            success = True
+        else:
+            success = self.set_agent_state(
+                position, rotation, reset_sensors=False
+            )
+        self.restore_sensor_states(sensor_states)
+        current_state_objects = self.restore_object_states(object_states)
+
+        object_to_re_add = []
+        for object_id in self.get_existing_object_ids():
+            if object_id not in current_state_objects:
+                self.remove_object(object_id)
+                object_to_re_add.append(self.get_object_from_scene(object_id))
+
+        if success:
+            sim_obs = self.get_sensor_observations()
+
+            self._prev_sim_obs = sim_obs
+
+            observations = self._sensor_suite.get_observations(sim_obs)
+            if not keep_agent_at_new_pose:
+                self.set_agent_state(
+                    current_state.position,
+                    current_state.rotation,
+                    reset_sensors=False,
+                )
+                self.add_objects_by_handle(object_to_re_add)
+                self.restore_object_states(current_object_states)
+                
+            return observations
+        else:
+            return None
