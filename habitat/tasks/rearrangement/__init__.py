@@ -10,7 +10,7 @@ from habitat.core.registry import registry
 
 def _try_register_rearrangement_task():
     try:
-        from habitat.tasks.object_rearrangement.rearrangement_task import RearrangementTask  # noqa
+        from habitat.tasks.rearrangement.rearrangement import RearrangementTask  # noqa
     except ImportError as e:
         rearrangement_task_import_error = e
 

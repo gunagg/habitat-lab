@@ -11,6 +11,7 @@ from typing import Dict, List, Any
 import attr
 
 import habitat_sim
+from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
 from habitat.core.simulator import ActionSpaceConfiguration
 from habitat.core.utils import Singleton
@@ -41,10 +42,16 @@ class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
             HabitatSimActions.extend_action_space("MOVE_BACKWARD")
         if not HabitatSimActions.has_action("NO_OP"):
             HabitatSimActions.extend_action_space("NO_OP")
+        if not HabitatSimActions.has_action("STOP"):
+            HabitatSimActions.extend_action_space("STOP")
+        if not HabitatSimActions.has_action("START"):
+            HabitatSimActions.extend_action_space("START")
 
     def get(self):
         config = self.config
         new_config = {
+            HabitatSimActions.START: habitat_sim.ActionSpec("start"),
+            HabitatSimActions.STOP: habitat_sim.ActionSpec("stop"),
             HabitatSimActions.MOVE_FORWARD: habitat_sim.ActionSpec(
                 "move_forward",
                 habitat_sim.ActuationSpec(
@@ -82,7 +89,7 @@ class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
                     crosshair_pos=self.config.CROSSHAIR_POS,
                     amount=self.config.GRAB_DISTANCE,
                 ),
-            )
+            ),
         }
 
         config.update(new_config)
@@ -102,7 +109,7 @@ class NoOpAction(SimulatorTaskAction):
                 HabitatSimActions.NO_OP,
                 replay_data=kwargs["replay_data"]
             )
-        return self._sim.step(HabitatSimActions.NO_OP, data=kwargs["data"])
+        return self._sim.step(HabitatSimActions.NO_OP)
 
 
 @registry.register_task_action
@@ -131,3 +138,18 @@ class MoveBackwardAction(SimulatorTaskAction):
                 replay_data=kwargs["replay_data"]
             )
         return self._sim.step(HabitatSimActions.MOVE_BACKWARD, data=kwargs["data"])
+
+
+@registry.register_task_action
+class StartAction(SimulatorTaskAction):
+    name: str = "START"
+
+    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
+        task.is_start_called = False  # type: ignore
+
+    def step(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        task.is_start_called = True  # type: ignore
+        return self._sim.get_observations_at()  # type: ignore

@@ -12,10 +12,11 @@ import numpy as np
 from gym import spaces
 
 from habitat.config import Config
+from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, Simulator
 from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav import NavigationTask, merge_sim_episode_config
+from habitat.tasks.nav.nav import merge_sim_episode_config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import SimulatorTaskAction, Measure
 from habitat.sims.habitat_simulator.actions import (
@@ -55,6 +56,7 @@ class RearrangementObjectSpec(RearrangementSpec):
         default=None, validator=not_none_validator
     )
     motion_type: Optional[str] = attr.ib(default=None)
+    is_receptacle: Optional[bool] = attr.ib(default=None)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -118,10 +120,7 @@ class InstructionSensor(Sensor):
         episode: RearrangementEpisode,
         **kwargs
     ):
-        return {
-            "text": episode.instruction.instruction_text,
-            "reference_replay": episode.reference_replay,
-        }
+        return episode.instruction.instruction_tokens
 
     def get_observation(self, **kwargs):
         return self._get_observation(**kwargs)
@@ -158,17 +157,38 @@ class ObjectToGoalDistance(Measure):
 
     def update_metric(self, episode, *args: Any, **kwargs: Any):
         object_ids = self._sim.get_existing_object_ids()
-        if len(object_ids):
-            sim_obj_id = object_ids[0]
+        obj_id = -1
+        receptacle_id = -1
+        for object_id in object_ids:
+            scene_object = self._sim.get_object_from_scene(object_id)
+            if scene_object["is_receptacle"] == False:
+                obj_id = scene_object["object_id"]
+            else:
+                receptacle_id = scene_object["object_id"]
 
-            previous_position = np.array(
-                self._sim.get_translation(sim_obj_id)
+        if obj_id != -1:
+            object_position = np.array(
+                self._sim.get_translation(obj_id)
             ).tolist()
-            # goal_position = episode.goals.position
-            # self._metric = self._euclidean_distance(
-            #     previous_position, goal_position
-            # )
-            self._metric = 100
+
+            receptacle_position = np.array(
+                self._sim.get_translation(receptacle_id)
+            ).tolist()
+
+            self._metric = self._geo_dist(
+                object_position, receptacle_position
+            )
+        else:
+            receptacle_position = np.array(
+                self._sim.get_translation(receptacle_id)
+            ).tolist()
+
+            agent_state = self._sim.get_agent_state()
+            agent_position = agent_state.position
+
+            self._metric = self._geo_dist(
+                agent_position, receptacle_position
+            )
 
 
 @registry.register_measure
@@ -197,10 +217,19 @@ class AgentToObjectDistance(Measure):
             np.array(position_b) - np.array(position_a), ord=2
         )
 
+    def _geo_dist(self, src_pos, object_pos: np.array) -> float:
+        return self._sim.geodesic_distance(src_pos, [object_pos])
+
     def update_metric(self, episode, *args: Any, **kwargs: Any):
         object_ids = self._sim.get_existing_object_ids()
-        if len(object_ids):
-            sim_obj_id = object_ids[0]
+
+        sim_obj_id = -1
+        for object_id in object_ids:
+            scene_object = self._sim.get_object_from_scene(object_id)
+            if scene_object["is_receptacle"] == False:
+                sim_obj_id = scene_object["object_id"]
+
+        if sim_obj_id != -1:
             previous_position = np.array(
                 self._sim.get_translation(sim_obj_id)
             ).tolist()
@@ -208,9 +237,75 @@ class AgentToObjectDistance(Measure):
             agent_state = self._sim.get_agent_state()
             agent_position = agent_state.position
 
-            self._metric = self._euclidean_distance(
+            self._metric = self._geo_dist(
                 previous_position, agent_position
             )
+        else:
+            self._metric = 0
+
+
+@registry.register_measure
+class RearrangementSuccess(Measure):
+    r"""Whether or not the agent succeeded at its task
+
+    This measure depends on DistanceToGoal measure.
+    """
+
+    cls_uuid: str = "rearrangement_success"
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._config = config
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [ObjectToGoalDistance.cls_uuid]
+        )
+        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
+        distance_to_target = task.measurements.measures[
+            ObjectToGoalDistance.cls_uuid
+        ].get_metric()
+        object_ids = self._sim.get_existing_object_ids()
+
+        obj_id = -1
+        receptacle_id = -1
+        for object_id in object_ids:
+            scene_object = self._sim.get_object_from_scene(object_id)
+            if scene_object["is_receptacle"] == False:
+                obj_id = scene_object["object_id"]
+            else:
+                receptacle_id = scene_object["object_id"]
+
+        is_object_stacked = False
+        if obj_id != -1 and receptacle_id != -1:
+            object_position = self._sim.get_translation(obj_id)
+            receptacle_position = self._sim.get_translation(receptacle_id)
+
+            object_y = object_position.y
+            receptacle_y = receptacle_position.y + self._sim.get_object_bb_y_coord(receptacle_id)
+            is_object_stacked = (object_y > receptacle_y)
+
+        if (
+            hasattr(task, "is_stop_called")
+            and task.is_stop_called  # type: ignore
+            and distance_to_target <= self._config.SUCCESS_DISTANCE
+            and is_object_stacked
+        ):
+            self._metric = 1.0
+        else:
+            self._metric = 0.0
+
 
 def merge_sim_episode_with_object_config(
     sim_config: Config, episode: Type[Episode]
@@ -222,8 +317,9 @@ def merge_sim_episode_with_object_config(
 
     return sim_config
 
+
 @registry.register_task(name="RearrangementTask-v0")
-class RearrangementTask(NavigationTask):
+class RearrangementTask(EmbodiedTask):
     r"""Language based Object Rearrangement Task
     Goal: An agent must rearrange objects in a 3D environment
         specified by a natural language instruction.
@@ -233,6 +329,9 @@ class RearrangementTask(NavigationTask):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+
+    def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
+        return not getattr(self, "is_stop_called", False)
 
     def overwrite_sim_config(self, sim_config, episode):
         return merge_sim_episode_with_object_config(sim_config, episode)

@@ -16,7 +16,7 @@ def _try_register_rearrangement_sim():
         rearrangement_sim_import_error = e
 
     if has_habitat_sim:
-        from habitat.sims.object_rearrangement.actions import (  # noqa: F401
+        from habitat.sims.rearrangement.actions import (  # noqa: F401
             RearrangementSimV0ActionSpaceConfiguration,
         )
     else:

@@ -112,7 +112,10 @@ class RNNStateEncoder(nn.Module):
         # add t=0 and t=T to the list
         has_zeros = [0] + has_zeros + [t]
 
+        print(hidden_states.shape)
         hidden_states = self._unpack_hidden(hidden_states)
+        print("unpack:")
+        print(hidden_states.shape)
         outputs = []
         for i in range(len(has_zeros) - 1):
             # process steps that don't have any zeros in masks together

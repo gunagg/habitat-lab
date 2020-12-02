@@ -127,6 +127,8 @@ class BaseTrainer:
                         writer=writer,
                         checkpoint_index=prev_ckpt_ind,
                     )
+                    print("eval deone!!!")
+                print("eval complete!!!")
 
     def _eval_checkpoint(
         self,

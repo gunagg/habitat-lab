@@ -7,6 +7,7 @@
 import gzip
 import json
 import os
+import sys
 from typing import List, Optional
 
 from habitat.config import Config
@@ -14,7 +15,7 @@ from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.core.utils import not_none_validator
 from habitat.datasets.utils import VocabFromText
-from habitat.tasks.object_rearrangement.rearrangement_task import InstructionData, RearrangementEpisode
+from habitat.tasks.rearrangement.rearrangement import InstructionData, RearrangementEpisode
 
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 

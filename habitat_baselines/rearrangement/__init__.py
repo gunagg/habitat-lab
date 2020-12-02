@@ -4,6 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat_baselines.object_rearrangement.policy import RearrangementBaselinePolicy
+from habitat_baselines.rearrangement.policy import RearrangementBaselinePolicy
 
 __all__ = ["RearrangementBaselinePolicy"]

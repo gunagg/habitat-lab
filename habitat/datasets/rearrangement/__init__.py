@@ -10,7 +10,7 @@ from habitat.core.registry import registry
 
 def _try_register_rearrangement_dataset():
     try:
-        from habitat.datasets.object_rearrangement.rearrangement_dataset import (  # noqa: F401 isort:skip
+        from habitat.datasets.rearrangement.rearrangement_dataset import (  # noqa: F401 isort:skip
             RearrangementDatasetV1,
         )
     except ImportError as e:

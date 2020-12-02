@@ -984,7 +984,10 @@ class MoveForwardAction(SimulatorTaskAction):
         ``step``.
         """
         if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
-            return self._sim.step_from_replay(HabitatSimActions.MOVE_FORWARD, replay_data=kwargs["replay_data"])
+            return self._sim.step_from_replay(
+                HabitatSimActions.MOVE_FORWARD,
+                replay_data=kwargs["replay_data"]
+            )
         return self._sim.step(HabitatSimActions.MOVE_FORWARD)
 
 

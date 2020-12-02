@@ -133,7 +133,7 @@ class RearrangementRLEnv(habitat.RLEnv):
 
     def get_done(self, observations):
         done = False
-        if self._env.episode_over or self._episode_success():
+        if self._env.episode_over or self._episode_success() == -1000:
             done = True
         return done
 

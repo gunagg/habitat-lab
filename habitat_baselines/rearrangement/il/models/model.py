@@ -39,7 +39,7 @@ def build_mlp(
 class MultitaskCNN(nn.Module):
     def __init__(
         self,
-        num_actions: int = 41,
+        num_actions: int = 10,
         only_encoder: bool = False,
         pretrained: bool = True,
         checkpoint_path: str = "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt",
@@ -51,7 +51,7 @@ class MultitaskCNN(nn.Module):
         self.only_encoder = only_encoder
 
         self.conv_block1 = nn.Sequential(
-            nn.Conv2d(3, 8, 5),
+            nn.Conv2d(4, 8, 5),
             nn.BatchNorm2d(8),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2, 2),
@@ -119,7 +119,7 @@ class MultitaskCNN(nn.Module):
         conv4 = self.conv_block4(conv3)
 
         if self.only_encoder:
-            return conv4.view(-1, 32 * 12 * 12)
+            return conv4.view(-1, 32 * 26 * 36)
 
         features = self.classifier(conv4)
         features = features.view(-1, 512 * 32 * 22)
@@ -174,3 +174,99 @@ class InstructionLstmEncoder(nn.Module):
         H = hs.size(2)
         return hs.gather(1, idx).view(N, H)
 
+
+class RearrangementLstmCnnAttentionModel(nn.Module):
+    def __init__(
+        self,
+        instruction_vocab: Dict,
+        rearrangement_pretrain_ckpt_path: str,
+        freeze_encoder: bool = False,
+        image_feat_dim: int = 64,
+        instruction_wordvec_dim: int = 64,
+        instruction_hidden_dim: int = 64,
+        instruction_num_layers: int = 2,
+        instruction_dropout: float = 0.5,
+        fc_use_batchnorm: bool = False,
+        fc_dropout: float = 0.5,
+        fc_dims: Iterable = (64,),
+        num_actions: int = 10
+    ):
+        super(RearrangementLstmCnnAttentionModel, self).__init__()
+
+        cnn_kwargs = {
+            "num_actions": num_actions,
+            "only_encoder": True,
+            "pretrained": False,
+            "checkpoint_path": rearrangement_pretrain_ckpt_path,
+            "freeze_encoder": freeze_encoder,
+        }
+        self.cnn = MultitaskCNN(**cnn_kwargs)
+        self.cnn_fc_layer = nn.Sequential(
+            nn.Linear(32 * 26 * 36, 64), nn.ReLU(), nn.Dropout(p=0.5)
+        )
+
+        q_rnn_kwargs = {
+            "token_to_idx": instruction_vocab,
+            "wordvec_dim": instruction_wordvec_dim,
+            "rnn_dim": instruction_hidden_dim,
+            "rnn_num_layers": instruction_num_layers,
+            "rnn_dropout": instruction_dropout,
+        }
+        self.q_rnn = InstructionLstmEncoder(**q_rnn_kwargs)
+
+        self.img_tr = nn.Sequential(nn.Linear(64, 64), nn.Dropout(p=0.5))
+
+        self.instruction_tr = nn.Sequential(nn.Linear(64, 64), nn.Dropout(p=0.5))
+
+        classifier_kwargs = {
+            "input_dim": 64,
+            "hidden_dims": fc_dims,
+            "output_dim": num_actions,
+            "use_batchnorm": True,
+            "dropout": fc_dropout,
+            "add_sigmoid": False,
+        }
+        self.classifier = build_mlp(**classifier_kwargs)
+
+        self.att = nn.Sequential(
+            nn.Tanh(), nn.Dropout(p=0.5), nn.Linear(128, 1)
+        )
+
+    def forward(
+        self, images: torch.Tensor, instruction: torch.Tensor
+    ) -> Tuple[torch.tensor]:
+
+        images = torch.unsqueeze(images, 1)
+        N, T, _, _, _ = images.size()
+
+        # bs x 5 x 3 x 256 x 256
+        img_feats = self.cnn(
+            images.contiguous().view(
+                -1, images.size(2), images.size(3), images.size(4)
+            )
+        )
+
+        img_feats = self.cnn_fc_layer(img_feats)
+
+        img_feats_tr = self.img_tr(img_feats)
+        ques_feats = self.q_rnn(instruction)
+
+        ques_feats_repl = ques_feats.view(N, 1, -1).repeat(1, T, 1)
+        ques_feats_repl = ques_feats_repl.view(N * T, -1)
+
+        ques_feats_tr = self.instruction_tr(ques_feats_repl)
+
+        ques_img_feats = torch.cat([ques_feats_tr, img_feats_tr], 1)
+
+        att_feats = self.att(ques_img_feats)
+        att_probs = F.softmax(att_feats.view(N, T), dim=1)
+        att_probs2 = att_probs.view(N, T, 1).repeat(1, 1, 64)
+
+        att_img_feats = torch.mul(att_probs2, img_feats.view(N, T, 64))
+        att_img_feats = torch.sum(att_img_feats, dim=1)
+
+        mul_feats = torch.mul(ques_feats, att_img_feats)
+
+        scores = self.classifier(mul_feats)
+
+        return scores, att_probs
