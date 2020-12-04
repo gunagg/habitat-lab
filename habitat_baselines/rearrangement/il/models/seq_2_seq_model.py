@@ -1,4 +1,5 @@
 import math
+import sys
 from typing import Dict, Iterable, Tuple
 
 import torch
@@ -11,6 +12,7 @@ from habitat_baselines.rearrangement.il.models.encoders.instruction import Instr
 from habitat_baselines.rearrangement.il.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo.policy import Net
+from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
 
 
 class Seq2SeqNet(Net):
@@ -117,8 +119,6 @@ class Seq2SeqNet(Net):
         depth_embedding: [batch_size x DEPTH_ENCODER.output_size]
         rgb_embedding: [batch_size x RGB_ENCODER.output_size]
         """
-        print("\n\n\n\n")
-        print(observations["depth"].shape)
         instruction_embedding = self.instruction_encoder(observations)
         depth_embedding = self.depth_encoder(observations)
         rgb_embedding = self.rgb_encoder(observations)
@@ -139,6 +139,31 @@ class Seq2SeqNet(Net):
             x = torch.cat([x, prev_actions_embedding], dim=1)
 
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
-        print(x.shape)
 
         return x, rnn_hidden_states
+
+
+class Seq2SeqModel(nn.Module):
+    def __init__(
+        self, observation_space: Space, action_space: Space, model_config: Config
+    ):
+        super().__init__()
+        self.net = Seq2SeqNet(
+            observation_space=observation_space,
+            model_config=model_config,
+            num_actions=action_space.n,
+        )
+        self.action_distribution = CategoricalNet(
+            self.net.output_size, action_space.n
+        )
+        self.train()
+    
+    def forward(
+        self, observations, rnn_hidden_states, prev_actions, masks
+    ) -> CustomFixedCategorical:
+        features, rnn_hidden_states = self.net(
+            observations, rnn_hidden_states, prev_actions, masks
+        )
+        distribution = self.action_distribution(features)
+
+        return distribution, rnn_hidden_states

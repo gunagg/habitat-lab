@@ -73,6 +73,11 @@ class InstructionEncoder(nn.Module):
         """
         instruction = observations["instruction"].long()
 
+        if len(instruction.size()) == 3:
+            instruction = instruction.contiguous().view(
+                -1, instruction.size(2)
+            )
+
         lengths = (instruction != 0.0).long().sum(dim=1)
         embedded = self.embedding_layer(instruction)
 

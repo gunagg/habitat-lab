@@ -120,8 +120,14 @@ class SimpleDepthCNN(SimpleAllCNN):
         self._init_model(cnn_dims, output_size)
 
     def forward(self, observations):
+        obs_depth = observations["depth"]
+
+        if len(obs_depth.size()) == 5:
+            obs_depth = obs_depth.contiguous().view(
+                -1, obs_depth.size(2), obs_depth.size(3), obs_depth.size(4)
+            )
         # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-        depth_observations = observations["depth"].permute(0, 3, 1, 2)
+        depth_observations = obs_depth.permute(0, 3, 1, 2)
         return self.cnn(depth_observations)
 
 
@@ -142,7 +148,13 @@ class SimpleRGBCNN(SimpleAllCNN):
         self._init_model(cnn_dims, output_size)
 
     def forward(self, observations):
+        obs_rgb = observations["rgb"]
+
+        if len(obs_rgb.size()) == 5:
+            obs_rgb = obs_rgb.contiguous().view(
+                -1, obs_rgb.size(2), obs_rgb.size(3), obs_rgb.size(4)
+            )
         # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-        rgb_observations = observations["rgb"].permute(0, 3, 1, 2)
+        rgb_observations = obs_rgb.permute(0, 3, 1, 2)
         rgb_observations = rgb_observations / 255.0  # normalize RGB
         return self.cnn(rgb_observations)

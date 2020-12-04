@@ -137,7 +137,7 @@ class MoveBackwardAction(SimulatorTaskAction):
                 HabitatSimActions.MOVE_BACKWARD,
                 replay_data=kwargs["replay_data"]
             )
-        return self._sim.step(HabitatSimActions.MOVE_BACKWARD, data=kwargs["data"])
+        return self._sim.step(HabitatSimActions.MOVE_BACKWARD)
 
 
 @registry.register_task_action

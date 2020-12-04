@@ -101,7 +101,7 @@ class RNNStateEncoder(nn.Module):
 
         # steps in sequence which have zero for any agent. Assume t=0 has
         # a zero in it.
-        has_zeros = (masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu()
+        has_zeros = torch.nonzero((masks[1:] == 0.0).any(dim=-1)).squeeze().cpu()
 
         # +1 to correct the masks[1:]
         if has_zeros.dim() == 0:
@@ -112,10 +112,7 @@ class RNNStateEncoder(nn.Module):
         # add t=0 and t=T to the list
         has_zeros = [0] + has_zeros + [t]
 
-        print(hidden_states.shape)
         hidden_states = self._unpack_hidden(hidden_states)
-        print("unpack:")
-        print(hidden_states.shape)
         outputs = []
         for i in range(len(has_zeros) - 1):
             # process steps that don't have any zeros in masks together

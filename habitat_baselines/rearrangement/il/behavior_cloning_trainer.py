@@ -30,15 +30,16 @@ from habitat_baselines.common.obs_transformers import (
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rearrangement.data.dataset import RearrangementDataset
+from habitat_baselines.rearrangement.data.episode_dataset import RearrangementEpisodeDataset
 from habitat_baselines.rearrangement.il.models.model import RearrangementLstmCnnAttentionModel
-from habitat_baselines.rearrangement.il.models.seq_2_seq_model import Seq2SeqNet
-from habitat_baselines.rearrangement.il.policy import Seq2SeqPolicy
+from habitat_baselines.rearrangement.il.models.seq_2_seq_model import Seq2SeqNet, Seq2SeqModel
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
 )
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.utils import get_habitat_sim_action
 
 
 @baseline_registry.register_trainer(name="rearrangement-behavior-cloning")
@@ -160,10 +161,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                 state_index.pop(idx)
                 envs.pause_at(idx)
 
-            # indexing along the batch dimensions
-            # test_recurrent_hidden_states = test_recurrent_hidden_states[
-            #     :, state_index
-            # ]
             not_done_masks = not_done_masks[state_index]
             current_episode_reward = current_episode_reward[state_index]
             prev_actions = prev_actions[state_index]
@@ -184,7 +181,7 @@ class RearrangementBCTrainer(BaseILTrainer):
     
 
     def _setup_model(self, observation_space, action_space, model_config):
-        model = Seq2SeqPolicy(observation_space, action_space, model_config)
+        model = Seq2SeqModel(observation_space, action_space, model_config)
         return model
 
 
@@ -200,13 +197,13 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         
-        rearrangement_dataset = RearrangementDataset(config)
+        rearrangement_dataset = RearrangementEpisodeDataset(config)
         batch_size = config.IL.BehaviorCloning.batch_size
 
         train_loader = DataLoader(
             rearrangement_dataset,
             batch_size=batch_size,
-            shuffle=True,
+            shuffle=False,
         )
 
         logger.info(
@@ -221,7 +218,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         model_kwargs = {
             "num_actions": action_space.n,
             "instruction_vocab": instruction_vocab_dict.word2idx_dict,
-            "rearrangement_pretrain_ckpt_path": config.REARRANGEMENT_PRETRAIN_CKPT_PATH,
             "freeze_encoder": config.IL.BehaviorCloning.freeze_encoder,
         }
 
@@ -236,15 +232,10 @@ class RearrangementBCTrainer(BaseILTrainer):
             lr=float(config.IL.BehaviorCloning.lr),
         )
 
+        scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=20, gamma=0.9)
         action_loss = torch.nn.CrossEntropyLoss()
 
-        prev_actions = torch.zeros(
-            batch_size, 1, device=self.device, dtype=torch.long
-        )
-        not_done_masks = torch.zeros(
-            batch_size, 1, device=self.device
-        )
-        rnn_hidden_states = torch.zeros(
+        test_rnn_hidden_states = torch.zeros(
             1,
             self.envs.num_envs,
             config.MODEL.STATE_ENCODER.hidden_size,
@@ -275,20 +266,13 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                     optim.zero_grad()
 
-                    #obs_input = torch.cat([obs_rgb, obs_depth], dim=1)
-
                     obs_rgb = obs_rgb.to(self.device)
                     obs_depth = obs_depth.to(self.device)
                     obs_seg = obs_seg.to(self.device)
-                    #obs_input = obs_input.to(self.device)
                     obs_instruction_tokens = obs_instruction_tokens.to(self.device)
                     gt_next_action = gt_next_action.long().to(self.device)
                     gt_prev_action = gt_prev_action.long().to(self.device)
                     episode_dones = episode_done.long().to(self.device)
-
-                    print(gt_next_action)
-                    print(gt_prev_action)
-                    print(prev_actions.shape)
 
                     observations = {
                         "rgb": obs_rgb,
@@ -296,24 +280,11 @@ class RearrangementBCTrainer(BaseILTrainer):
                         "instruction": obs_instruction_tokens
                     }
 
-                    distribution, rnn_hidden_states = self.model(observations, rnn_hidden_states, prev_actions, not_done_masks)
+                    distribution, rnn_hidden_states = self.model(observations, test_rnn_hidden_states, gt_prev_action, episode_dones)
 
                     logits = distribution.logits
-                    loss = action_loss(logits, gt_next_action)
+                    loss = action_loss(logits, gt_next_action.squeeze(0))
                     actions = torch.argmax(softmax(logits), dim=1)
-                    print("\n\nactions shape:")
-                    print(actions.unsqueeze(1).shape)
-                    prev_actions.copy_(actions.unsqueeze(1))
-                    not_done_masks = torch.tensor(
-                        [[0.0] if done else [1.0] for done in episode_dones],
-                        dtype=torch.float,
-                        device=self.device,
-                    )
-                    print(not_done_masks.shape)
-
-                    print("Loss: {}".format(loss))
-
-                    #sys.exit(1)
 
                     avg_loss += loss.item()
 
@@ -328,6 +299,7 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                     loss.backward()
                     optim.step()
+                    scheduler.step()
 
                 end_time = time.time()
                 time_taken = "{:.1f}".format((end_time - start_time) / 60)
@@ -348,6 +320,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                     )
 
                 epoch += 1
+        self.envs.close()
 
     def _eval_checkpoint(
         self,
@@ -379,10 +352,11 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         
         rearrangement_dataset = RearrangementDataset(config)
+        batch_size = config.IL.BehaviorCloning.batch_size
 
         train_loader = DataLoader(
             rearrangement_dataset,
-            batch_size=config.IL.BehaviorCloning.batch_size,
+            batch_size=batch_size,
             shuffle=False,
         )
 
@@ -398,11 +372,14 @@ class RearrangementBCTrainer(BaseILTrainer):
         model_kwargs = {
             "num_actions": action_space.n,
             "instruction_vocab": instruction_vocab_dict.word2idx_dict,
-            "rearrangement_pretrain_ckpt_path": config.REARRANGEMENT_PRETRAIN_CKPT_PATH,
             "freeze_encoder": config.IL.BehaviorCloning.freeze_encoder,
         }
 
-        self.model = RearrangementLstmCnnAttentionModel(**model_kwargs)
+        self.model = self._setup_model(
+            self.envs.observation_spaces[0],
+            action_space,
+            config.MODEL
+        )
 
         # Map location CPU is almost always better than mapping to a CUDA device.
         ckpt_dict = torch.load(checkpoint_path)
@@ -417,10 +394,15 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
 
         prev_actions = torch.zeros(
-            self.config.NUM_PROCESSES, 1, device=self.device, dtype=torch.long
+            batch_size, 1, device=self.device, dtype=torch.long
         )
         not_done_masks = torch.zeros(
-            self.config.NUM_PROCESSES, 1, device=self.device
+            batch_size, 1, device=self.device
+        )
+        rnn_hidden_states = torch.zeros(
+            1,
+            self.envs.num_envs,
+            config.MODEL.STATE_ENCODER.hidden_size,
         )
         stats_episodes: Dict[
             Any, Any
@@ -454,25 +436,33 @@ class RearrangementBCTrainer(BaseILTrainer):
             and self.envs.num_envs > 0 and count < 50
         ):
             current_episodes = self.envs.current_episodes()
-
-            rgb_batch = batch["rgb"].permute(0, 3, 1, 2) / 255.0
-            depth_batch = batch["depth"].permute(0, 3, 1, 2)
-            instruction_batch = batch["instruction"]
-
-            obs_input = torch.cat([rgb_batch, depth_batch], dim=1)
-            obs_input = obs_input.to(self.device)
+            reference_replay = current_episodes[0].reference_replay
 
             with torch.no_grad():
                 (
-                    actions,
-                    _
+                    distribution,
+                    rnn_hidden_states
                 ) = self.model(
-                    obs_input,
-                    instruction_batch
+                    batch,
+                    rnn_hidden_states,
+                    prev_actions,
+                    not_done_masks
                 )
 
-                actions = torch.argmax(softmax(actions), dim=1)
-                prev_actions.copy_(actions)  # type: ignore
+                rnn_hidden_states = rnn_hidden_states.detach()
+
+                logits = distribution.logits
+                actions = torch.argmax(softmax(logits), dim=1)
+                prev_actions.copy_(actions.unsqueeze(1))
+            
+
+            gt_action = get_habitat_sim_action(reference_replay[count]["action"])
+            if gt_action != actions[0].item():
+                print("gt_action: {}, pred action: {}".format(gt_action, actions))
+                print("match: {}".format(gt_action == actions[0].item()))
+            elif gt_action != 8:
+                print("\n\n\ngt_action: {}, pred action: {}".format(gt_action, actions))
+                print("match: {}\n\n\n".format(gt_action == actions[0].item()))
 
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts

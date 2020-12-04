@@ -127,10 +127,10 @@ class InstructionSensor(Sensor):
 
 
 @registry.register_measure
-class ObjectToGoalDistance(Measure):
+class ObjectToReceptacleDistance(Measure):
     """The measure calculates distance of object towards the goal."""
 
-    cls_uuid: str = "object_to_goal_distance"
+    cls_uuid: str = "object_to_receptacle_distance"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -142,7 +142,7 @@ class ObjectToGoalDistance(Measure):
 
     @staticmethod
     def _get_uuid(*args: Any, **kwargs: Any):
-        return ObjectToGoalDistance.cls_uuid
+        return ObjectToReceptacleDistance.cls_uuid
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self.update_metric(*args, episode=episode, **kwargs)
@@ -245,6 +245,59 @@ class AgentToObjectDistance(Measure):
 
 
 @registry.register_measure
+class AgentToReceptacleDistance(Measure):
+    """The measure calculates the distance of receptacle from the agent"""
+
+    cls_uuid: str = "agent_to_receptacle_distance"
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._config = config
+
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args: Any, **kwargs: Any):
+        return AgentToReceptacleDistance.cls_uuid
+
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(
+            np.array(position_b) - np.array(position_a), ord=2
+        )
+
+    def _geo_dist(self, src_pos, object_pos: np.array) -> float:
+        return self._sim.geodesic_distance(src_pos, [object_pos])
+
+    def update_metric(self, episode, *args: Any, **kwargs: Any):
+        object_ids = self._sim.get_existing_object_ids()
+
+        sim_obj_id = -1
+        for object_id in object_ids:
+            scene_object = self._sim.get_object_from_scene(object_id)
+            if scene_object["is_receptacle"] == True:
+                sim_obj_id = scene_object["object_id"]
+
+        if sim_obj_id != -1:
+            previous_position = np.array(
+                self._sim.get_translation(sim_obj_id)
+            ).tolist()
+
+            agent_state = self._sim.get_agent_state()
+            agent_position = agent_state.position
+
+            self._metric = self._geo_dist(
+                previous_position, agent_position
+            )
+        else:
+            self._metric = 0
+
+
+@registry.register_measure
 class RearrangementSuccess(Measure):
     r"""Whether or not the agent succeeded at its task
 
@@ -266,7 +319,7 @@ class RearrangementSuccess(Measure):
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
-            self.uuid, [ObjectToGoalDistance.cls_uuid]
+            self.uuid, [ObjectToReceptacleDistance.cls_uuid]
         )
         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
@@ -274,7 +327,7 @@ class RearrangementSuccess(Measure):
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         distance_to_target = task.measurements.measures[
-            ObjectToGoalDistance.cls_uuid
+            ObjectToReceptacleDistance.cls_uuid
         ].get_metric()
         object_ids = self._sim.get_existing_object_ids()
 
