@@ -1,5 +1,6 @@
 import argparse
 import cv2
+import gzip
 import habitat
 import json
 import sys
@@ -23,6 +24,35 @@ def make_videos(observations_list, output_prefix):
         make_video_cv2(observations_list[idx], prefix=prefix)
 
 
+def write_gzip(input_path, output_path):
+    with open(input_path, "rb") as input_file:
+        with gzip.open(output_path + ".gz", "wb") as output_file:
+            output_file.writelines(input_file)
+
+
+def save_episode_replay(episodes, output_path):
+    episode_data = {
+        "episodes": []
+    }
+    for episode, reference_replay in episodes:
+        data = {}
+        data["episode_id"] = episode.episode_id
+        data["scene_id"] = episode.scene_id.split("/")[-1]
+        data["start_position"] = episode.start_position
+        data["start_rotation"] = episode.start_rotation
+        data["objects"] = episode.objects
+        data["instruction"] = {
+            "instruction_text": episode.instruction.instruction_text
+        }
+        data["goals"] = episode.goals
+        data["reference_replay"] = reference_replay
+        episode_data["episodes"].append(data)
+        
+    with open(output_path, "w") as f:
+        f.write(json.dumps(episode_data))
+    write_gzip(output_path, output_path)
+
+
 def get_habitat_sim_action(data):
     if data["action"] == "turnRight":
         return HabitatSimActions.TURN_RIGHT
@@ -43,14 +73,7 @@ def get_habitat_sim_action(data):
     return HabitatSimActions.STOP
 
 
-def log_action_data(data):
-    if data["action"] != "stepPhysics":
-        print("Action: {} - {} - {}".format(data["action"], i, restore_state))
-    else:
-        print("Action {} - {}".format(data["action"], i))
-
-
-def run_reference_replay(cfg, restore_state=False log_action=False, num_episodes=None):
+def rebuild_episode_replay(cfg, output_path, num_episodes=None):
     instructions = []
     with habitat.Env(cfg) as env:
         obs_list = []
@@ -58,6 +81,7 @@ def run_reference_replay(cfg, restore_state=False log_action=False, num_episodes
         if num_episodes is None:
             num_episodes = len(env.episodes)
 
+        episodes = []
         print("Total episodes: {}".format(len(env.episodes)))
         for ep_id in range(len(env.episodes)):
             observation_list = []
@@ -77,22 +101,25 @@ def run_reference_replay(cfg, restore_state=False log_action=False, num_episodes
                 "task": env.current_episode.instruction.instruction_text
             }
             instructions.append(data)
+            reference_replay = []
+            episode = env.current_episode
             for data in env.current_episode.reference_replay:
-                if log_action:
-                    log_action_data(data)
                 action = get_habitat_sim_action(data)
-                if not restore_state:
-                    observations = env.step(action=action, replay_data=data)
-                else:
-                    agent_state = data["agent_state"]
-                    sensor_states = data["agent_state"]["sensor_data"]
-                    object_states = data["object_states"]
-                    observations = env._sim.get_observations_at(agent_state["position"], agent_state["rotation"], sensor_states, object_states)
+                observations = env.step(action=action, replay_data=data)
                 observation_list.append(observations)
+
+                agent_state = env._sim.get_agent_pose()
+                object_states = env._sim.get_current_object_states()
+                data["agent_state"] = agent_state
+                data["object_states"] = object_states
+                reference_replay.append(data)
                 i+=1
+            episodes.append((episode, reference_replay))
             obs_list.append(observation_list)
         inst_file = open("instructions.json", "w")
         inst_file.write(json.dumps(instructions))
+        
+        save_episode_replay(episodes, output_path)
         return obs_list
 
 
@@ -105,18 +132,15 @@ def main():
         "--output-prefix", type=str, default="demo"
     )
     parser.add_argument(
-        "--restore-state", dest='restore_state', action='store_true'
-    )
-    parser.add_argument(
-        "--log-action", dest='log_action', action='store_true'
+        "--output-path", type=str, default="task_1.json"
     )
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.freeze()
-
-    observations = run_reference_replay(cfg, args.restore_state, args.log_action, num_episodes=1)
+    
+    observations = rebuild_episode_replay(cfg, output_path=args.output_path, num_episodes=1)
     make_videos(observations, args.output_prefix)
 
 if __name__ == "__main__":

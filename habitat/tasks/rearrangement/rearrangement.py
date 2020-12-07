@@ -166,7 +166,9 @@ class ObjectToReceptacleDistance(Measure):
             else:
                 receptacle_id = scene_object["object_id"]
 
-        if obj_id != -1:
+        if receptacle_id == -1:
+            self._metric = 100
+        elif obj_id != -1:
             object_position = np.array(
                 self._sim.get_translation(obj_id)
             ).tolist()
@@ -294,7 +296,7 @@ class AgentToReceptacleDistance(Measure):
                 previous_position, agent_position
             )
         else:
-            self._metric = 0
+            self._metric = 100
 
 
 @registry.register_measure

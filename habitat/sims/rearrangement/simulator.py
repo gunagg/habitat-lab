@@ -324,13 +324,32 @@ class RearrangementSim(HabitatSim):
             translation = self.get_translation(object_id)
             rotation = self.get_rotation(object_id)
             rotation = quat_from_magnum(rotation)
+            scene_object = self.get_object_from_scene(object_id)
 
             object_state = {}
             object_state["object_id"] = object_id
             object_state["translation"] = np.array(translation).tolist()
             object_state["rotation"] = quat_to_coeffs(rotation).tolist()
+            object_state["object_handle"] = scene_object["object_handle"]
             object_states.append(object_state)
         return object_states
+    
+    def get_agent_pose(self):
+        agent_translation = self._default_agent.body.object.translation
+        agent_rotation = self._default_agent.body.object.rotation
+        sensor_data = {}
+        for sensor_key, v in self._default_agent._sensors.items():
+            rotation = quat_from_magnum(v.object.rotation)
+            rotation = quat_to_coeffs(rotation).tolist()
+            sensor_data[sensor_key] = {
+                "rotation": rotation
+            }
+        
+        return {
+            "position": np.array(agent_translation).tolist(),
+            "rotation": quat_to_coeffs(quat_from_magnum(agent_rotation)).tolist(),
+            "sensor_data": sensor_data
+        }
     
     def restore_sensor_states(self, sensor_data: Dict = {}):
         for sensor_key, v in self._default_agent._sensors.items():
@@ -389,17 +408,22 @@ class RearrangementSim(HabitatSim):
         elif action_spec.name == "no_op":
             self.restore_object_states(replay_data["object_states"])
         else:
-            if action_spec.name == "look_up" or action_spec.name == "look_down":
-                sensor_data = replay_data["agent_state"]["sensor_data"]
-                self.restore_sensor_states(sensor_data)
+            if "agent_state" in replay_data.keys():
+                if action_spec.name == "look_up" or action_spec.name == "look_down":
+                    sensor_data = replay_data["agent_state"]["sensor_data"]
+                    self.restore_sensor_states(sensor_data)
+                else:
+                    success = self.set_agent_state(
+                        replay_data["agent_state"]["position"], replay_data["agent_state"]["rotation"], reset_sensors=False
+                    )
+                collided = replay_data["collision"]
+                self._last_state = self._default_agent.get_state()
             else:
-                success = self.set_agent_state(
-                    replay_data["agent_state"]["position"], replay_data["agent_state"]["rotation"], reset_sensors=False
-                )
-            collided = replay_data["collision"]
-            self._last_state = self._default_agent.get_state()
+                collided = replay_data["collision"]
+                if not collided:
+                    self._default_agent.act(action)
 
-        self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
+        #self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
 
         # obtain observations
         self._prev_sim_obs = self.get_sensor_observations()
