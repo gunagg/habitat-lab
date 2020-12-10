@@ -4,9 +4,11 @@ import copy
 import glob
 import gzip
 import json
+import sys
 
 
 instruction_list = []
+unique_action_combo_map = {}
 
 def read_csv(path, delimiter=","):
     file = open(path, "r")
@@ -26,7 +28,16 @@ def write_gzip(input_path, output_path):
 
 
 def column_to_json(col):
+    if col is None:
+        return None
     return json.loads(col)
+
+
+def get_csv_rows(csv_reader):
+    rows = []
+    for row in csv_reader:
+        rows.append(row)
+    return rows
 
 
 def is_viewer_step(data):
@@ -50,6 +61,16 @@ def get_object_states(data):
             "motion_type": object_state["motionType"],
         })
     return object_states
+
+
+def get_action(data):
+    if data is None:
+        return None
+    return data.get("action")
+
+
+def is_physics_step(action):
+    return (action == "stepPhysics")
 
 
 def parse_replay_data_for_action(action, data):
@@ -77,12 +98,13 @@ def parse_replay_data_for_action(action, data):
         replay_data["object_under_cross_hair"] = data["objectUnderCrosshair"]
         replay_data["nearest_object_id"] = data["nearestObjectId"]
         replay_data["gripped_object_id"] = data["grippedObjectId"]
-    replay_data["agent_state"] = {
-        "position": data["agentState"]["position"],
-        "rotation": data["agentState"]["rotation"],
-        "sensor_data": data["agentState"]["sensorData"]
-    }
-    replay_data["object_states"] = get_object_states(data)
+    if "agentState" in data.keys():
+        replay_data["agent_state"] = {
+            "position": data["agentState"]["position"],
+            "rotation": data["agentState"]["rotation"],
+            "sensor_data": data["agentState"]["sensorData"]
+        }
+        replay_data["object_states"] = get_object_states(data)
 
     return replay_data
 
@@ -91,18 +113,18 @@ def parse_replay_data_for_step_physics(data):
     replay_data = {}
     replay_data["action"] = "stepPhysics"
     replay_data["object_under_cross_hair"] = data["objectUnderCrosshair"]
-    replay_data["object_drop_point"] = data["objectDropPoint"]
-    replay_data["agent_state"] = {
-        "position": data["agentState"]["position"],
-        "rotation": data["agentState"]["rotation"],
-        "sensor_data": data["agentState"]["sensorData"]
-    }
+    #replay_data["object_drop_point"] = data["objectDropPoint"]
+    if "agentState" in data.keys():
+        replay_data["agent_state"] = {
+            "position": data["agentState"]["position"],
+            "rotation": data["agentState"]["rotation"],
+            "sensor_data": data["agentState"]["sensorData"]
+        }
     replay_data["object_states"] = get_object_states(data)
     return replay_data
 
 
-def handle_step(step, episode, unique_id, episode_id):
-
+def handle_step(step, episode, unique_id, timestamp):
     if step.get("event"):
         if step["event"] == "setEpisode":
             data = copy.deepcopy(step["data"]["episode"])
@@ -138,17 +160,18 @@ def handle_step(step, episode, unique_id, episode_id):
 
         elif step["event"] == "handleAction":
             data = parse_replay_data_for_action(step["data"]["action"], step["data"])
+            data["timestamp"] = timestamp
             episode["reference_replay"].append(data)
 
-        elif (step["event"] == "stepPhysics"):
+        elif is_physics_step(step["event"]):
             data = parse_replay_data_for_step_physics(step["data"])
+            data["timestamp"] = timestamp
             episode["reference_replay"].append(data)
 
     elif step.get("type"):
         if step["type"] == "finishStep":
             return True
     return False
-
 
 
 def convert_to_episode(csv_reader):
@@ -164,9 +187,81 @@ def convert_to_episode(csv_reader):
             viewer_step = is_viewer_step(data)
 
         if viewer_step:
-            is_viewer_step_finished = handle_step(data, episode, unique_id, 0)
-
+            is_viewer_step_finished = handle_step(data, episode, unique_id, timestamp)
+    
+    episode["reference_replay"] = post_process_episode(copy.deepcopy(episode["reference_replay"]))
     return episode
+
+
+def merge_replay_data_for_action(action_data_list):
+    if len(action_data_list) == 1:
+        return action_data_list[0]
+
+    first_action_data = action_data_list[0]
+    action = first_action_data["action"]
+    last_action_data = action_data_list[-1]
+
+    if len(action_data_list) == 2:
+        last_action_data["action"] = action
+        if action == "grabReleaseObject":
+            last_action_data["action_data"] = first_action_data["action_data"]
+            last_action_data["is_grab_action"] = first_action_data["is_grab_action"]
+            last_action_data["is_release_action"] = first_action_data["is_release_action"]
+            last_action_data["object_under_cross_hair"] = first_action_data["object_under_cross_hair"]
+            last_action_data["gripped_object_id"] = first_action_data["gripped_object_id"]
+        else:
+            last_action_data["collision"] = first_action_data["collision"]
+            last_action_data["object_under_cross_hair"] = first_action_data["object_under_cross_hair"]
+            last_action_data["nearest_object_id"] = first_action_data["nearest_object_id"]
+        return last_action_data
+
+    if len(action_data_list) == 3:
+        new_action = "{}Twice".format(action)
+        next_action_data = action_data_list[1]
+        next_action = next_action_data["action"]
+        if action != next_action:
+            new_action = "{}{}".format(action, next_action)
+            #print("\n2 Different actions between physics step - {}".format(new_action))
+            #sys.exit(1)
+
+        last_action_data["action"] = new_action
+        if action != "grabReleaseObject":
+            last_action_data["collision"] = next_action_data["collision"]
+        else:
+            print("\nGrab relase action between physics step")
+            sys.exit(1)
+
+        return last_action_data
+    return None
+
+
+def post_process_episode(reference_replay):
+    i = 0
+    post_processed_ref_replay = []
+    unique_action_combo_map = {}
+    while i < len(reference_replay):
+        data = reference_replay[i]
+        action = get_action(data)
+
+        if not is_physics_step(action):
+            old_i = i
+            action_data_list = [data]
+            while i < len(reference_replay) and not is_physics_step(get_action(data)):
+                data = reference_replay[i + 1]
+                action_data_list.append(data)
+                i += 1
+            data = merge_replay_data_for_action(copy.deepcopy(action_data_list))
+            if len(action_data_list) == 3:
+                action_str = "".join([dd.get("action") for dd in action_data_list])
+                if not data["action"] in unique_action_combo_map.keys():
+                    unique_action_combo_map[data["action"]] = 0
+                unique_action_combo_map[data["action"]] += 1
+                #print([dd.get("action") for dd in action_data_list], data["action"], old_i)
+
+        post_processed_ref_replay.append(data)
+        i += 1
+    print(unique_action_combo_map, len(reference_replay))
+    return post_processed_ref_replay
 
 
 def replay_to_episode(replay_path, output_path):
@@ -181,6 +276,9 @@ def replay_to_episode(replay_path, output_path):
     all_episodes["instruction_vocab"] = {
         "sentences": list(set(instruction_list))
     }
+    print("unique action combo map:\n")
+    for key, v in unique_action_combo_map.items():
+        print(key)
 
     print("Total episodes: {}".format(len(all_episodes["episodes"])))
     write_json(all_episodes, output_path)

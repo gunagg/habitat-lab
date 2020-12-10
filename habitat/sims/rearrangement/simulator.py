@@ -280,7 +280,7 @@ class RearrangementSim(HabitatSim):
                 self.remove_object(nearest_object_id)
                 self.gripped_object_id = nearest_object_id
         elif action_spec.name == "no_op":
-            super().step_world(action_spec.actuation.amount)
+            pass
         else:
             agent_transform = self._default_agent.body.object.transformation
             data = self.is_agent_colliding(action_spec.name, agent_transform)
@@ -289,8 +289,8 @@ class RearrangementSim(HabitatSim):
                 collided = data["collision"]
                 self._last_state = self._default_agent.get_state()
 
-        object_id = self.get_object_under_cross_hair()
-        self.draw_bb_around_nearest_object(object_id)
+        # step world physics
+        super().step_world(dt)
 
         # obtain observations
         self._prev_sim_obs = self.get_sensor_observations()
@@ -384,6 +384,7 @@ class RearrangementSim(HabitatSim):
 
         agent_config = self._default_agent.agent_config
         action_spec = agent_config.action_space[action]
+        print(action, action_spec.name, action_spec.actuation.amount)
 
         if action_spec.name == "grab_or_release_object_under_crosshair":
             action_data = replay_data["action_data"]
@@ -391,6 +392,7 @@ class RearrangementSim(HabitatSim):
                 if replay_data["is_release_action"]:
                     # Fetch object handle and drop point from replay
                     new_object_position = mn.Vector3(action_data["new_object_translation"])
+                    new_object_position.y = new_object_position.y + 0.5
                     scene_object = self.get_object_from_scene(action_data["gripped_object_id"])
                     new_object_id = self.add_object_by_handle(
                         scene_object["object_handle"]
