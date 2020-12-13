@@ -19,6 +19,21 @@ from PIL import Image
 config = habitat.get_config("configs/tasks/object_rearrangement.yaml")
 
 
+def save_grab_release_frames(env, i):
+    if i + 1 <= len(env.current_episode.reference_replay) - 1:
+        prev_action = env.current_episode.reference_replay[i - 1]
+        prev_prev_action = env.current_episode.reference_replay[i - 2]
+        if data["action"] == "grabReleaseObject":
+            im = Image.fromarray(observations["rgb"])
+            im.save('outfile{}.jpg'.format(i))
+        if prev_action["action"] == "grabReleaseObject" and data["action"] == "stepPhysics":
+            im = Image.fromarray(observations["rgb"])
+            im.save('outfile{}.jpg'.format(i))
+        if prev_prev_action["action"] == "grabReleaseObject" and prev_action["action"] == "stepPhysics":
+            im = Image.fromarray(observations["rgb"])
+            im.save('outfile{}.jpg'.format(i))
+
+
 def make_videos(observations_list, output_prefix):
     for idx in range(len(observations_list)):
         prefix = output_prefix + "_{}".format(idx)
@@ -99,20 +114,6 @@ def run_reference_replay(cfg, restore_state=False, log_action=False, num_episode
                     sensor_states = data["agent_state"]["sensor_data"]
                     object_states = data["object_states"]
                     observations = env._sim.get_observations_at(agent_state["position"], agent_state["rotation"], sensor_states, object_states)
-                
-                if i + 1 <= len(env.current_episode.reference_replay) - 1:
-                    prev_action = env.current_episode.reference_replay[i - 1]
-                    prev_prev_action = env.current_episode.reference_replay[i - 2]
-                    if data["action"] == "grabReleaseObject":
-                        im = Image.fromarray(observations["rgb"])
-                        im.save('outfile{}.jpg'.format(i))
-                    if prev_action["action"] == "grabReleaseObject" and data["action"] == "stepPhysics":
-                        im = Image.fromarray(observations["rgb"])
-                        im.save('outfile{}.jpg'.format(i))
-                    if prev_prev_action["action"] == "grabReleaseObject" and prev_action["action"] == "stepPhysics":
-                        im = Image.fromarray(observations["rgb"])
-                        im.save('outfile{}.jpg'.format(i))
-                        
                 observation_list.append(observations)
                 i+=1
             obs_list.append(observation_list)

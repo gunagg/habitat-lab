@@ -61,7 +61,7 @@ class RearrangementSim(HabitatSim):
     def reset(self):
         sim_obs = super().reset()
         if self._update_agents_state():
-            sim_obs = self.get_sensor_observations()
+            sim_obs = self.get_sensor_observations(agent_ids=self._default_agent_id)
 
         self._prev_sim_obs = sim_obs
         self.did_reset = True
@@ -293,7 +293,7 @@ class RearrangementSim(HabitatSim):
         super().step_world(dt)
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations()
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self._default_agent_id)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 
@@ -384,11 +384,10 @@ class RearrangementSim(HabitatSim):
 
         agent_config = self._default_agent.agent_config
         action_spec = agent_config.action_space[action]
-        print(action, action_spec.name, action_spec.actuation.amount)
 
         if action_spec.name == "grab_or_release_object_under_crosshair":
             action_data = replay_data["action_data"]
-            if action_data["gripped_object_id"] != -1:
+            if len(action_data.keys()) == 0 or action_data["gripped_object_id"] != -1:
                 if replay_data["is_release_action"]:
                     # Fetch object handle and drop point from replay
                     new_object_position = mn.Vector3(action_data["new_object_translation"])
@@ -425,10 +424,10 @@ class RearrangementSim(HabitatSim):
                 if not collided:
                     self._default_agent.act(action)
 
-        #self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
+        self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations()
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self._default_agent_id, draw_crosshair=True)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 
@@ -461,7 +460,7 @@ class RearrangementSim(HabitatSim):
                 object_to_re_add.append(self.get_object_from_scene(object_id))
 
         if success:
-            sim_obs = self.get_sensor_observations()
+            sim_obs = self.get_sensor_observations(agent_ids=self._default_agent_id)
 
             self._prev_sim_obs = sim_obs
 

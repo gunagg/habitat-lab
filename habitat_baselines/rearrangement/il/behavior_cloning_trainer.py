@@ -29,6 +29,7 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+from habitat_baselines.rearrangement.common.aux_losses import AuxLosses
 from habitat_baselines.rearrangement.data.dataset import RearrangementDataset
 from habitat_baselines.rearrangement.data.episode_dataset import RearrangementEpisodeDataset
 from habitat_baselines.rearrangement.il.models.model import RearrangementLstmCnnAttentionModel
@@ -215,12 +216,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         instruction_vocab_dict = rearrangement_dataset.get_vocab_dict()
         action_space = self.envs.action_spaces[0]
 
-        model_kwargs = {
-            "num_actions": action_space.n,
-            "instruction_vocab": instruction_vocab_dict.word2idx_dict,
-            "freeze_encoder": config.IL.BehaviorCloning.freeze_encoder,
-        }
-
         self.model = self._setup_model(
             self.envs.observation_spaces[0],
             action_space,
@@ -233,7 +228,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
 
         scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=20, gamma=0.9)
-        action_loss = torch.nn.CrossEntropyLoss()
+        cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
         test_rnn_hidden_states = torch.zeros(
             1,
@@ -243,6 +238,7 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
+        AuxLosses.activate()
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
@@ -261,10 +257,12 @@ class RearrangementBCTrainer(BaseILTrainer):
                      obs_instruction_tokens,
                      gt_next_action,
                      gt_prev_action,
-                     episode_done
+                     episode_done,
+                     inflec_weights
                     ) = batch
 
                     optim.zero_grad()
+                    AuxLosses.clear()
 
                     obs_rgb = obs_rgb.to(self.device)
                     obs_depth = obs_depth.to(self.device)
@@ -273,6 +271,12 @@ class RearrangementBCTrainer(BaseILTrainer):
                     gt_next_action = gt_next_action.long().to(self.device)
                     gt_prev_action = gt_prev_action.long().to(self.device)
                     episode_dones = episode_done.long().to(self.device)
+                    inflec_weights = inflec_weights.long().to(self.device)
+
+                    # print("\n\n\n")
+                    # print(inflec_weights.shape)
+                    # print(inflec_weights)
+                    # print("\n\n\n")
 
                     observations = {
                         "rgb": obs_rgb,
@@ -283,8 +287,19 @@ class RearrangementBCTrainer(BaseILTrainer):
                     distribution, rnn_hidden_states = self.model(observations, test_rnn_hidden_states, gt_prev_action, episode_dones)
 
                     logits = distribution.logits
-                    loss = action_loss(logits, gt_next_action.squeeze(0))
-                    actions = torch.argmax(softmax(logits), dim=1)
+                    #print(logits.shape)
+                    action_loss = cross_entropy_loss(logits, gt_next_action.squeeze(0))
+
+                    action_loss = ((inflec_weights * action_loss).sum(1) / inflec_weights.sum(1)).mean()
+                    # print("action loss")
+                    # print(inflec_weights.shape, action_loss.shape)
+                    #print(inflec_weights.sum(1), (inflec_weights * action_loss).sum(1))
+                    #print("action loss\n\n")
+                    aux_mask = (inflec_weights > 0).view(-1)
+
+                    aux_loss = AuxLosses.reduce(aux_mask)
+                    loss = action_loss + aux_loss
+                    #print(action_loss, aux_loss)
 
                     avg_loss += loss.item()
 

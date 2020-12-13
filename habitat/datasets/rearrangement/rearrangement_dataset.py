@@ -54,14 +54,14 @@ class RearrangementDatasetV1(Dataset):
     ) -> None:
 
         deserialized = json.loads(json_str)
-        #self.instruction_vocab = VocabFromText(
-        #    sentences=deserialized["instruction_vocab"]["sentences"]
-        #)
+        self.instruction_vocab = VocabFromText(
+           sentences=deserialized["instruction_vocab"]["sentences"]
+        )
 
         for episode in deserialized["episodes"]:
             instruction_text = episode["instruction"]["instruction_text"]
-            #instruction_tokens = self.instruction_vocab.tokenize_and_index(instruction_text)
-            episode["instruction"]["instruction_tokens"] = []
+            instruction_tokens = self.instruction_vocab.tokenize_and_index(instruction_text)
+            episode["instruction"]["instruction_tokens"] = instruction_tokens
             episode = RearrangementEpisode(**episode)
 
             if scenes_dir is not None:

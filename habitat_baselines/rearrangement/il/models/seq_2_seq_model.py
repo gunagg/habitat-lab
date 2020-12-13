@@ -9,6 +9,10 @@ import torch.nn.functional as F
 from gym import Space
 from habitat import Config
 from habitat_baselines.rearrangement.il.models.encoders.instruction import InstructionEncoder
+from habitat_baselines.rearrangement.il.models.encoders.resnet_encoders import (
+    TorchVisionResNet50,
+    VlnResnetDepthEncoder
+)
 from habitat_baselines.rearrangement.il.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo.policy import Net

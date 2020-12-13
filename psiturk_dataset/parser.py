@@ -215,23 +215,9 @@ def merge_replay_data_for_action(action_data_list):
             last_action_data["nearest_object_id"] = first_action_data["nearest_object_id"]
         return last_action_data
 
-    if len(action_data_list) == 3:
-        new_action = "{}Twice".format(action)
-        next_action_data = action_data_list[1]
-        next_action = next_action_data["action"]
-        if action != next_action:
-            new_action = "{}{}".format(action, next_action)
-            #print("\n2 Different actions between physics step - {}".format(new_action))
-            #sys.exit(1)
-
-        last_action_data["action"] = new_action
-        if action != "grabReleaseObject":
-            last_action_data["collision"] = next_action_data["collision"]
-        else:
-            print("\nGrab relase action between physics step")
-            sys.exit(1)
-
-        return last_action_data
+    if len(action_data_list) >= 3:
+        print("\n\n\nIncorrectly aligned actions in episode")
+        sys.exit(1)
     return None
 
 
@@ -256,7 +242,6 @@ def post_process_episode(reference_replay):
                 if not data["action"] in unique_action_combo_map.keys():
                     unique_action_combo_map[data["action"]] = 0
                 unique_action_combo_map[data["action"]] += 1
-                #print([dd.get("action") for dd in action_data_list], data["action"], old_i)
 
         post_processed_ref_replay.append(data)
         i += 1
