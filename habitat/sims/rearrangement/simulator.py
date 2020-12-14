@@ -53,6 +53,7 @@ class RearrangementSim(HabitatSim):
         self.navmesh_settings.set_defaults()
         self.navmesh_settings.agent_radius = agent_config.RADIUS
         self.navmesh_settings.agent_height = agent_config.HEIGHT
+        self.default_agent_id = agent_id
 
     def reconfigure(self, config: Config) -> None:
         super().reconfigure(config)
@@ -61,7 +62,7 @@ class RearrangementSim(HabitatSim):
     def reset(self):
         sim_obs = super().reset()
         if self._update_agents_state():
-            sim_obs = self.get_sensor_observations(agent_ids=self._default_agent_id)
+            sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id)
 
         self._prev_sim_obs = sim_obs
         self.did_reset = True
@@ -293,7 +294,7 @@ class RearrangementSim(HabitatSim):
         super().step_world(dt)
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self._default_agent_id)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 
@@ -427,7 +428,7 @@ class RearrangementSim(HabitatSim):
         self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self._default_agent_id, draw_crosshair=True)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=True)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 
@@ -460,7 +461,7 @@ class RearrangementSim(HabitatSim):
                 object_to_re_add.append(self.get_object_from_scene(object_id))
 
         if success:
-            sim_obs = self.get_sensor_observations(agent_ids=self._default_agent_id)
+            sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id)
 
             self._prev_sim_obs = sim_obs
 

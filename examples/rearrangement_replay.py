@@ -57,14 +57,6 @@ def get_habitat_sim_action(data):
         return HabitatSimActions.GRAB_RELEASE
     elif data["action"] == "stepPhysics":
         return HabitatSimActions.NO_OP
-    elif data["action"] == "turnLeftTwice":
-        return HabitatSimActions.TURN_LEFT_TWICE
-    elif data["action"] == "turnRightTwice":
-        return HabitatSimActions.TURN_RIGHT_TWICE
-    elif data["action"] == "moveForwardTwice":
-        return HabitatSimActions.MOVE_FORWARD_TWICE
-    elif data["action"] == "moveBackwardTwice":
-        return HabitatSimActions.MOVE_BACKWARD_TWICE
     return HabitatSimActions.STOP
 
 
