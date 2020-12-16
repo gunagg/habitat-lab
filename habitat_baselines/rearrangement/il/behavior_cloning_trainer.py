@@ -13,6 +13,7 @@ import numpy as np
 import sys
 import torch
 import tqdm
+
 from torch import Tensor
 from numpy import ndarray
 from torch.utils.data import DataLoader
@@ -40,7 +41,8 @@ from habitat_baselines.utils.common import (
     generate_video,
 )
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.utils import get_habitat_sim_action
+from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
+from PIL import Image
 
 
 @baseline_registry.register_trainer(name="rearrangement-behavior-cloning")
@@ -182,6 +184,10 @@ class RearrangementBCTrainer(BaseILTrainer):
     
 
     def _setup_model(self, observation_space, action_space, model_config):
+        model_config.defrost()
+        model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
+        model_config.freeze()
+
         model = Seq2SeqModel(observation_space, action_space, model_config)
         return model
 
@@ -221,6 +227,11 @@ class RearrangementBCTrainer(BaseILTrainer):
             action_space,
             config.MODEL
         )
+        self.model.to(self.device)
+        # Map location CPU is almost always better than mapping to a CUDA device.
+        ckpt_dict = torch.load(self.config.EVAL_CKPT_PATH_DIR, map_location=self.device)
+        self.model.load_state_dict(ckpt_dict)
+
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -234,6 +245,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             1,
             self.envs.num_envs,
             config.MODEL.STATE_ENCODER.hidden_size,
+            device=self.device,
         )
 
         epoch, t = 1, 0
@@ -270,13 +282,8 @@ class RearrangementBCTrainer(BaseILTrainer):
                     obs_instruction_tokens = obs_instruction_tokens.to(self.device)
                     gt_next_action = gt_next_action.long().to(self.device)
                     gt_prev_action = gt_prev_action.long().to(self.device)
-                    episode_dones = episode_done.long().to(self.device)
+                    episode_not_dones = episode_done.long().to(self.device)
                     inflec_weights = inflec_weights.long().to(self.device)
-
-                    # print("\n\n\n")
-                    # print(inflec_weights.shape)
-                    # print(inflec_weights)
-                    # print("\n\n\n")
 
                     observations = {
                         "rgb": obs_rgb,
@@ -284,23 +291,13 @@ class RearrangementBCTrainer(BaseILTrainer):
                         "instruction": obs_instruction_tokens
                     }
 
-                    distribution, rnn_hidden_states = self.model(observations, test_rnn_hidden_states, gt_prev_action, episode_dones)
+                    distribution, rnn_hidden_states = self.model(observations, test_rnn_hidden_states, gt_prev_action, episode_not_dones)
 
                     logits = distribution.logits
-                    #print(logits.shape)
                     action_loss = cross_entropy_loss(logits, gt_next_action.squeeze(0))
 
                     action_loss = ((inflec_weights * action_loss).sum(1) / inflec_weights.sum(1)).mean()
-                    # print("action loss")
-                    # print(inflec_weights.shape, action_loss.shape)
-                    #print(inflec_weights.sum(1), (inflec_weights * action_loss).sum(1))
-                    #print("action loss\n\n")
-                    aux_mask = (inflec_weights > 0).view(-1)
-
-                    aux_loss = AuxLosses.reduce(aux_mask)
-                    loss = action_loss + aux_loss
-                    #print(action_loss, aux_loss)
-
+                    loss = action_loss
                     avg_loss += loss.item()
 
                     if t % config.LOG_INTERVAL == 0:
@@ -309,8 +306,8 @@ class RearrangementBCTrainer(BaseILTrainer):
                                 epoch, t, loss.item()
                             )
                         )
-
-                        writer.add_scalar("total_loss", loss, t)
+                        writer.add_scalar("train_total_loss", loss, t)
+                        writer.add_scalar("train_action_loss", action_loss.item(), t)
 
                     loss.backward()
                     optim.step()
@@ -366,7 +363,7 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         
-        rearrangement_dataset = RearrangementDataset(config)
+        rearrangement_dataset = RearrangementEpisodeDataset(config)
         batch_size = config.IL.BehaviorCloning.batch_size
 
         train_loader = DataLoader(
@@ -397,22 +394,22 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
 
         # Map location CPU is almost always better than mapping to a CUDA device.
-        ckpt_dict = torch.load(checkpoint_path)
+        ckpt_dict = torch.load(checkpoint_path, map_location=self.device)
         self.model.load_state_dict(ckpt_dict)
+        self.model.eval()
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
         )
 
         prev_actions = torch.zeros(
-            batch_size, 1, device=self.device, dtype=torch.long
+            1, 1, device=self.device, dtype=torch.long
         )
-        not_done_masks = torch.zeros(
-            batch_size, 1, device=self.device
+        not_done_masks = torch.ones(
+            1, 1, device=self.device
         )
         rnn_hidden_states = torch.zeros(
             1,
@@ -443,15 +440,30 @@ class RearrangementBCTrainer(BaseILTrainer):
                 number_of_eval_episodes = total_num_eps
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
-        self.model.eval()
         softmax = torch.nn.Softmax(dim=1)
         count = 0
+        prev_actions[0][0] = HabitatSimActions.START
+
+        current_episodes = self.envs.current_episodes()
+        reference_replay = current_episodes[0].reference_replay
+        gt_batch = next(iter(train_loader))
+        mismatch_actions = 0
+        mismatch_ids = []
+        gt_actions = []
+        pred_actions = []
+
         while (
             len(stats_episodes) < number_of_eval_episodes
-            and self.envs.num_envs > 0 and count < 50
+            and self.envs.num_envs > 0 and count < len(reference_replay)
         ):
             current_episodes = self.envs.current_episodes()
-            reference_replay = current_episodes[0].reference_replay
+
+            inpute_data = gt_batch
+            episode_done = gt_batch[7]
+            gt_next_action = gt_batch[5]
+            gt_prev_action = gt_batch[6]
+
+            not_done_masks[0][0] = episode_done[0][count]
 
             with torch.no_grad():
                 (
@@ -469,15 +481,25 @@ class RearrangementBCTrainer(BaseILTrainer):
                 logits = distribution.logits
                 actions = torch.argmax(softmax(logits), dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))
-            
 
-            gt_action = get_habitat_sim_action(reference_replay[count]["action"])
-            if gt_action != actions[0].item():
+            gt_action = HabitatSimActions.STOP
+            if count != len(reference_replay) - 1:
+                gt_action = get_habitat_sim_action(reference_replay[count + 1]["action"])
+
+            gt_actions.append(get_habitat_sim_action_str(gt_action))
+            pred_actions.append(get_habitat_sim_action_str(actions[0].item()))
+            if not (gt_action == actions[0].item()):
+
+                print("prev action: ", prev_actions, gt_prev_action[0][count])
+                print("actual action: ", gt_action, gt_next_action[0][count])
+
                 print("gt_action: {}, pred action: {}".format(gt_action, actions))
                 print("match: {}".format(gt_action == actions[0].item()))
-            elif gt_action != 8:
-                print("\n\n\ngt_action: {}, pred action: {}".format(gt_action, actions))
-                print("match: {}\n\n\n".format(gt_action == actions[0].item()))
+                print("\n")
+                mismatch_actions += 1
+                mismatch_ids.append(count)
+            else:
+                print("gt_action: {}, pred action: {}".format(gt_action, actions[0].item()))
 
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
@@ -485,6 +507,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             # For backwards compatibility, we also call .item() to convert to
             # an int
             step_data = [a.item() for a in actions.to(device="cpu")]
+            # step_data = [gt_action]
 
             outputs = self.envs.step(step_data)
 
@@ -492,7 +515,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                 list(x) for x in zip(*outputs)
             ]
             batch = batch_obs(observations, device=self.device)
-            batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -511,7 +533,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                 if (
                     next_episodes[i].scene_id,
                     next_episodes[i].episode_id,
-                ) in stats_episodes or count == 49:
+                ) in stats_episodes:
                     envs_to_pause.append(i)
 
                 # episode ended
@@ -547,7 +569,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
-                        {k: v[i] for k, v in batch.items()}, infos[i]
+                        {"rgb": batch["rgb"].squeeze(0)}, infos[i]
                     )
                     rgb_frames[i].append(frame)
             (
@@ -567,5 +589,14 @@ class RearrangementBCTrainer(BaseILTrainer):
                 rgb_frames,
             )
             count += 1
+        print("\n\n\n")
+        print("Total actions: {}".format(len(reference_replay)))
+        print("Mismatch actions: {}".format(mismatch_actions))
+        print("Mismatch index: {}".format(mismatch_ids))
+
+        with open("predictions.csv", "w") as f:
+            f.write("ground_truth,prediction,match\n")
+            for i in range(len(gt_actions)):
+                f.write("{},{},{}\n".format(gt_actions[i], pred_actions[i], (gt_actions[i] == pred_actions[i])))
         self.envs.close()
 

@@ -68,3 +68,23 @@ def get_habitat_sim_action(action):
     elif action == "stepPhysics":
         return HabitatSimActions.NO_OP
     return HabitatSimActions.STOP
+
+
+def get_habitat_sim_action_str(action):
+    if action == HabitatSimActions.TURN_RIGHT:
+        return "turnRight"
+    elif action == HabitatSimActions.TURN_LEFT:
+        return "turnLeft"
+    elif action == HabitatSimActions.MOVE_FORWARD:
+        return "moveForward"
+    elif action == HabitatSimActions.MOVE_BACKWARD:
+        return "moveBackward"
+    elif action == HabitatSimActions.LOOK_UP:
+        return "lookUp"
+    elif action == HabitatSimActions.LOOK_DOWN:
+        return "lookDown"
+    elif action == HabitatSimActions.GRAB_RELEASE:
+        return "grabReleaseObject"
+    elif action == HabitatSimActions.NO_OP:
+        return "stepPhysics"
+    return HabitatSimActions.STOP

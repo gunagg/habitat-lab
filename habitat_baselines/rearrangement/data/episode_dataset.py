@@ -150,12 +150,12 @@ class RearrangementEpisodeDataset(Dataset):
 
             prev_action = HabitatSimActions.START
             if state_index != 0:
-                prev_state = reference_replay[state_index - 1]
+                prev_state = reference_replay[state_index]
                 prev_action = get_habitat_sim_action(prev_state["action"])
             
-            not_done = 0
+            not_done = 1
             if state_index == len(reference_replay) -1:
-                not_done = 1
+                not_done = 0
             
             instruction_tokens = np.array(instruction.instruction_tokens)
 
@@ -248,7 +248,7 @@ class RearrangementEpisodeDataset(Dataset):
         rgb_idx = "{0:0=6d}_rgb".format(idx)
         rgb_binary = self.lmdb_cursor.get(rgb_idx.encode())
         rgb_np = np.frombuffer(rgb_binary, dtype="uint8")
-        rgb = rgb_np.reshape(-1, height, width, 3) / 255.0
+        rgb = rgb_np.reshape(-1, height, width, 3)
         rgb = rgb.astype(np.float32)
         
 
@@ -270,12 +270,12 @@ class RearrangementEpisodeDataset(Dataset):
         prev_action_binary = self.lmdb_cursor.get(prev_action_idx.encode())
         prev_action = np.frombuffer(prev_action_binary, dtype="int")
 
-        done_idx = "{0:0=6d}_not_done".format(idx)
-        done_binary = self.lmdb_cursor.get(done_idx.encode())
-        done = np.frombuffer(done_binary, dtype="int")
+        not_done_idx = "{0:0=6d}_not_done".format(idx)
+        not_done_binary = self.lmdb_cursor.get(not_done_idx.encode())
+        not_done = np.frombuffer(not_done_binary, dtype="int")
 
         weight_idx = "{0:0=6d}_weights".format(idx)
         weight_binary = self.lmdb_cursor.get(weight_idx.encode())
         weight = np.frombuffer(weight_binary, dtype="int")
 
-        return idx, rgb, depth, depth, instruction_tokens, next_action, prev_action, done, weight
+        return idx, rgb, depth, depth, instruction_tokens, next_action, prev_action, not_done, weight

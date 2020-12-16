@@ -93,4 +93,4 @@ demos/
 
 # training logs
 tb/
-
+video_dir/

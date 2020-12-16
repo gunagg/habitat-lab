@@ -67,7 +67,7 @@ def log_action_data(data, i):
         print("Action {} - {}".format(data["action"], i))
 
 
-def run_reference_replay(cfg, restore_state=False, log_action=False, num_episodes=None):
+def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=False, num_episodes=None):
     instructions = []
     with habitat.Env(cfg) as env:
         obs_list = []
@@ -99,7 +99,9 @@ def run_reference_replay(cfg, restore_state=False, log_action=False, num_episode
                     log_action_data(data, i)
                 action = get_habitat_sim_action(data)
                 print(restore_state)
-                if not restore_state:
+                if step_env:
+                    observations = env.step(action=action)
+                elif not restore_state:
                     observations = env.step(action=action, replay_data=data)
                 else:
                     agent_state = data["agent_state"]
@@ -126,6 +128,9 @@ def main():
         "--restore-state", dest='restore_state', action='store_true'
     )
     parser.add_argument(
+        "--step-env", dest='step_env', action='store_true'
+    )
+    parser.add_argument(
         "--log-action", dest='log_action', action='store_true'
     )
     args = parser.parse_args()
@@ -134,7 +139,7 @@ def main():
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.freeze()
 
-    observations = run_reference_replay(cfg, args.restore_state, args.log_action, num_episodes=1)
+    observations = run_reference_replay(cfg, args.restore_state, args.step_env, args.log_action, num_episodes=1)
     make_videos(observations, args.output_prefix)
 
 if __name__ == "__main__":
