@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 
 from habitat.sims import make_sim
-from habitat_sim.utils.common import quat_from_coeffs
+from habitat_sim.utils.common import quat_from_coeffs, quat_from_magnum, quat_to_coeffs
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -28,14 +28,16 @@ ISLAND_RADIUS_LIMIT = 1.5
 VISITED_POINT_DICT = {}
 
 
+def get_object_handle(object_name):
+    return "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
+
+
 def contact_test(sim, object_name, position):
     object_handle = "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
-    #object_handle = "./data/test_assets/objects/{}.object_config.json".format(object_name)
     return sim.pre_add_contact_test(object_handle, mn.Vector3(position))
 
 
 def contact_test_rotation(sim, object_name, position, rotation):
-    #object_handle = "./data/test_assets/objects/{}.object_config.json".format(object_name)
     object_handle = "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
     return sim.pre_add_contact_test(object_handle, mn.Vector3(position), quat_from_coeffs(rotation))
 
@@ -172,11 +174,6 @@ def get_bad_points(
     for i, point in enumerate(points):
         if VISITED_POINT_DICT.get(str(point)) == 1 or is_less_than_island_radius_limit(sim, point):
             bad_points[i] = 1
-        # TODO: make this dynamic
-        if i == 1 and contact_test_rotation(sim, object_names[i - 1], point, rotations[i]):
-            bad_points[i] = 1
-        if i == 2 and contact_test_rotation(sim, object_names[i - 1], point, rotations[i]):
-            bad_points[i] = 1
 
     # Too close to another object or receptacle
     for i, point1 in enumerate(points):
@@ -213,8 +210,10 @@ def rejection_sampling(
     while sum(bad_points) > 0 and num_tries > 0:
 
         for i, bad_point in enumerate(bad_points):
-            if bad_point:
-                points[i] = sim.sample_navigable_point()
+            if bad_point and i == 0:
+                points[i] = get_random_point(sim)
+            elif bad_point:
+                points[i], rotations[i] = get_random_object_position(sim, object_names[i - 1])
 
         bad_points = get_bad_points(
             sim, points, rotations, d_lower_lim, d_upper_lim,
@@ -248,9 +247,42 @@ def is_less_than_island_radius_limit(sim, point):
 
 
 def add_contact_test_object(sim, object_name):
-    #object_handle = "./data/test_assets/objects/{}.object_config.json".format(object_name)
-    object_handle = "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
+    object_handle = get_object_handle(object_name)
     sim.add_contact_test_object(object_handle)
+
+
+def step_physics_n_times(sim, n=50, dt = 1.0 / 10.0):
+    sim.step_world(n * dt)
+
+
+def is_num_active_collision_points_zero(sim):
+    return (sim.get_num_active_contact_points() == 0)
+
+
+def get_random_object_position(sim, object_name):
+    object_handle = get_object_handle(object_name)
+    position = get_random_point(sim)
+    position[1] += 0.35
+
+    object_id  = sim.add_object_by_handle(object_handle)
+    sim.set_translation(position, object_id)
+
+    step_count = 0
+    while step_count < 10 and not is_num_active_collision_points_zero(sim):
+        step_physics_n_times(sim)
+        step_count += 1
+
+    if not is_num_active_collision_points_zero(sim):
+        print("\n\nObject still rolling down!!")
+        sys.exit(1)
+
+    translation = sim.get_translation(object_id)
+    rotation = sim.get_rotation(object_id)
+
+    rotation = quat_to_coeffs(quat_from_magnum(rotation)).tolist()
+    translation = np.array(translation).tolist()
+    sim.remove_object(object_id)
+    return np.array(translation), rotation
 
 
 def populate_episodes_points(episodes):
@@ -277,6 +309,12 @@ def populate_prev_generated_points(path):
             data = json.loads(file.read())
             populate_episodes_points(data)
     print("Total previously generated points {}".format(len(VISITED_POINT_DICT.keys())))
+
+
+def remove_all_objects(sim):
+    for object_id in sim.get_existing_object_ids():
+        sim.remove_object(object_id)
+    sim.clear_recycled_object_ids()
 
 
 def generate_points(
@@ -311,13 +349,10 @@ def generate_points(
     num_episodes = num_episodes * len(object_to_receptacle_list)
 
     while episode_count < num_episodes or num_episodes < 0:
-        for object_, receptacle in object_to_receptacle_list:
+        for object_list in object_to_receptacle_list:
             print("\nEpisode {}\n".format(episode_count))
+            object_, receptacle = object_list
             objects = []
-
-            # Adding contact test objects to test object positions
-            add_contact_test_object(sim, object_)
-            add_contact_test_object(sim, receptacle)
 
             object_name = object_name_map[object_]
             receptacle_name = object_name_map[receptacle]
@@ -325,8 +360,11 @@ def generate_points(
             points = []
             rotations = []
             for idx in range(num_points):
-                point = get_random_point(sim)
-                rotation = get_random_rotation()
+                if idx == 0:
+                    point = get_random_point(sim)
+                    rotation = get_random_rotation()
+                else:
+                    point, rotation = get_random_object_position(sim, object_list[idx - 1])
                 points.append(point)
                 rotations.append(rotation)
             
@@ -334,7 +372,7 @@ def generate_points(
             points = rejection_sampling(
                 sim, points, rotations, d_lower_lim, d_upper_lim,
                 geodesic_to_euclid_min_ratio, xlim=x_limit, ylim=y_limit,
-                num_tries=number_retries_per_target, object_names=[object_, receptacle]
+                num_tries=number_retries_per_target, object_names=object_list
             )
 
             # Mark valid points as visited to get unique points
@@ -344,12 +382,12 @@ def generate_points(
                 
             agent_position = points[0].tolist()
             agent_rotation = rotations[0]
-    
-            target_position = points[1].tolist()
-            target_rotation = rotations[1]
 
-            source_position = points[2].tolist()
-            source_rotation = rotations[2]
+            source_position = points[1].tolist()
+            source_rotation = rotations[1]
+
+            target_position = points[2].tolist()
+            target_rotation = rotations[2]
 
             # Create episode object configs
             objects.append(build_object(object_, len(objects), object_name, False, source_position, source_rotation))
@@ -359,8 +397,8 @@ def generate_points(
             episode = build_episode(config, episode_count, objects, agent_position,
                 agent_rotation, object_name, receptacle_name)
             episodes.append(episode)
-            print(episode)
 
+            remove_all_objects(sim)
             episode_count += 1
 
     dataset = {
@@ -454,6 +492,7 @@ if __name__ == "__main__":
     if args.scenes is not None:
         config.defrost()
         config.SIMULATOR.SCENE = args.scenes
+        config.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS = True
         config.freeze()
 
     if dataset_type == "Interactive":
