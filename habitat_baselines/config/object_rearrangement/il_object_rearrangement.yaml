@@ -11,7 +11,7 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: 1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/gamma099_step_10_epoch_700.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/one_cycle_0_001_epoch_700.ckpt"
 NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs

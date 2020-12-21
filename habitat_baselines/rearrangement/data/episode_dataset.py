@@ -14,7 +14,7 @@ import habitat
 from habitat import logger
 from habitat.datasets.utils import VocabDict
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrangement.rearrangement import InstructionData
+from habitat.tasks.rearrangement.rearrangement import InstructionData, RearrangementEpisode
 from habitat.tasks.utils import get_habitat_sim_action
 from habitat.utils.visualizations.utils import observations_to_image, images_to_video
 from habitat_sim.utils import viz_utils as vut
@@ -85,14 +85,13 @@ class RearrangementEpisodeDataset(Dataset):
             for scene in tqdm(list(self.scene_episode_dict.keys())):
                 for episode in tqdm(self.scene_episode_dict[scene]):
                     self.load_scene(scene, episode)
+                    state_index_queue = [-1]
                     try:
                         # TODO: Consider alternative for shortest_paths
-                        state_index_queue = range(0, len(episode.reference_replay))
+                        state_index_queue.extend(range(0, len(episode.reference_replay)))
                     except AttributeError as e:
                         logger.error(e)
-                    # Sample states if needed
-                    # random_states = random.sample(state_queue, 9)
-                    self.save_frames(state_index_queue, episode.reference_replay, episode.instruction)
+                    self.save_frames(state_index_queue, episode)
 
             logger.info("Rearrangement database ready!")
 
@@ -121,8 +120,7 @@ class RearrangementEpisodeDataset(Dataset):
         self.lmdb_env = None
 
     def save_frames(
-        self, state_index_queue: List[int], reference_replay: List[Dict],
-        instruction: InstructionData
+        self, state_index_queue: List[int], episode: RearrangementEpisode
     ) -> None:
         r"""
         Writes rgb, seg, depth frames to LMDB.
@@ -136,12 +134,27 @@ class RearrangementEpisodeDataset(Dataset):
             "not_done": []
         }
         obs_list = []
+        reference_replay = episode.reference_replay
+        instruction = episode.instruction
         for state_index in state_index_queue:
-            state = reference_replay[state_index]
-            position = state["agent_state"]["position"]
-            rotation = state["agent_state"]["rotation"]
-            object_states = state["object_states"]
-            sensor_states = state["agent_state"]["sensor_data"]
+            instruction_tokens = np.array(instruction.instruction_tokens)
+            observation = self.env.sim.get_observations_at(
+                episode.start_position,
+                episode.start_rotation
+            )
+
+            if state_index != -1:
+                state = reference_replay[state_index]
+                position = state["agent_state"]["position"]
+                rotation = state["agent_state"]["rotation"]
+                object_states = state["object_states"]
+                sensor_states = state["agent_state"]["sensor_data"]
+
+                observation = self.env.sim.get_observations_at(
+                    position, rotation, sensor_states, object_states
+                )
+            else:
+                print("Start State\n\n")
 
             next_action = HabitatSimActions.STOP
             if state_index < len(reference_replay) - 1:
@@ -149,19 +162,13 @@ class RearrangementEpisodeDataset(Dataset):
                 next_action = get_habitat_sim_action(next_state["action"])
 
             prev_action = HabitatSimActions.START
-            if state_index != 0:
+            if state_index != -1:
                 prev_state = reference_replay[state_index]
                 prev_action = get_habitat_sim_action(prev_state["action"])
-            
+
             not_done = 1
             if state_index == len(reference_replay) -1:
                 not_done = 0
-            
-            instruction_tokens = np.array(instruction.instruction_tokens)
-
-            observation = self.env.sim.get_observations_at(
-                position, rotation, sensor_states, object_states
-            )
 
             observations["depth"].append(observation["depth"])
             observations["rgb"].append(observation["rgb"])
@@ -186,7 +193,7 @@ class RearrangementEpisodeDataset(Dataset):
             seg = seg.astype("uint8")
 
             # frame = observations_to_image(
-            #     observation, {}
+            #     {"rgb": observation["rgb"]}, {}
             # )
             # obs_list.append(frame)
         
@@ -204,7 +211,7 @@ class RearrangementEpisodeDataset(Dataset):
             txn.put((sample_key + "_weights").encode(), inflection_weights.tobytes())
         
         self.count += 1
-        #images_to_video(images=obs_list, output_dir="demos", video_name="dummy")
+        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy")
 
     def cache_exists(self) -> bool:
         if os.path.exists(self.dataset_path):

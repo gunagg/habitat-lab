@@ -425,7 +425,7 @@ class RearrangementSim(HabitatSim):
                 if not collided:
                     self._default_agent.act(action)
 
-        #self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
+        # self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
 
         # obtain observations
         self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=False)
@@ -451,10 +451,13 @@ class RearrangementSim(HabitatSim):
             success = self.set_agent_state(
                 position, rotation, reset_sensors=False
             )
+        if sensor_states is not None:
             self.restore_sensor_states(sensor_states)
+
+        object_to_re_add = []
+        if object_states is not None:
             current_state_objects = self.restore_object_states(object_states)
 
-            object_to_re_add = []
             for object_id in self.get_existing_object_ids():
                 if object_id not in current_state_objects:
                     self.remove_object(object_id)
@@ -466,7 +469,7 @@ class RearrangementSim(HabitatSim):
             self._prev_sim_obs = sim_obs
 
             observations = self._sensor_suite.get_observations(sim_obs)
-            if not keep_agent_at_new_pose and position is not None:
+            if not keep_agent_at_new_pose:
                 self.set_agent_state(
                     current_state.position,
                     current_state.rotation,
