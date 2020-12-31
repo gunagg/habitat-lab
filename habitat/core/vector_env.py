@@ -58,6 +58,8 @@ EPISODE_COMMAND = "current_episode"
 COUNT_EPISODES_COMMAND = "count_episodes"
 EPISODE_OVER = "episode_over"
 GET_METRICS = "get_metrics"
+GET_AGENT_POSE = "get_agent_pose"
+GET_OBJECT_STATE = "get_current_object_states"
 
 
 def _make_env_fn(
@@ -251,6 +253,14 @@ class VectorEnv:
                     result = env.get_metrics()
                     connection_write_fn(result)
 
+                elif command == GET_AGENT_POSE:
+                    result = env._env._sim.get_agent_pose()
+                    connection_write_fn(result)
+
+                elif command == GET_OBJECT_STATE:
+                    result = env._env._sim.get_current_object_states()
+                    connection_write_fn(result)
+
                 else:
                     raise NotImplementedError
 
@@ -313,6 +323,26 @@ class VectorEnv:
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((COUNT_EPISODES_COMMAND, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def get_agent_pose(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((GET_AGENT_POSE, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def get_current_object_states(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((GET_OBJECT_STATE, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())

@@ -4,7 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import os
+import json
 import time
 from collections import defaultdict, deque
 from typing import Any, DefaultDict, Dict, List, Optional, Tuple, Union
@@ -13,6 +15,7 @@ import numpy as np
 import sys
 import torch
 import tqdm
+import torch.nn.functional as F
 
 from torch import Tensor
 from numpy import ndarray
@@ -32,7 +35,7 @@ from habitat_baselines.common.obs_transformers import (
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rearrangement.common.aux_losses import AuxLosses
 from habitat_baselines.rearrangement.data.dataset import RearrangementDataset
-from habitat_baselines.rearrangement.data.episode_dataset import RearrangementEpisodeDataset
+from habitat_baselines.rearrangement.data.episode_dataset import RearrangementEpisodeDataset, collate_fn
 from habitat_baselines.rearrangement.il.models.model import RearrangementLstmCnnAttentionModel
 from habitat_baselines.rearrangement.il.models.seq_2_seq_model import Seq2SeqNet, Seq2SeqModel
 from habitat_baselines.utils.env_utils import construct_envs
@@ -42,6 +45,7 @@ from habitat_baselines.utils.common import (
 )
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
+from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, get_distance
 from PIL import Image
 
 
@@ -209,6 +213,7 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         train_loader = DataLoader(
             rearrangement_dataset,
+            collate_fn=collate_fn,
             batch_size=batch_size,
             shuffle=False,
         )
@@ -229,8 +234,8 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
         self.model.to(self.device)
         # Map location CPU is almost always better than mapping to a CUDA device.
-        ckpt_dict = torch.load(self.config.EVAL_CKPT_PATH_DIR, map_location=self.device)
-        self.model.load_state_dict(ckpt_dict)
+        # ckpt_dict = torch.load(self.config.EVAL_CKPT_PATH_DIR, map_location=self.device)
+        # self.model.load_state_dict(ckpt_dict)
 
 
         optim = torch.optim.Adam(
@@ -243,11 +248,11 @@ class RearrangementBCTrainer(BaseILTrainer):
             optim, max_lr=config.IL.BehaviorCloning.lr,
             steps_per_epoch=len(train_loader), epochs=config.IL.BehaviorCloning.max_epochs
         )
-        cross_entropy_loss = torch.nn.CrossEntropyLoss()
+        cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
 
         test_rnn_hidden_states = torch.zeros(
             1,
-            self.envs.num_envs,
+            batch_size,
             config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
         )
@@ -266,41 +271,34 @@ class RearrangementBCTrainer(BaseILTrainer):
                     t += 1
 
                     (
-                     idx,
-                     obs_rgb,
-                     obs_depth,
-                     obs_seg,
-                     obs_instruction_tokens,
-                     gt_next_action,
+                     observations_batch,
                      gt_prev_action,
                      episode_done,
+                     gt_next_action,
                      inflec_weights
                     ) = batch
 
                     optim.zero_grad()
                     AuxLosses.clear()
 
-                    obs_rgb = obs_rgb.to(self.device)
-                    obs_depth = obs_depth.to(self.device)
-                    obs_seg = obs_seg.to(self.device)
-                    obs_instruction_tokens = obs_instruction_tokens.to(self.device)
+                    observations_batch = {
+                        k: v.to(device=self.device, non_blocking=True)
+                        for k, v in observations_batch.items()
+                    }
                     gt_next_action = gt_next_action.long().to(self.device)
                     gt_prev_action = gt_prev_action.long().to(self.device)
                     episode_not_dones = episode_done.long().to(self.device)
                     inflec_weights = inflec_weights.long().to(self.device)
 
-                    observations = {
-                        "rgb": obs_rgb,
-                        "depth": obs_depth,
-                        "instruction": obs_instruction_tokens
-                    }
-
-                    distribution, rnn_hidden_states = self.model(observations, test_rnn_hidden_states, gt_prev_action, episode_not_dones)
+                    distribution, rnn_hidden_states = self.model(observations_batch, test_rnn_hidden_states, gt_prev_action, episode_not_dones)
 
                     logits = distribution.logits
-                    action_loss = cross_entropy_loss(logits, gt_next_action.squeeze(0))
+                    T, N = int(logits.shape[0] / batch_size), batch_size
+                    logits = logits.view(T, N, -1)
 
-                    action_loss = ((inflec_weights * action_loss).sum(1) / inflec_weights.sum(1)).mean()
+                    action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action) # .squeeze(1))
+
+                    action_loss = ((inflec_weights * action_loss).sum(0) / inflec_weights.sum(0)).mean()
                     loss = action_loss
                     avg_loss += loss.item()
 
@@ -310,7 +308,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                                 epoch, t, loss.item()
                             )
                         )
-                        writer.add_scalar("train_total_loss", loss, t)
+                        writer.add_scalar("train_total_loss", loss.item(), t)
                         writer.add_scalar("train_action_loss", action_loss.item(), t)
 
                     loss.backward()
@@ -455,19 +453,32 @@ class RearrangementBCTrainer(BaseILTrainer):
         mismatch_ids = []
         gt_actions = []
         pred_actions = []
-
+        pred_data = []
+        gt_prev_actions = []
+        pred_prev_actions = []
+        gt_agent_state = self.envs.get_agent_pose()[0]
+        gt_object_states = self.envs.get_current_object_states()[0]
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0 and count < len(reference_replay)
         ):
             current_episodes = self.envs.current_episodes()
 
-            inpute_data = gt_batch
-            episode_done = gt_batch[7]
-            gt_next_action = gt_batch[5]
-            gt_prev_action = gt_batch[6]
+            input_data = gt_batch
+            episode_done = gt_batch[4]
+            gt_next_action = gt_batch[2]
+            gt_prev_action = gt_batch[3]
 
+            obs_rgb = input_data[1]["rgb"]
             not_done_masks[0][0] = episode_done[0][count]
+
+            pred_prev_actions.append(get_habitat_sim_action_str(prev_actions[0][0]))
+            gt_prev_actions.append(get_habitat_sim_action_str(gt_prev_action[0][count]))
+
+            (agent_l2_distance,
+             agent_quat_distance,
+             sensor_quat_distance,
+             object_dist_map) = self.get_agent_object_distance(gt_agent_state, gt_object_states)
 
             with torch.no_grad():
                 (
@@ -483,27 +494,21 @@ class RearrangementBCTrainer(BaseILTrainer):
                 rnn_hidden_states = rnn_hidden_states.detach()
 
                 logits = distribution.logits
-                actions = torch.argmax(softmax(logits), dim=1)
+                actions = torch.argmax(logits, dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))
 
-            gt_action = HabitatSimActions.STOP
-            if count != len(reference_replay) - 1:
-                gt_action = get_habitat_sim_action(reference_replay[count + 1]["action"])
-
-            gt_actions.append(get_habitat_sim_action_str(gt_action))
+            gt_actions.append(get_habitat_sim_action_str(gt_next_action[0][count].item()))
             pred_actions.append(get_habitat_sim_action_str(actions[0].item()))
-            if not (gt_action == actions[0].item()):
+            if not (gt_next_action[0][count].item() == actions[0].item()):
+                print("actual action: ", gt_next_action[0][count])
 
-                print("prev action: ", prev_actions, gt_prev_action[0][count])
-                print("actual action: ", gt_action, gt_next_action[0][count])
-
-                print("gt_action: {}, pred action: {}".format(gt_action, actions))
-                print("match: {}".format(gt_action == actions[0].item()))
+                print("pred action: {}".format(actions))
+                print("match: {}".format(gt_next_action[0][count].item() == actions[0].item()))
                 print("\n")
                 mismatch_actions += 1
                 mismatch_ids.append(count)
             else:
-                print("gt_action: {}, pred action: {}".format(gt_action, actions[0].item()))
+                print("gt_action: {}, pred action: {}".format(gt_next_action[0][count].item(), actions[0].item()))
 
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
@@ -511,7 +516,28 @@ class RearrangementBCTrainer(BaseILTrainer):
             # For backwards compatibility, we also call .item() to convert to
             # an int
             step_data = [a.item() for a in actions.to(device="cpu")]
-            # step_data = [gt_action]
+
+            pred_img = "../psiturk-habitat-sim/data/training_results/preds/task_2/img_{}.png".format(count)
+            img = Image.fromarray(batch["rgb"].squeeze(0).numpy())
+            img.save(pred_img)
+
+            gt_img = "../psiturk-habitat-sim/data/training_results/gt/task_2/img_{}.png".format(count)
+            img = Image.fromarray(obs_rgb[0][count].numpy().astype(np.uint8))
+            img.save(gt_img)
+            pred_data.append({
+                "gt_img": gt_img,
+                "pred_img": pred_img,
+                "gt_next_action": gt_actions[-1],
+                "pred_next_action": pred_actions[-1],
+                "gt_prev_action": gt_prev_actions[-1],
+                "pred_prev_action": pred_prev_actions[-1],
+                "obs_l2_dist": torch.dist(batch["rgb"].squeeze(0).float() / 255.0, obs_rgb[0][count].float() / 255.0).item(),
+                "agent_l2_distance": agent_l2_distance,
+                "agent_rot_distance": agent_quat_distance,
+                "sensor_quat_distance": sensor_quat_distance,
+                "object_dist_map": object_dist_map,
+                "match": (gt_next_action[0][count].item() == actions[0].item()),
+            })
 
             outputs = self.envs.step(step_data)
 
@@ -525,6 +551,9 @@ class RearrangementBCTrainer(BaseILTrainer):
                 dtype=torch.float,
                 device=self.device,
             )
+
+            gt_agent_state = reference_replay[count]["agent_state"]
+            gt_object_states = reference_replay[count]["object_states"]
 
             rewards = torch.tensor(
                 rewards_l, dtype=torch.float, device=self.device
@@ -597,10 +626,47 @@ class RearrangementBCTrainer(BaseILTrainer):
         print("Total actions: {}".format(len(reference_replay)))
         print("Mismatch actions: {}".format(mismatch_actions))
         print("Mismatch index: {}".format(mismatch_ids))
+        with open("pred.json", "w") as f:
+            f.write(json.dumps(pred_data))
 
         with open("predictions.csv", "w") as f:
             f.write("ground_truth,prediction,match\n")
             for i in range(len(gt_actions)):
                 f.write("{},{},{}\n".format(gt_actions[i], pred_actions[i], (gt_actions[i] == pred_actions[i])))
         self.envs.close()
+
+    def get_agent_object_distance(self, agent_state, object_states):
+        eval_agent_state = self.envs.get_agent_pose()[0]
+        eval_object_states = self.envs.get_current_object_states()[0]
+        if "semantic" in agent_state["sensor_data"]:
+            del agent_state["sensor_data"]["semantic"]
+        if "depth" in eval_agent_state["sensor_data"]:
+            del eval_agent_state["sensor_data"]["depth"]
+        if "depth" in agent_state["sensor_data"]:
+            del agent_state["sensor_data"]["depth"]
+
+        agent_l2_distance = get_distance(agent_state["position"], eval_agent_state["position"], "l2")
+        agent_quat_distance = get_distance(agent_state["rotation"], eval_agent_state["rotation"], "quat")
+        sensor_quat_distance = get_distance(agent_state["sensor_data"]["rgb"]["rotation"], eval_agent_state["sensor_data"]["rgb"]["rotation"], "quat")
+
+        object_dist_map = {}
+        for idx in range(len(object_states)):
+            object_id = object_states[idx]["object_id"]
+            eval_idx = -1
+            for idx2 in range(len(eval_object_states)):
+                eval_object_id = eval_object_states[idx2]["object_id"]
+                handle = eval_object_states[idx2]["object_handle"].split("/")[-1].split(".")[0]
+                if object_id == eval_object_id:
+                    eval_idx = idx2
+                    break
+            trans_dist = -1
+            rot_dist = -1
+            if eval_idx != -1:
+                trans_dist = get_distance(object_states[idx]["translation"], eval_object_states[eval_idx]["translation"], "l2")
+                rot_dist = get_distance(object_states[idx]["rotation"], eval_object_states[eval_idx]["rotation"], "quat")
+            object_dist_map[handle] = {
+                "trans_dist": trans_dist,
+                "rot_dist": rot_dist
+            }
+        return agent_l2_distance, agent_quat_distance, sensor_quat_distance, object_dist_map
 

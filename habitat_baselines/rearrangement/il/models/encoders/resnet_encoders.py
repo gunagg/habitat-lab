@@ -126,6 +126,7 @@ class TorchVisionResNet50(nn.Module):
         linear_layer_input_size = 0
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
+            obs_size = observation_space.spaces["rgb"].shape
             obs_size_0 = observation_space.spaces["rgb"].shape[0]
             obs_size_1 = observation_space.spaces["rgb"].shape[1]
             if obs_size_0 != 224 or obs_size_1 != 224:

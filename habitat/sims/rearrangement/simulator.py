@@ -242,7 +242,7 @@ class RearrangementSim(HabitatSim):
                 ref_transform = self._default_agent.body.object.transformation
                 ray_hit_info = self.find_floor_position_under_crosshair(
                     cross_hair_point, ref_transform,
-                     self.get_resolution(), action_spec.actuation.amount
+                    self.get_resolution(), action_spec.actuation.amount
                 )
 
                 floor_position = ray_hit_info.point
@@ -342,8 +342,10 @@ class RearrangementSim(HabitatSim):
         for sensor_key, v in self._default_agent._sensors.items():
             rotation = quat_from_magnum(v.object.rotation)
             rotation = quat_to_coeffs(rotation).tolist()
+            translation = v.object.translation
             sensor_data[sensor_key] = {
-                "rotation": rotation
+                "rotation": rotation,
+                "translation": np.array(translation).tolist()
             }
         
         return {
@@ -368,7 +370,7 @@ class RearrangementSim(HabitatSim):
             object_handle = object_["object_handle"]
             self.add_object_by_handle(object_handle)
     
-    def update_drop_point(self, replay_data=None):
+    def update_drop_point(self, replay_data=None, show=False):
         if self.gripped_object_id == -1 or show == False:
             position = self._default_agent.body.object.absolute_translation
             position = mn.Vector3(position.x, position.y - 0.5, position.z)
@@ -425,10 +427,10 @@ class RearrangementSim(HabitatSim):
                 if not collided:
                     self._default_agent.act(action)
 
-        # self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
+        self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=False)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=True)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 

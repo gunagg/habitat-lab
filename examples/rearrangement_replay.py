@@ -98,7 +98,6 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 if log_action:
                     log_action_data(data, i)
                 action = get_habitat_sim_action(data)
-                print(restore_state)
                 if step_env:
                     observations = env.step(action=action)
                 elif not restore_state:

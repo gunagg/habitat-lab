@@ -87,4 +87,6 @@ def get_habitat_sim_action_str(action):
         return "grabReleaseObject"
     elif action == HabitatSimActions.NO_OP:
         return "stepPhysics"
-    return HabitatSimActions.STOP
+    elif action == HabitatSimActions.START:
+        return "start"
+    return "stop"

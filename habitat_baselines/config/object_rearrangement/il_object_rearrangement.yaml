@@ -11,7 +11,7 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: 1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/one_cycle_0_001_epoch_700.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/one_cycle_0_001_epoch_700_sz_256_task_2.ckpt"
 NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
@@ -28,8 +28,8 @@ EVAL:
 IL:
   BehaviorCloning:
     lr: 0.001
-    max_epochs: 1
-    batch_size: 1
+    max_epochs: 700
+    batch_size: 2
     freeze_encoder: False
 
 RL:
