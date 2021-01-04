@@ -205,6 +205,9 @@ class RearrangementBCTrainer(BaseILTrainer):
         """
 
         config = self.config
+        n_gpu = 1
+        if torch.cuda.is_available():
+            n_gpu = torch.cuda.device_count()
 
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         
@@ -232,11 +235,11 @@ class RearrangementBCTrainer(BaseILTrainer):
             action_space,
             config.MODEL
         )
+        self.model = torch.nn.DataParallel(self.model)
         self.model.to(self.device)
         # Map location CPU is almost always better than mapping to a CUDA device.
         # ckpt_dict = torch.load(self.config.EVAL_CKPT_PATH_DIR, map_location=self.device)
         # self.model.load_state_dict(ckpt_dict)
-
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -248,11 +251,11 @@ class RearrangementBCTrainer(BaseILTrainer):
             optim, max_lr=config.IL.BehaviorCloning.lr,
             steps_per_epoch=len(train_loader), epochs=config.IL.BehaviorCloning.max_epochs
         )
-        cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
+        cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="mean")
 
         test_rnn_hidden_states = torch.zeros(
-            1,
-            batch_size,
+            1 * n_gpu,
+            batch_size // n_gpu,
             config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
         )
@@ -290,15 +293,24 @@ class RearrangementBCTrainer(BaseILTrainer):
                     episode_not_dones = episode_done.long().to(self.device)
                     inflec_weights = inflec_weights.long().to(self.device)
 
-                    distribution, rnn_hidden_states = self.model(observations_batch, test_rnn_hidden_states, gt_prev_action, episode_not_dones)
+                    logits, rnn_hidden_states = self.model(observations_batch, test_rnn_hidden_states, gt_prev_action, episode_not_dones)
 
-                    logits = distribution.logits
-                    T, N = int(logits.shape[0] / batch_size), batch_size
-                    logits = logits.view(T, N, -1)
+                    N, T = gt_next_action.shape
+                    logits = logits.view(N, T, -1)
+                    pred_actions = torch.argmax(logits.view(T * N, -1), dim=1)
 
-                    action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action) # .squeeze(1))
+                    # print(logits.shape)
+                    # print(gt_next_action.shape)
+                    # print(logits.permute(0, 2, 1).shape)
+                    # print(pred_actions.shape)
+                    # print(pred_actions)
 
-                    action_loss = ((inflec_weights * action_loss).sum(0) / inflec_weights.sum(0)).mean()
+                    # print(gt_next_action.shape)
+
+                    # print((pred_actions - gt_next_action.squeeze(0)))
+
+                    action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action)
+                    action_loss = ((inflec_weights * action_loss).sum(1) / inflec_weights.sum(1)).mean()
                     loss = action_loss
                     avg_loss += loss.item()
 
@@ -415,7 +427,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
         rnn_hidden_states = torch.zeros(
             1,
-            self.envs.num_envs,
+            batch_size,
             config.MODEL.STATE_ENCODER.hidden_size,
         )
         stats_episodes: Dict[

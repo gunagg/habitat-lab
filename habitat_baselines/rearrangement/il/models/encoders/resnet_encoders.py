@@ -152,6 +152,7 @@ class TorchVisionResNet50(nn.Module):
 
         if not self.spatial_output:
             self.output_shape = (output_size,)
+            self.cnn.fc = torch.nn.Identity()
             self.fc = nn.Linear(linear_layer_input_size, output_size)
             self.activation = nn.ReLU()
         else:
@@ -191,15 +192,8 @@ class TorchVisionResNet50(nn.Module):
             )
 
         def resnet_forward(observation):
-            resnet_output = torch.zeros(1, dtype=torch.float32, device=self.device)
-
-            def hook(m, i, o):
-                resnet_output.set_(o)
-
             # output: [BATCH x RESNET_DIM]
-            h = self.layer_extract.register_forward_hook(hook)
-            self.cnn(observation)
-            h.remove()
+            resnet_output = self.cnn(observation)
             return resnet_output
 
         if "rgb_features" in observations:

@@ -170,4 +170,4 @@ class Seq2SeqModel(nn.Module):
         )
         distribution = self.action_distribution(features)
 
-        return distribution, rnn_hidden_states
+        return distribution.logits, rnn_hidden_states

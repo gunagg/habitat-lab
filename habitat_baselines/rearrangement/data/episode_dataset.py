@@ -42,13 +42,10 @@ def collate_fn(batch):
 
     def _pad_helper(t, max_len, fill_val=0):
         pad_amount = max_len - t.size(0)
-        #print("pad amt: {}".format(pad_amount))
-        #print(t.shape)
         if pad_amount == 0:
             return t
 
         pad = torch.full_like(t[0:1], fill_val).expand(pad_amount, *t.size()[1:])
-        #print(pad.shape)
         return torch.cat([t, pad], dim=0)
 
     transposed = list(zip(*batch))
@@ -59,8 +56,6 @@ def collate_fn(batch):
     episode_not_dones_batch = list(transposed[4])
     weights_batch = list(transposed[5])
     B = len(prev_actions_batch)
-    # print("nation {}".format(next_actions_batch[0].shape))
-    # print("pation {}".format(prev_actions_batch[0].shape))
 
     new_observations_batch = defaultdict(list)
     for sensor in observations_batch[0]:
@@ -70,37 +65,28 @@ def collate_fn(batch):
     observations_batch = new_observations_batch
 
     max_traj_len = max(ele.size(0) for ele in prev_actions_batch)
-    #print("max traj: {}".format(max_traj_len))
     for bid in range(B):
         for sensor in observations_batch:
             observations_batch[sensor][bid] = _pad_helper(
                 observations_batch[sensor][bid], max_traj_len, fill_val=1.0
             )
-        #print("starting next actions: ", next_actions_batch[0].shape)
         next_actions_batch[bid] = _pad_helper(next_actions_batch[bid], max_traj_len)
         prev_actions_batch[bid] = _pad_helper(prev_actions_batch[bid], max_traj_len)
         episode_not_dones_batch[bid] = _pad_helper(episode_not_dones_batch[bid], max_traj_len)
         weights_batch[bid] = _pad_helper(weights_batch[bid], max_traj_len)
 
     for sensor in observations_batch:
-        observations_batch[sensor] = torch.stack(observations_batch[sensor], dim=1)
+        observations_batch[sensor] = torch.stack(observations_batch[sensor], dim=0)
         observations_batch[sensor] = observations_batch[sensor].view(
             -1, *observations_batch[sensor].size()[2:]
         )
     
-    next_actions_batch = torch.stack(next_actions_batch, dim=1)
-    prev_actions_batch = torch.stack(prev_actions_batch, dim=1)
-    episode_not_dones_batch = torch.stack(episode_not_dones_batch, dim=1)
-    weights_batch = torch.stack(weights_batch, dim=1)
-    not_done_masks = torch.ones_like(prev_actions_batch, dtype=torch.float)
-    not_done_masks[0] = 0
+    next_actions_batch = torch.stack(next_actions_batch, dim=0)
+    prev_actions_batch = torch.stack(prev_actions_batch, dim=0)
+    episode_not_dones_batch = torch.stack(episode_not_dones_batch, dim=0)
+    weights_batch = torch.stack(weights_batch, dim=0)
 
     observations_batch = ObservationsDict(observations_batch)
-    # print("done maks")
-    # print(episode_not_dones_batch)
-
-    # print(not_done_masks)
-    # print("done maks")
 
     return (
         observations_batch,
@@ -115,7 +101,7 @@ def collate_fn(batch):
 class RearrangementEpisodeDataset(Dataset):
     """Pytorch dataset for object rearrangement task for each episode"""
 
-    def __init__(self, config, mode="train"):
+    def __init__(self, config, mode="train", use_iw=False, inflection_weight_coef=1.0):
         """
         Args:
             env (habitat.Env): Habitat environment
@@ -130,6 +116,11 @@ class RearrangementEpisodeDataset(Dataset):
         self.instruction_vocab = self.env._dataset.instruction_vocab
 
         self.resolution = self.env._sim.get_resolution()
+
+        if use_iw:
+            self.inflec_weight = torch.tensor([1.0, inflection_weight_coef])
+        else:
+            self.inflec_weight = torch.tensor([1.0, 1.0])
 
         if not self.cache_exists():
             """
@@ -267,9 +258,6 @@ class RearrangementEpisodeDataset(Dataset):
             prev_actions.append(prev_action)
             not_dones.append(not_done)
 
-            # if state_index == len(reference_replay) - 150:
-            #     break
-
             frame = observations_to_image(
                 {"rgb": observation["rgb"]}, {}
             )
@@ -277,6 +265,7 @@ class RearrangementEpisodeDataset(Dataset):
         
         oracle_actions = np.array(next_actions)
         inflection_weights = np.concatenate(([1], oracle_actions[1:] != oracle_actions[:-1]))
+        inflection_weights = self.inflec_weight[torch.from_numpy(inflection_weights)].numpy()
 
         sample_key = "{0:0=6d}".format(self.count)
         with self.lmdb_env.begin(write=True) as txn:
@@ -352,7 +341,7 @@ class RearrangementEpisodeDataset(Dataset):
 
         weight_idx = "{0:0=6d}_weights".format(idx)
         weight_binary = self.lmdb_cursor.get(weight_idx.encode())
-        weight = np.frombuffer(weight_binary, dtype="int")
+        weight = np.frombuffer(weight_binary, dtype="float32")
         weight = torch.from_numpy(np.copy(weight))
 
         return idx, observations, next_action, prev_action, not_done, weight
