@@ -221,7 +221,7 @@ class RearrangementSim(HabitatSim):
                 self.set_object_bb_draw(True, self.nearest_object_id, 0)
 
     def step(self, action: int):
-        dt = 1.0 / 10.0
+        dt = 1.0 / 20.0
         self._num_total_frames += 1
         collided = False
 
@@ -294,7 +294,7 @@ class RearrangementSim(HabitatSim):
         super().step_world(dt)
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=False)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 
@@ -381,7 +381,7 @@ class RearrangementSim(HabitatSim):
                 self.update_drop_point_node(position)
 
     def step_from_replay(self, action: int, replay_data: Dict = {}):
-        dt = 1.0 / 10.0
+        dt = 1.0 / 20.0
         self._num_total_frames += 1
         collided = False
 
@@ -427,10 +427,10 @@ class RearrangementSim(HabitatSim):
                 if not collided:
                     self._default_agent.act(action)
 
-        self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
+        # self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=True)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=False)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 

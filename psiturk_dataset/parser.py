@@ -4,9 +4,13 @@ import copy
 import glob
 import gzip
 import json
+import re
 import sys
 
+from habitat.datasets.utils import VocabFromText
 
+
+max_instruction_len = 9
 instruction_list = []
 unique_action_combo_map = {}
 
@@ -45,6 +49,13 @@ def is_viewer_step(data):
         if data["type"] == "runStep" and data["step"] == "viewer":
             return True
     return False
+
+
+def preprocess(instruction):
+    tokens = instruction.split()
+    if len(tokens) < max_instruction_len:
+        tokens = tokens + ["<pad>"] * (max_instruction_len - len(tokens))
+    return " ".join(tokens)
 
 
 def append_instruction(instruction):
@@ -147,7 +158,8 @@ def handle_step(step, episode, unique_id, timestamp):
 
             instruction_text = data["task"]["instruction"]
             episode["instruction"] = {
-                "instruction_text": instruction_text
+                "instruction_text": instruction_text,
+                #"preprocessed_instruction": preprocess(instruction_text)
             }
             append_instruction(instruction_text)
             object_receptacle_map = {}
@@ -249,15 +261,37 @@ def post_process_episode(reference_replay):
     return post_processed_ref_replay
 
 
+def compute_instruction_tokens(episodes):
+    instruction_vocab = VocabFromText(
+        sentences=list(set(instruction_list))
+    )
+    max_token_size = 0
+    for episode in episodes:
+        instruction = episode["instruction"]["instruction_text"]
+        instruction_tokens = instruction_vocab.tokenize_and_index(instruction, keep=())
+        max_token_size = max(max_token_size, len(instruction_tokens))
+
+    for episode in episodes:
+        instruction = episode["instruction"]["instruction_text"]
+        instruction_tokens = instruction_vocab.tokenize_and_index(instruction, keep=())
+        if len(instruction_tokens) < max_token_size:
+            instruction_tokens = instruction_tokens + [instruction_vocab.word2idx("<pad>")] * (max_token_size - len(instruction_tokens))
+        episode["instruction"]["instruction_tokens"] = instruction_tokens
+    return episodes
+
+
 def replay_to_episode(replay_path, output_path):
     all_episodes = {
         "episodes": []
     }
+    episodes = []
     for file_path in glob.glob(replay_path + "/*.csv"):
         print(file_path)
         reader = read_csv(file_path)
         episode = convert_to_episode(reader)
-        all_episodes["episodes"].append(episode)
+        episodes.append(episode)
+
+    all_episodes["episodes"] = compute_instruction_tokens(copy.deepcopy(episodes))
     all_episodes["instruction_vocab"] = {
         "sentences": list(set(instruction_list))
     }

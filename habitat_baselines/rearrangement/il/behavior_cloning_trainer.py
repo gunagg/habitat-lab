@@ -25,7 +25,7 @@ from habitat import Config, logger
 from habitat.core.env import Env, RLEnv
 from habitat.core.vector_env import VectorEnv
 from habitat.utils import profiling_wrapper
-from habitat.utils.visualizations.utils import observations_to_image
+from habitat.utils.visualizations.utils import observations_to_image, images_to_video
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import get_env_class
@@ -211,7 +211,11 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         
-        rearrangement_dataset = RearrangementEpisodeDataset(config)
+        rearrangement_dataset = RearrangementEpisodeDataset(
+            config,
+            use_iw=config.IL.USE_IW,
+            inflection_weight_coef=config.MODEL.inflection_weight_coef
+        )
         batch_size = config.IL.BehaviorCloning.batch_size
 
         train_loader = DataLoader(
@@ -235,7 +239,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             action_space,
             config.MODEL
         )
-        self.model = torch.nn.DataParallel(self.model)
+        self.model = torch.nn.DataParallel(self.model, dim=1)
         self.model.to(self.device)
         # Map location CPU is almost always better than mapping to a CUDA device.
         # ckpt_dict = torch.load(self.config.EVAL_CKPT_PATH_DIR, map_location=self.device)
@@ -246,7 +250,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             lr=float(config.IL.BehaviorCloning.lr),
         )
 
-        #scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=20, gamma=0.9)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=20, gamma=0.9)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optim, max_lr=config.IL.BehaviorCloning.lr,
             steps_per_epoch=len(train_loader), epochs=config.IL.BehaviorCloning.max_epochs
@@ -254,8 +258,8 @@ class RearrangementBCTrainer(BaseILTrainer):
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="mean")
 
         test_rnn_hidden_states = torch.zeros(
-            1 * n_gpu,
-            batch_size // n_gpu,
+            1,
+            batch_size,
             config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
         )
@@ -295,22 +299,24 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                     logits, rnn_hidden_states = self.model(observations_batch, test_rnn_hidden_states, gt_prev_action, episode_not_dones)
 
-                    N, T = gt_next_action.shape
-                    logits = logits.view(N, T, -1)
-                    pred_actions = torch.argmax(logits.view(T * N, -1), dim=1)
+                    T, N = gt_next_action.shape
+                    logits = logits.view(T, N, -1)
+                    pred_actions = torch.argmax(logits, dim=2)
 
                     # print(logits.shape)
                     # print(gt_next_action.shape)
                     # print(logits.permute(0, 2, 1).shape)
                     # print(pred_actions.shape)
-                    # print(pred_actions)
+                    # print(pred_actions[:, 0])
 
                     # print(gt_next_action.shape)
+                    # print(gt_next_action[:, 0])
 
-                    # print((pred_actions - gt_next_action.squeeze(0)))
+                    # print(torch.sum(pred_actions - gt_next_action))
+                    # print(torch.sum(pred_actions != gt_next_action))
 
                     action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action)
-                    action_loss = ((inflec_weights * action_loss).sum(1) / inflec_weights.sum(1)).mean()
+                    action_loss = ((inflec_weights * action_loss).sum(0) / inflec_weights.sum(0)).mean()
                     loss = action_loss
                     avg_loss += loss.item()
 
@@ -377,12 +383,17 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         
-        rearrangement_dataset = RearrangementEpisodeDataset(config)
+        rearrangement_dataset = RearrangementEpisodeDataset(
+            config,
+            use_iw=config.IL.USE_IW,
+            inflection_weight_coef=config.MODEL.inflection_weight_coef
+        )
         batch_size = config.IL.BehaviorCloning.batch_size
 
         train_loader = DataLoader(
             rearrangement_dataset,
             batch_size=batch_size,
+            collate_fn=collate_fn,
             shuffle=False,
         )
 
@@ -406,6 +417,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             action_space,
             config.MODEL
         )
+        self.model = torch.nn.DataParallel(self.model, dim=1)
 
         # Map location CPU is almost always better than mapping to a CUDA device.
         ckpt_dict = torch.load(checkpoint_path, map_location=self.device)
@@ -427,7 +439,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
         rnn_hidden_states = torch.zeros(
             1,
-            batch_size,
+            self.envs.num_envs,
             config.MODEL.STATE_ENCODER.hidden_size,
         )
         stats_episodes: Dict[
@@ -477,15 +489,15 @@ class RearrangementBCTrainer(BaseILTrainer):
             current_episodes = self.envs.current_episodes()
 
             input_data = gt_batch
-            episode_done = gt_batch[4]
-            gt_next_action = gt_batch[2]
-            gt_prev_action = gt_batch[3]
+            episode_done = gt_batch[2]
+            gt_next_action = gt_batch[3]
+            gt_prev_action = gt_batch[1]
 
-            obs_rgb = input_data[1]["rgb"]
-            not_done_masks[0][0] = episode_done[0][count]
+            obs_rgb = input_data[0]["rgb"]
+            not_done_masks[0][0] = episode_done[count][0]
 
             pred_prev_actions.append(get_habitat_sim_action_str(prev_actions[0][0]))
-            gt_prev_actions.append(get_habitat_sim_action_str(gt_prev_action[0][count]))
+            gt_prev_actions.append(get_habitat_sim_action_str(gt_prev_action[count][0]))
 
             (agent_l2_distance,
              agent_quat_distance,
@@ -494,7 +506,7 @@ class RearrangementBCTrainer(BaseILTrainer):
 
             with torch.no_grad():
                 (
-                    distribution,
+                    logits,
                     rnn_hidden_states
                 ) = self.model(
                     batch,
@@ -505,22 +517,21 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                 rnn_hidden_states = rnn_hidden_states.detach()
 
-                logits = distribution.logits
                 actions = torch.argmax(logits, dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))
 
-            gt_actions.append(get_habitat_sim_action_str(gt_next_action[0][count].item()))
+            gt_actions.append(get_habitat_sim_action_str(gt_next_action[count][0].item()))
             pred_actions.append(get_habitat_sim_action_str(actions[0].item()))
-            if not (gt_next_action[0][count].item() == actions[0].item()):
-                print("actual action: ", gt_next_action[0][count])
+            if not (gt_next_action[count][0].item() == actions[0].item()):
+                print("{} actual action: ", gt_next_action[count][0])
 
                 print("pred action: {}".format(actions))
-                print("match: {}".format(gt_next_action[0][count].item() == actions[0].item()))
+                print("match: {}".format(gt_next_action[count][0].item() == actions[0].item()))
                 print("\n")
                 mismatch_actions += 1
                 mismatch_ids.append(count)
             else:
-                print("gt_action: {}, pred action: {}".format(gt_next_action[0][count].item(), actions[0].item()))
+                print("{} gt_action: {}, pred action: {}".format(count, gt_next_action[count][0].item(), actions[0].item()))
 
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
@@ -529,12 +540,12 @@ class RearrangementBCTrainer(BaseILTrainer):
             # an int
             step_data = [a.item() for a in actions.to(device="cpu")]
 
-            pred_img = "../psiturk-habitat-sim/data/training_results/preds/task_2/img_{}.png".format(count)
+            pred_img = "../psiturk-habitat-sim/data/training_results/preds/task_3/img_{}.png".format(count)
             img = Image.fromarray(batch["rgb"].squeeze(0).numpy())
             img.save(pred_img)
 
-            gt_img = "../psiturk-habitat-sim/data/training_results/gt/task_2/img_{}.png".format(count)
-            img = Image.fromarray(obs_rgb[0][count].numpy().astype(np.uint8))
+            gt_img = "../psiturk-habitat-sim/data/training_results/gt/task_3/img_{}.png".format(count)
+            img = Image.fromarray(obs_rgb[count][0].numpy().astype(np.uint8))
             img.save(gt_img)
             pred_data.append({
                 "gt_img": gt_img,
@@ -543,12 +554,12 @@ class RearrangementBCTrainer(BaseILTrainer):
                 "pred_next_action": pred_actions[-1],
                 "gt_prev_action": gt_prev_actions[-1],
                 "pred_prev_action": pred_prev_actions[-1],
-                "obs_l2_dist": torch.dist(batch["rgb"].squeeze(0).float() / 255.0, obs_rgb[0][count].float() / 255.0).item(),
+                "obs_l2_dist": torch.dist(batch["rgb"].squeeze(0).float() / 255.0, obs_rgb[count][0].float() / 255.0).item(),
                 "agent_l2_distance": agent_l2_distance,
                 "agent_rot_distance": agent_quat_distance,
                 "sensor_quat_distance": sensor_quat_distance,
                 "object_dist_map": object_dist_map,
-                "match": (gt_next_action[0][count].item() == actions[0].item()),
+                "match": (gt_next_action[count][0].item() == actions[0].item()),
             })
 
             outputs = self.envs.step(step_data)
@@ -638,13 +649,9 @@ class RearrangementBCTrainer(BaseILTrainer):
         print("Total actions: {}".format(len(reference_replay)))
         print("Mismatch actions: {}".format(mismatch_actions))
         print("Mismatch index: {}".format(mismatch_ids))
-        with open("pred.json", "w") as f:
+        with open("pred_1.json", "w") as f:
             f.write(json.dumps(pred_data))
-
-        with open("predictions.csv", "w") as f:
-            f.write("ground_truth,prediction,match\n")
-            for i in range(len(gt_actions)):
-                f.write("{},{},{}\n".format(gt_actions[i], pred_actions[i], (gt_actions[i] == pred_actions[i])))
+        # images_to_video(images=rgb_frames[0], output_dir="demos", video_name="dummy")
         self.envs.close()
 
     def get_agent_object_distance(self, agent_state, object_states):

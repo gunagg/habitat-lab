@@ -76,22 +76,19 @@ def collate_fn(batch):
         weights_batch[bid] = _pad_helper(weights_batch[bid], max_traj_len)
 
     for sensor in observations_batch:
-        observations_batch[sensor] = torch.stack(observations_batch[sensor], dim=0)
-        observations_batch[sensor] = observations_batch[sensor].view(
-            -1, *observations_batch[sensor].size()[2:]
-        )
+        observations_batch[sensor] = torch.stack(observations_batch[sensor], dim=1)
     
-    next_actions_batch = torch.stack(next_actions_batch, dim=0)
-    prev_actions_batch = torch.stack(prev_actions_batch, dim=0)
-    episode_not_dones_batch = torch.stack(episode_not_dones_batch, dim=0)
-    weights_batch = torch.stack(weights_batch, dim=0)
+    next_actions_batch = torch.stack(next_actions_batch, dim=1)
+    prev_actions_batch = torch.stack(prev_actions_batch, dim=1)
+    episode_not_dones_batch = torch.stack(episode_not_dones_batch, dim=1)
+    weights_batch = torch.stack(weights_batch, dim=1)
 
     observations_batch = ObservationsDict(observations_batch)
 
     return (
         observations_batch,
-        prev_actions_batch.view(-1, 1),
-        episode_not_dones_batch.view(-1, 1),
+        prev_actions_batch,
+        episode_not_dones_batch,
         next_actions_batch,
         weights_batch,
     )
@@ -116,6 +113,8 @@ class RearrangementEpisodeDataset(Dataset):
         self.instruction_vocab = self.env._dataset.instruction_vocab
 
         self.resolution = self.env._sim.get_resolution()
+        self.total_actions = 0
+        self.inflections = 0
 
         if use_iw:
             self.inflec_weight = torch.tensor([1.0, inflection_weight_coef])
@@ -175,6 +174,7 @@ class RearrangementEpisodeDataset(Dataset):
                     except AttributeError as e:
                         logger.error(e)
                     self.save_frames(state_index_queue, episode)
+            print("Inflection weight coef: {}, N: {}, nI: {}".format(self.total_actions / self.inflections, self.total_actions, self.inflections))
 
             logger.info("Rearrangement database ready!")
 
@@ -265,6 +265,8 @@ class RearrangementEpisodeDataset(Dataset):
         
         oracle_actions = np.array(next_actions)
         inflection_weights = np.concatenate(([1], oracle_actions[1:] != oracle_actions[:-1]))
+        self.total_actions += inflection_weights.shape[0]
+        self.inflections += np.sum(inflection_weights)
         inflection_weights = self.inflec_weight[torch.from_numpy(inflection_weights)].numpy()
 
         sample_key = "{0:0=6d}".format(self.count)

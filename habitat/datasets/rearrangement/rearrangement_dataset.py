@@ -59,14 +59,6 @@ class RearrangementDatasetV1(Dataset):
         )
 
         for episode in deserialized["episodes"]:
-            instruction_text = episode["instruction"]["instruction_text"]
-            instruction_tokens = self.instruction_vocab.tokenize_and_index(instruction_text)
-            if len(instruction_tokens) < 8:
-                # print(instruction_tokens)
-                instruction_tokens.extend([0] * (8 - len(instruction_tokens)))
-                # print("tokens")
-                # print(instruction_tokens)
-            episode["instruction"]["instruction_tokens"] = instruction_tokens
             episode = RearrangementEpisode(**episode)
 
             if scenes_dir is not None:
