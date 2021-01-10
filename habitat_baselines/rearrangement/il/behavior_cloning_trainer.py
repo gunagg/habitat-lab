@@ -303,6 +303,8 @@ class RearrangementBCTrainer(BaseILTrainer):
                     logits = logits.view(T, N, -1)
                     pred_actions = torch.argmax(logits, dim=2)
 
+                    # print("batch : {}".format(t))
+
                     # print(logits.shape)
                     # print(gt_next_action.shape)
                     # print(logits.permute(0, 2, 1).shape)
@@ -314,6 +316,8 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                     # print(torch.sum(pred_actions - gt_next_action))
                     # print(torch.sum(pred_actions != gt_next_action))
+                    # print(torch.sum(test_rnn_hidden_states))
+                    # print("\n\n")
 
                     action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action)
                     action_loss = ((inflec_weights * action_loss).sum(0) / inflec_weights.sum(0)).mean()
@@ -348,7 +352,7 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                 if epoch % config.CHECKPOINT_INTERVAL == 0:
                     self.save_checkpoint(
-                        self.model.state_dict(), "epoch_{}.ckpt".format(epoch)
+                        self.model.state_dict(), "model.ckpt"
                     )
 
                 epoch += 1
@@ -425,6 +429,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.model.eval()
 
         observations = self.envs.reset()
+        # observations = self.envs.reset_at(0)
         batch = batch_obs(observations, device=self.device)
 
         current_episode_reward = torch.zeros(
@@ -432,10 +437,10 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
 
         prev_actions = torch.zeros(
-            1, 1, device=self.device, dtype=torch.long
+            self.envs.num_envs, 1, device=self.device, dtype=torch.long
         )
         not_done_masks = torch.ones(
-            1, 1, device=self.device
+            self.envs.num_envs, 1, device=self.device
         )
         rnn_hidden_states = torch.zeros(
             1,
@@ -472,7 +477,8 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         current_episodes = self.envs.current_episodes()
         reference_replay = current_episodes[0].reference_replay
-        gt_batch = next(iter(train_loader))
+        tr_itr = iter(train_loader)
+        gt_batch = next(tr_itr)
         mismatch_actions = 0
         mismatch_ids = []
         gt_actions = []
@@ -484,7 +490,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         gt_object_states = self.envs.get_current_object_states()[0]
         while (
             len(stats_episodes) < number_of_eval_episodes
-            and self.envs.num_envs > 0 and count < len(reference_replay)
+            and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
 
@@ -502,7 +508,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             (agent_l2_distance,
              agent_quat_distance,
              sensor_quat_distance,
-             object_dist_map) = self.get_agent_object_distance(gt_agent_state, gt_object_states)
+             object_dist_map) = self.get_agent_object_distance(gt_agent_state, gt_object_states, batch, obs_rgb)
 
             with torch.no_grad():
                 (
@@ -540,16 +546,9 @@ class RearrangementBCTrainer(BaseILTrainer):
             # an int
             step_data = [a.item() for a in actions.to(device="cpu")]
 
-            pred_img = "../psiturk-habitat-sim/data/training_results/preds/task_3/img_{}.png".format(count)
-            img = Image.fromarray(batch["rgb"].squeeze(0).numpy())
-            img.save(pred_img)
-
-            gt_img = "../psiturk-habitat-sim/data/training_results/gt/task_3/img_{}.png".format(count)
-            img = Image.fromarray(obs_rgb[count][0].numpy().astype(np.uint8))
-            img.save(gt_img)
             pred_data.append({
-                "gt_img": gt_img,
-                "pred_img": pred_img,
+                # "gt_img": gt_img,
+                # "pred_img": pred_img,
                 "gt_next_action": gt_actions[-1],
                 "pred_next_action": pred_actions[-1],
                 "gt_prev_action": gt_prev_actions[-1],
@@ -567,7 +566,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(observations, device=self.device)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -575,8 +573,8 @@ class RearrangementBCTrainer(BaseILTrainer):
                 device=self.device,
             )
 
-            gt_agent_state = reference_replay[count]["agent_state"]
-            gt_object_states = reference_replay[count]["object_states"]
+            # gt_agent_state = reference_replay[count]["agent_state"]
+            # gt_object_states = reference_replay[count]["object_states"]
 
             rewards = torch.tensor(
                 rewards_l, dtype=torch.float, device=self.device
@@ -594,6 +592,8 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                 # episode ended
                 if not_done_masks[i].item() == 0:
+                    print("\n\nResetting episodes")
+                    print(next_episodes[i].instruction)
                     pbar.update()
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
@@ -608,6 +608,17 @@ class RearrangementBCTrainer(BaseILTrainer):
                             current_episodes[i].episode_id,
                         )
                     ] = episode_stats
+                    observations[i] = self.envs.reset_at(i)[0]
+                    rnn_hidden_states[0][i][:] = 0.0
+                    prev_actions[i][0] = HabitatSimActions.START
+                    count = -1
+                    print(gt_batch[1].shape, len(next_episodes[i].reference_replay))
+                    next_episodes = self.envs.current_episodes()
+                    print("Switching")
+                    print(next_episodes[i].instruction)
+                    gt_batch = next(tr_itr)
+                    print(gt_batch[1].shape, len(next_episodes[i].reference_replay))
+                    print(gt_batch[1][0], prev_actions[i][0])
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
@@ -628,6 +639,9 @@ class RearrangementBCTrainer(BaseILTrainer):
                         {"rgb": batch["rgb"].squeeze(0)}, infos[i]
                     )
                     rgb_frames[i].append(frame)
+
+            batch = batch_obs(observations, device=self.device)
+
             (
                 self.envs,
                 not_done_masks,
@@ -654,7 +668,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         # images_to_video(images=rgb_frames[0], output_dir="demos", video_name="dummy")
         self.envs.close()
 
-    def get_agent_object_distance(self, agent_state, object_states):
+    def get_agent_object_distance(self, agent_state, object_states, batch, obs_rgb):
         eval_agent_state = self.envs.get_agent_pose()[0]
         eval_object_states = self.envs.get_current_object_states()[0]
         if "semantic" in agent_state["sensor_data"]:
@@ -687,5 +701,13 @@ class RearrangementBCTrainer(BaseILTrainer):
                 "trans_dist": trans_dist,
                 "rot_dist": rot_dist
             }
+
+        # pred_img = "../psiturk-habitat-sim/data/training_results/preds/task_3/img_{}.png".format(count)
+        # img = Image.fromarray(batch["rgb"].squeeze(0).numpy())
+        # img.save(pred_img)
+
+        # gt_img = "../psiturk-habitat-sim/data/training_results/gt/task_3/img_{}.png".format(count)
+        # img = Image.fromarray(obs_rgb[count][0].numpy().astype(np.uint8))
+        # img.save(gt_img)
         return agent_l2_distance, agent_quat_distance, sensor_quat_distance, object_dist_map
 

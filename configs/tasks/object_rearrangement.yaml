@@ -64,7 +64,7 @@ TASK:
   REARRANGEMENT_SUCCESS:
     TYPE: "RearrangementSuccess"
     SUCCESS_DISTANCE: 1.5
-  
+
 DATASET:
   TYPE: RearrangementDataset-v0
   SPLIT: "train"

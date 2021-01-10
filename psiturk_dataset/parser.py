@@ -257,7 +257,7 @@ def post_process_episode(reference_replay):
 
         post_processed_ref_replay.append(data)
         i += 1
-    print(unique_action_combo_map, len(reference_replay))
+    print(unique_action_combo_map, len(post_processed_ref_replay), len(reference_replay))
     return post_processed_ref_replay
 
 

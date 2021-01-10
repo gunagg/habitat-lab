@@ -365,6 +365,17 @@ class RearrangementSim(HabitatSim):
             agent_rotation = quat_to_magnum(rotation)
             v.object.rotation = agent_rotation
     
+    def get_sensor_states(self):
+        sensor_states = {}
+        for sensor_key, v in self._default_agent._sensors.items():
+            rotation = v.object.rotation
+            rotation = quat_from_magnum(rotation)
+            rotation = quat_to_coeffs(rotation)
+            sensor_states[sensor_key] = {
+                "rotation": rotation
+            }
+        return sensor_states
+
     def add_objects_by_handle(self, objects):
         for object_ in objects:
             object_handle = object_["object_handle"]
@@ -447,6 +458,7 @@ class RearrangementSim(HabitatSim):
     ) -> Optional[Observations]:
         current_state = self.get_agent_state()
         current_object_states = self.get_current_object_states()
+        current_sensor_states = self.get_sensor_states()
         if position is None or rotation is None:
             success = True
         else:
@@ -479,6 +491,7 @@ class RearrangementSim(HabitatSim):
                 )
                 self.add_objects_by_handle(object_to_re_add)
                 self.restore_object_states(current_object_states)
+                self.restore_sensor_states(current_sensor_states)
                 
             return observations
         else:

@@ -278,7 +278,7 @@ class RearrangementEpisodeDataset(Dataset):
             txn.put((sample_key + "_weights").encode(), inflection_weights.tobytes())
         
         self.count += 1
-        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy")
+        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
 
     def cache_exists(self) -> bool:
         if os.path.exists(self.dataset_path):
