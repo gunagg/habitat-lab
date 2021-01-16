@@ -53,8 +53,7 @@ def collate_fn(batch):
     observations_batch = list(transposed[1])
     next_actions_batch = list(transposed[2])
     prev_actions_batch = list(transposed[3])
-    episode_not_dones_batch = list(transposed[4])
-    weights_batch = list(transposed[5])
+    weights_batch = list(transposed[4])
     B = len(prev_actions_batch)
 
     new_observations_batch = defaultdict(list)
@@ -72,7 +71,6 @@ def collate_fn(batch):
             )
         next_actions_batch[bid] = _pad_helper(next_actions_batch[bid], max_traj_len)
         prev_actions_batch[bid] = _pad_helper(prev_actions_batch[bid], max_traj_len)
-        episode_not_dones_batch[bid] = _pad_helper(episode_not_dones_batch[bid], max_traj_len)
         weights_batch[bid] = _pad_helper(weights_batch[bid], max_traj_len)
 
     for sensor in observations_batch:
@@ -80,15 +78,16 @@ def collate_fn(batch):
     
     next_actions_batch = torch.stack(next_actions_batch, dim=1)
     prev_actions_batch = torch.stack(prev_actions_batch, dim=1)
-    episode_not_dones_batch = torch.stack(episode_not_dones_batch, dim=1)
     weights_batch = torch.stack(weights_batch, dim=1)
+    not_done_masks = torch.ones_like(next_actions_batch, dtype=torch.float)
+    not_done_masks[0] = 0
 
     observations_batch = ObservationsDict(observations_batch)
 
     return (
         observations_batch,
         prev_actions_batch,
-        episode_not_dones_batch,
+        not_done_masks,
         next_actions_batch,
         weights_batch,
     )
@@ -198,7 +197,7 @@ class RearrangementEpisodeDataset(Dataset):
         
         self.env.close()
 
-        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 5)
+        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 4)
         self.lmdb_env.close()
         self.lmdb_env = None
 
@@ -274,11 +273,10 @@ class RearrangementEpisodeDataset(Dataset):
             txn.put((sample_key + "_obs").encode(), msgpack_numpy.packb(observations, use_bin_type=True))
             txn.put((sample_key + "_next_action").encode(), np.array(next_actions).tobytes())
             txn.put((sample_key + "_prev_action").encode(), np.array(prev_actions).tobytes())
-            txn.put((sample_key + "_not_done").encode(), np.array(not_dones).tobytes())
             txn.put((sample_key + "_weights").encode(), inflection_weights.tobytes())
         
         self.count += 1
-        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
+        images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
 
     def cache_exists(self) -> bool:
         if os.path.exists(self.dataset_path):
@@ -336,14 +334,9 @@ class RearrangementEpisodeDataset(Dataset):
         prev_action = np.frombuffer(prev_action_binary, dtype="int")
         prev_action = torch.from_numpy(np.copy(prev_action))
 
-        not_done_idx = "{0:0=6d}_not_done".format(idx)
-        not_done_binary = self.lmdb_cursor.get(not_done_idx.encode())
-        not_done = np.frombuffer(not_done_binary, dtype="int")
-        not_done = torch.from_numpy(np.copy(not_done))
-
         weight_idx = "{0:0=6d}_weights".format(idx)
         weight_binary = self.lmdb_cursor.get(weight_idx.encode())
         weight = np.frombuffer(weight_binary, dtype="float32")
         weight = torch.from_numpy(np.copy(weight))
 
-        return idx, observations, next_action, prev_action, not_done, weight
+        return idx, observations, next_action, prev_action, weight

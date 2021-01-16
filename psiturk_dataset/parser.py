@@ -1,6 +1,7 @@
 import argparse
 import csv
 import copy
+import datetime
 import glob
 import gzip
 import json
@@ -13,6 +14,10 @@ from habitat.datasets.utils import VocabFromText
 max_instruction_len = 9
 instruction_list = []
 unique_action_combo_map = {}
+max_num_actions = 0
+num_actions_lte_tenk = 0
+total_episodes = 0
+excluded_ep = 0
 
 def read_csv(path, delimiter=","):
     file = open(path, "r")
@@ -189,19 +194,40 @@ def handle_step(step, episode, unique_id, timestamp):
 def convert_to_episode(csv_reader):
     episode = {}
     viewer_step = False
+    start_ts = 0
+    end_ts = 0
     for row in csv_reader:
         unique_id = row[0]
         step = row[1]
         timestamp = row[2]
         data = column_to_json(row[3])
 
+        if start_ts == 0:
+            start_ts = int(timestamp)
+
         if not viewer_step:
             viewer_step = is_viewer_step(data)
 
         if viewer_step:
             is_viewer_step_finished = handle_step(data, episode, unique_id, timestamp)
+        end_ts = int(timestamp)
     
     episode["reference_replay"] = post_process_episode(copy.deepcopy(episode["reference_replay"]))
+    start_dt = datetime.datetime.fromtimestamp(start_ts / 1000)
+    end_dt = datetime.datetime.fromtimestamp(end_ts / 1000)
+
+    global max_num_actions
+    global total_episodes
+    global num_actions_lte_tenk
+    global excluded_ep
+
+    ep_len_in_sec = (end_dt - start_dt).total_seconds()
+    print("Excluded: ", len(episode["reference_replay"]) < 9500, unique_id, ep_len_in_sec)
+    max_num_actions += ep_len_in_sec
+    if len(episode["reference_replay"]) < 9500:
+        num_actions_lte_tenk += ep_len_in_sec
+        excluded_ep += 1
+    total_episodes += 1
     return episode
 
 
@@ -281,6 +307,11 @@ def compute_instruction_tokens(episodes):
 
 
 def replay_to_episode(replay_path, output_path):
+    global max_num_actions
+    global total_episodes
+    global num_actions_lte_tenk
+    global excluded_ep
+
     all_episodes = {
         "episodes": []
     }
@@ -300,6 +331,8 @@ def replay_to_episode(replay_path, output_path):
         print(key)
 
     print("Total episodes: {}".format(len(all_episodes["episodes"])))
+    print("Average time per episode: {}, Total actions: {} -- {}".format(max_num_actions / total_episodes, max_num_actions, total_episodes))
+    print("(Exclude > 15 min) Average time per episode: {}, Total actions: {} -- {}".format(num_actions_lte_tenk/excluded_ep, num_actions_lte_tenk, excluded_ep))
     write_json(all_episodes, output_path)
     write_gzip(output_path, output_path)
 

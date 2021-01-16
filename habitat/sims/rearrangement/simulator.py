@@ -67,6 +67,8 @@ class RearrangementSim(HabitatSim):
         self._prev_sim_obs = sim_obs
         self.did_reset = True
         self.grip_offset = np.eye(4)
+        self.gripped_object_id = -1
+        self.nearest_object_id = -1
         return self._sensor_suite.get_observations(sim_obs)
 
     def remove_existing_objects(self):

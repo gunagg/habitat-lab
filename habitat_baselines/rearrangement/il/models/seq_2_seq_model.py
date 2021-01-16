@@ -89,7 +89,7 @@ class Seq2SeqNet(Net):
         self.state_encoder = RNNStateEncoder(
             input_size=rnn_input_size,
             hidden_size=model_config.STATE_ENCODER.hidden_size,
-            num_layers=1,
+            num_layers=model_config.STATE_ENCODER.num_recurrent_layers,
             rnn_type=model_config.STATE_ENCODER.rnn_type,
         )
 

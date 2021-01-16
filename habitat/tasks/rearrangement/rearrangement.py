@@ -343,6 +343,8 @@ class RearrangementSuccess(Measure):
                 receptacle_id = scene_object["object_id"]
 
         is_object_stacked = False
+        is_object_not_in_air = False
+        is_receptacle_not_in_air = False
         if obj_id != -1 and receptacle_id != -1:
             object_position = self._sim.get_translation(obj_id)
             receptacle_position = self._sim.get_translation(receptacle_id)
@@ -350,10 +352,12 @@ class RearrangementSuccess(Measure):
             object_y = object_position.y
             receptacle_y = receptacle_position.y + self._sim.get_object_bb_y_coord(receptacle_id)
             is_object_stacked = (object_y > receptacle_y)
+            is_object_not_in_air = self._sim.contact_test(obj_id)
+            is_receptacle_not_in_air = self._sim.contact_test(receptacle_id)
 
         if (
             hasattr(task, "is_stop_called")
-            and task.is_stop_called  # type: ignore
+            and task.is_stop_called # type: ignore
             and distance_to_target <= self._config.SUCCESS_DISTANCE
             and is_object_stacked
         ):

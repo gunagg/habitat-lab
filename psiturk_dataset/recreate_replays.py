@@ -86,7 +86,6 @@ def rebuild_episode_replay(cfg, output_path, num_episodes=None):
         for ep_id in range(len(env.episodes)):
             observation_list = []
 
-            env._sim.update_cross_hair()
             obs = env.reset()
             observation_list.append(obs)
 

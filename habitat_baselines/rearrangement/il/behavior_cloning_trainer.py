@@ -242,8 +242,9 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.model = torch.nn.DataParallel(self.model, dim=1)
         self.model.to(self.device)
         # Map location CPU is almost always better than mapping to a CUDA device.
-        # ckpt_dict = torch.load(self.config.EVAL_CKPT_PATH_DIR, map_location=self.device)
-        # self.model.load_state_dict(ckpt_dict)
+        ckpt_dict = torch.load(self.config.EVAL_CKPT_PATH_DIR, map_location=self.device)
+        self.model.load_state_dict(ckpt_dict)
+        self.model.eval()
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -255,10 +256,10 @@ class RearrangementBCTrainer(BaseILTrainer):
             optim, max_lr=config.IL.BehaviorCloning.lr,
             steps_per_epoch=len(train_loader), epochs=config.IL.BehaviorCloning.max_epochs
         )
-        cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="mean")
+        cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
 
         test_rnn_hidden_states = torch.zeros(
-            1,
+            config.MODEL.STATE_ENCODER.num_recurrent_layers,
             batch_size,
             config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
@@ -303,21 +304,21 @@ class RearrangementBCTrainer(BaseILTrainer):
                     logits = logits.view(T, N, -1)
                     pred_actions = torch.argmax(logits, dim=2)
 
-                    # print("batch : {}".format(t))
+                    print("batch : {}".format(t))
 
-                    # print(logits.shape)
-                    # print(gt_next_action.shape)
-                    # print(logits.permute(0, 2, 1).shape)
-                    # print(pred_actions.shape)
-                    # print(pred_actions[:, 0])
+                    print(logits.shape)
+                    print(gt_next_action.shape)
+                    print(logits.permute(0, 2, 1).shape)
+                    print(pred_actions.shape)
+                    print(pred_actions[:, 0])
 
-                    # print(gt_next_action.shape)
-                    # print(gt_next_action[:, 0])
+                    print(gt_next_action.shape)
+                    print(gt_next_action[:, 0])
 
-                    # print(torch.sum(pred_actions - gt_next_action))
-                    # print(torch.sum(pred_actions != gt_next_action))
-                    # print(torch.sum(test_rnn_hidden_states))
-                    # print("\n\n")
+                    print(torch.sum(pred_actions - gt_next_action))
+                    print(torch.sum(pred_actions != gt_next_action))
+                    print(torch.sum(test_rnn_hidden_states))
+                    print("\n\n")
 
                     action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action)
                     action_loss = ((inflec_weights * action_loss).sum(0) / inflec_weights.sum(0)).mean()
@@ -429,7 +430,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.model.eval()
 
         observations = self.envs.reset()
-        # observations = self.envs.reset_at(0)
         batch = batch_obs(observations, device=self.device)
 
         current_episode_reward = torch.zeros(
@@ -443,9 +443,10 @@ class RearrangementBCTrainer(BaseILTrainer):
             self.envs.num_envs, 1, device=self.device
         )
         rnn_hidden_states = torch.zeros(
-            1,
+            config.MODEL.STATE_ENCODER.num_recurrent_layers,
             self.envs.num_envs,
             config.MODEL.STATE_ENCODER.hidden_size,
+            device=self.device,
         )
         stats_episodes: Dict[
             Any, Any
@@ -500,7 +501,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             gt_prev_action = gt_batch[1]
 
             obs_rgb = input_data[0]["rgb"]
-            not_done_masks[0][0] = episode_done[count][0]
 
             pred_prev_actions.append(get_habitat_sim_action_str(prev_actions[0][0]))
             gt_prev_actions.append(get_habitat_sim_action_str(gt_prev_action[count][0]))
@@ -594,6 +594,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                 if not_done_masks[i].item() == 0:
                     print("\n\nResetting episodes")
                     print(next_episodes[i].instruction)
+                    print(next_episodes[i].episode_id)
                     pbar.update()
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
@@ -609,16 +610,17 @@ class RearrangementBCTrainer(BaseILTrainer):
                         )
                     ] = episode_stats
                     observations[i] = self.envs.reset_at(i)[0]
-                    rnn_hidden_states[0][i][:] = 0.0
+                    rnn_hidden_states[:][:][:] = 0.0
                     prev_actions[i][0] = HabitatSimActions.START
                     count = -1
                     print(gt_batch[1].shape, len(next_episodes[i].reference_replay))
                     next_episodes = self.envs.current_episodes()
-                    print("Switching")
+                    print("Switching ", len(next_episodes))
                     print(next_episodes[i].instruction)
-                    gt_batch = next(tr_itr)
-                    print(gt_batch[1].shape, len(next_episodes[i].reference_replay))
-                    print(gt_batch[1][0], prev_actions[i][0])
+                    print(len(stats_episodes), number_of_eval_episodes)
+                    print(next_episodes[i].episode_id)
+                    reference_replay = current_episodes[0].reference_replay
+                    print("\n\n\n")
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
@@ -632,6 +634,9 @@ class RearrangementBCTrainer(BaseILTrainer):
                         )
 
                         rgb_frames[i] = []
+                    gt_batch = next(tr_itr)
+                    print(gt_batch[1].shape, len(next_episodes[i].reference_replay))
+                    print(gt_batch[1][0], prev_actions[i][0])
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here

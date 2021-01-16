@@ -34,10 +34,10 @@ def save_grab_release_frames(env, i):
             im.save('outfile{}.jpg'.format(i))
 
 
-def make_videos(observations_list, output_prefix):
-    for idx in range(len(observations_list)):
-        prefix = output_prefix + "_{}".format(idx)
-        make_video_cv2(observations_list[idx], prefix=prefix)
+def make_videos(observations_list, output_prefix, ep_id):
+    #for idx in range(len(observations_list)):
+    prefix = output_prefix + "_{}".format(ep_id)
+    make_video_cv2(observations_list[0], prefix=prefix, open_vid=False)
 
 
 def get_habitat_sim_action(data):
@@ -67,7 +67,7 @@ def log_action_data(data, i):
         print("Action {} - {}".format(data["action"], i))
 
 
-def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=False, num_episodes=None):
+def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=False, num_episodes=None, output_prefix=None):
     instructions = []
     with habitat.Env(cfg) as env:
         obs_list = []
@@ -79,19 +79,19 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
         for ep_id in range(len(env.episodes)):
             observation_list = []
 
-            env._sim.update_cross_hair()
             obs = env.reset()
             observation_list.append(obs)
 
             print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
             print("Physics simulation library: {}".format(physics_simulation_library))
-            print("Episode length: {}".format(len(env.current_episode.reference_replay)))
+            print("Episode length: {}, Episode index: {}".format(len(env.current_episode.reference_replay), ep_id))
             i = 0
             data = {
                 "episodeId": env.current_episode.episode_id,
                 "video": "demo_{}.mp4".format(ep_id),
-                "task": env.current_episode.instruction.instruction_text
+                "task": env.current_episode.instruction.instruction_text,
+                "episodeLength": len(env.current_episode.reference_replay)
             }
             instructions.append(data)
             for data in env.current_episode.reference_replay:
@@ -109,7 +109,8 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     observations = env._sim.get_observations_at(agent_state["position"], agent_state["rotation"], sensor_states, object_states)
                 observation_list.append(observations)
                 i+=1
-            obs_list.append(observation_list)
+            # obs_list.append(observation_list)
+            make_videos([observation_list], output_prefix, ep_id)
         inst_file = open("instructions.json", "w")
         inst_file.write(json.dumps(instructions))
         return obs_list
@@ -138,8 +139,10 @@ def main():
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.freeze()
 
-    observations = run_reference_replay(cfg, args.restore_state, args.step_env, args.log_action, num_episodes=1)
-    make_videos(observations, args.output_prefix)
+    observations = run_reference_replay(
+        cfg, args.restore_state, args.step_env, args.log_action,
+        num_episodes=1, output_prefix=args.output_prefix
+    )
 
 if __name__ == "__main__":
     main()

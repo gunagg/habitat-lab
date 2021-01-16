@@ -10,8 +10,8 @@ VIDEO_OPTION: ["disk"]
 TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # To evaluate on all episodes, set this to -1
-TEST_EPISODE_COUNT: 10
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/one_cycle_0_0001_epoch_700_sz_256_task_8_iw_10_4.ckpt"
+TEST_EPISODE_COUNT: 2
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/one_cycle_0_005_epoch_700_sz_256_task_9_iw_10_4.ckpt"
 NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
@@ -29,8 +29,8 @@ IL:
   USE_IW: True
   BehaviorCloning:
     lr: 0.0005
-    max_epochs: 500
-    batch_size: 2
+    max_epochs: 1 #500
+    batch_size: 1
     freeze_encoder: False
 
 RL:
@@ -40,13 +40,12 @@ RL:
   SUCCESS_REWARD: 1.0
 
 MODEL:
-  inflection_weight_coef: 8.966521106259098
+  inflection_weight_coef: 9.141304347826088 # 8.966521106259098
   ablate_depth: False
   ablate_rgb: False
   ablate_instruction: False
   INSTRUCTION_ENCODER:
     vocab_size: 28
-    max_length: 7
     embedding_size: 64
     hidden_size: 128
     use_pretrained_embeddings: False
@@ -64,6 +63,7 @@ MODEL:
   STATE_ENCODER:
     hidden_size: 512
     rnn_type: "GRU"
+    num_recurrent_layers: 2
   SEQ2SEQ:
     use_prev_action: True
   PROGRESS_MONITOR:
