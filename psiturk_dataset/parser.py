@@ -222,7 +222,6 @@ def convert_to_episode(csv_reader):
     global excluded_ep
 
     ep_len_in_sec = (end_dt - start_dt).total_seconds()
-    print("Excluded: ", len(episode["reference_replay"]) < 9500, unique_id, ep_len_in_sec)
     max_num_actions += ep_len_in_sec
     if len(episode["reference_replay"]) < 9500:
         num_actions_lte_tenk += ep_len_in_sec
@@ -306,7 +305,7 @@ def compute_instruction_tokens(episodes):
     return episodes
 
 
-def replay_to_episode(replay_path, output_path):
+def replay_to_episode(replay_path, output_path, max_episodes=1):
     global max_num_actions
     global total_episodes
     global num_actions_lte_tenk
@@ -315,8 +314,11 @@ def replay_to_episode(replay_path, output_path):
     all_episodes = {
         "episodes": []
     }
+
     episodes = []
-    for file_path in glob.glob(replay_path + "/*.csv"):
+    file_paths = glob.glob(replay_path + "/*.csv")
+    file_paths = file_paths[:max_episodes]
+    for file_path in file_paths:
         print(file_path)
         reader = read_csv(file_path)
         episode = convert_to_episode(reader)
@@ -345,8 +347,11 @@ def main():
     parser.add_argument(
         "--output-path", type=str, default="data/episodes/data.json"
     )
+    parser.add_argument(
+        "--max-episodes", type=int, default=1
+    )
     args = parser.parse_args()
-    replay_to_episode(args.replay_path, args.output_path)
+    replay_to_episode(args.replay_path, args.output_path, args.max_episodes)
 
 
 if __name__ == '__main__':

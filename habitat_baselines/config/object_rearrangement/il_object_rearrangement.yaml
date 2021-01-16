@@ -30,7 +30,7 @@ IL:
   BehaviorCloning:
     lr: 0.0005
     max_epochs: 1 #500
-    batch_size: 1
+    batch_size: 2
     freeze_encoder: False
 
 RL:

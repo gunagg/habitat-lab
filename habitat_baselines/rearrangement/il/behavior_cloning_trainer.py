@@ -242,9 +242,9 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.model = torch.nn.DataParallel(self.model, dim=1)
         self.model.to(self.device)
         # Map location CPU is almost always better than mapping to a CUDA device.
-        ckpt_dict = torch.load(self.config.EVAL_CKPT_PATH_DIR, map_location=self.device)
-        self.model.load_state_dict(ckpt_dict)
-        self.model.eval()
+        # ckpt_dict = torch.load(self.config.EVAL_CKPT_PATH_DIR, map_location=self.device)
+        # self.model.load_state_dict(ckpt_dict)
+        # self.model.eval()
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -303,22 +303,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                     T, N = gt_next_action.shape
                     logits = logits.view(T, N, -1)
                     pred_actions = torch.argmax(logits, dim=2)
-
-                    print("batch : {}".format(t))
-
-                    print(logits.shape)
-                    print(gt_next_action.shape)
-                    print(logits.permute(0, 2, 1).shape)
-                    print(pred_actions.shape)
-                    print(pred_actions[:, 0])
-
-                    print(gt_next_action.shape)
-                    print(gt_next_action[:, 0])
-
-                    print(torch.sum(pred_actions - gt_next_action))
-                    print(torch.sum(pred_actions != gt_next_action))
-                    print(torch.sum(test_rnn_hidden_states))
-                    print("\n\n")
 
                     action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action)
                     action_loss = ((inflec_weights * action_loss).sum(0) / inflec_weights.sum(0)).mean()
@@ -439,7 +423,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         prev_actions = torch.zeros(
             self.envs.num_envs, 1, device=self.device, dtype=torch.long
         )
-        not_done_masks = torch.ones(
+        not_done_masks = torch.zeros(
             self.envs.num_envs, 1, device=self.device
         )
         rnn_hidden_states = torch.zeros(
@@ -592,9 +576,6 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                 # episode ended
                 if not_done_masks[i].item() == 0:
-                    print("\n\nResetting episodes")
-                    print(next_episodes[i].instruction)
-                    print(next_episodes[i].episode_id)
                     pbar.update()
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
@@ -613,14 +594,8 @@ class RearrangementBCTrainer(BaseILTrainer):
                     rnn_hidden_states[:][:][:] = 0.0
                     prev_actions[i][0] = HabitatSimActions.START
                     count = -1
-                    print(gt_batch[1].shape, len(next_episodes[i].reference_replay))
                     next_episodes = self.envs.current_episodes()
-                    print("Switching ", len(next_episodes))
-                    print(next_episodes[i].instruction)
-                    print(len(stats_episodes), number_of_eval_episodes)
-                    print(next_episodes[i].episode_id)
                     reference_replay = current_episodes[0].reference_replay
-                    print("\n\n\n")
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
@@ -635,8 +610,6 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                         rgb_frames[i] = []
                     gt_batch = next(tr_itr)
-                    print(gt_batch[1].shape, len(next_episodes[i].reference_replay))
-                    print(gt_batch[1][0], prev_actions[i][0])
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
@@ -664,12 +637,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                 rgb_frames,
             )
             count += 1
-        print("\n\n\n")
-        print("Total actions: {}".format(len(reference_replay)))
-        print("Mismatch actions: {}".format(mismatch_actions))
-        print("Mismatch index: {}".format(mismatch_ids))
-        with open("pred_1.json", "w") as f:
-            f.write(json.dumps(pred_data))
         # images_to_video(images=rgb_frames[0], output_dir="demos", video_name="dummy")
         self.envs.close()
 
