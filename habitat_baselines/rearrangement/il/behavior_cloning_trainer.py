@@ -251,7 +251,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             lr=float(config.IL.BehaviorCloning.lr),
         )
 
-        # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=20, gamma=0.9)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optim, max_lr=config.IL.BehaviorCloning.lr,
             steps_per_epoch=len(train_loader), epochs=config.IL.BehaviorCloning.max_epochs

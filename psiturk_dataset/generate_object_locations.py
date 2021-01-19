@@ -100,7 +100,10 @@ def get_object_receptacle_pair(object_to_receptacle_list, index):
 
 def get_task_config(config, object_name, receptacle_name, object_ids, receptacle_ids):
     task = {}
-    task["instruction"] = config["TASK"]["INSTRUCTION"].format(object_name, receptacle_name)
+    in_or_on = "on"
+    if "bowl" in receptacle_name :
+        in_or_on = "in"
+    task["instruction"] = config["TASK"]["INSTRUCTION"].format(object_name, in_or_on, receptacle_name)
     task["type"] = config["TASK"]["TYPE"]
     task["goals"] = {}
 
@@ -262,19 +265,16 @@ def is_num_active_collision_points_zero(sim):
 def get_random_object_position(sim, object_name):
     object_handle = get_object_handle(object_name)
     position = get_random_point(sim)
-    position[1] += 0.35
 
     object_id  = sim.add_object_by_handle(object_handle)
+    position[1] += (sim.get_object_bb_y_coord(object_id) * 2)
     sim.set_translation(position, object_id)
+    step_physics_n_times(sim)
 
     step_count = 0
-    while step_count < 10 and not is_num_active_collision_points_zero(sim):
+    while step_count < 5:
         step_physics_n_times(sim)
         step_count += 1
-
-    if not is_num_active_collision_points_zero(sim):
-        print("\n\nObject still rolling down!!")
-        sys.exit(1)
 
     translation = sim.get_translation(object_id)
     rotation = sim.get_rotation(object_id)
@@ -323,7 +323,7 @@ def generate_points(
     num_episodes,
     num_targets,
     number_retries_per_target=1000,
-    d_lower_lim=10.0,
+    d_lower_lim=50.0,
     d_upper_lim=500.0,
     geodesic_to_euclid_min_ratio=1.1,
     prev_episodes="data/tasks"
@@ -347,6 +347,7 @@ def generate_points(
 
     all_points = []
     num_episodes = num_episodes * len(object_to_receptacle_list)
+    print("Generating total {} episodes for {} object receptacle pair".format(num_episodes, len(object_to_receptacle_list)))
 
     while episode_count < num_episodes or num_episodes < 0:
         for object_list in object_to_receptacle_list:

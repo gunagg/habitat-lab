@@ -10,7 +10,7 @@ TASK:
     DIMENSIONALITY: 2
   GOAL_SENSOR_UUID: pointgoal_with_gps_compass
 
-  INSTRUCTION: "Place the {} on the {}"
+  INSTRUCTION: "Place the {} {} the {}"
 
   TYPE: "arrangement"
 
@@ -24,65 +24,165 @@ TASK:
   NUM_RECEPTACLES: 1
 
   OBJECTS: [
-    "mini_soccer_ball",
-    "cracker_box",
     "tomato_soup_can",
     "master_chef_can",
-    "toy_airplane",
+    "tuna_fish_can",
+    "potted_meat_can",
+    "gelatin_box",
     "apple",
-    "mug",
-    "orange",
     "banana",
+    "orange",
+    "plum",
+    "pear",
+    "cracker_box",
+    "sugar_box",
     "mustard_bottle",
-    "gelatine_box",
     "bleach_cleanser",
-    "sphere",
+    "spoon",
+    "fork",
+    "knife",
+    "spatula",
+    "b_cups",
+    "c_cups",
+    "e_cups",
     "d_cups",
-    "hammer"
+    "a_cups",
+    "f_cups",
+    "mug",
+    "bowl",
+    "plate",
+    "pitcher_base",
+    "rubiks_cube",
+    "toy_airplane",
+    "b_lego_duplo",
+    "e_lego_duplo",
+    "a_lego_duplo",
+    "b_toy_airplane",
+    "baseball",
+    "tennis_ball",
+    "softball",
+    "racquetball",
+    "hammer",
+    "adjustable_wrench",
+    "power_drill",
+    "phillips_screwdriver",
+    "large_clamp",
+    "scissors",
   ]
 
   RECEPTACLES: [
     "plate",
-    "nine_hole_peg_test",
     "bowl",
     "colored_wood_blocks",
-    "wood_block"
+    "wood_block",
+    "b_colored_wood_blocks",
+    "foam_brick",
   ]
 
   OBJECT_NAME_MAP:
-    "mini_soccer_ball": "soccer ball"
-    "cracker_box": "cheezit box"
-    "tomato_soup_can": "tomato soup can"
-    "master_chef_can": "masterchef can"
-    "toy_airplane": "toy airplane"
     "apple": "apple"
-    "gelatin_box": "jello box"
-    "mug": "red mug"
-    "orange": "orange"
     "banana": "banana"
-    "mustard_bottle": "mustard bottle"
-    "bleach_cleanser": "bleach cleanser"
-    "sphere": "red sphere"
-    "d_cups": "yellow cup"
+    "cracker_box": "cheezit box"
+    "colored_wood_blocks": "colored wood blocks"
+    "gelatin_box": "jello box"
     "hammer": "hammer"
-    "plate": "red plate"
-    "nine_hole_peg_test": "nine hole wood block"
+    "master_chef_can": "masterchef can"
+    "mini_soccer_ball": "soccer ball"
+    "mustard_bottle": "mustard bottle"
+    "orange": "orange"
     "bowl": "red bowl"
-    "colored_wood_blocks": "colored wood block"
+    "mug": "red mug"
+    "plate": "red plate"
+    "sphere": "red sphere"
+    "tomato_soup_can": "tomato soup can"
+    "toy_airplane": "toy airplane"
     "wood_block": "wood block"
+    "large_clamp": "large clamp"
+    "b_cups": "blue cup"
+    "c_cups": "green cup"
+    "baseball": "baseball"
+    "tennis_ball": "tennis ball"
+    "pitcher_base": "blue jug"
+    "potted_meat_can": "potted meat can"
+    "sugar_box": "sugar box"
+    "rubiks_cube": "rubiks cube"
+    "softball": "softball"
+    "plum": "plum"
+    "spoon": "spoon"
+    "b_colored_wood_blocks": "blue wood block"
+    "fork": "fork"
+    "knife": "knife"
+    "e_cups": "red cup"
+    "d_cups": "yellow cup"
+    "b_toy_airplane": "toy gun"
+    "phillips_screwdriver": "screwdriver"
+    "foam_brick": "brown box"
+    "b_lego_duplo": "purple lego"
+    "e_lego_duplo": "blue lego"
+    "spatula": "spatula"
+    "adjustable_wrench": "wrench"
+    "a_cups": "orange cup"
+    "tuna_fish_can": "tuna fish can"
+    "power_drill": "power drill"
+    "a_lego_duplo": "green lego"
+    "f_cups": "purple cup"
+    "pear": "pear"
+    "flat_screwdriver": "flat screwdriver"
+    "racquetball": "racquetball"
+    "scissors": "scissors"
+    "bleach_cleanser": "white bottle"
 
   OBJECTS_RECEPTACLE_MAP:
-    "mini_soccer_ball": ["colored_wood_blocks"]
-    "cracker_box": ["plate"]
+    # Food
     "tomato_soup_can": ["plate"]
     "master_chef_can": ["plate"]
-    "toy_airplane": ["colored_wood_blocks"]
+    "tuna_fish_can": ["plate"]
+    "potted_meat_can": ["plate"]
+    "gelatin_box": ["plate"]
     "apple": ["plate", "bowl"]
-    "banana": ["plate"]
+    "banana": ["plate", "bowl"]
     "orange": ["plate", "bowl"]
-    "mug": ["plate"]
-    "mustard_bottle": ["plate"]
-    "hammer": ["wood_block"]
+    "plum": ["bowl", "plate"]
+    "pear": ["plate", "bowl"]
+    "cracker_box": ["b_colored_wood_blocks", "plate", "foam_brick"]
+    "sugar_box": ["b_colored_wood_blocks", "plate", "foam_brick"]
+    "mustard_bottle": ["plate", "b_colored_wood_blocks", "foam_brick"]
+    "bleach_cleanser": ["plate", "b_colored_wood_blocks", "foam_brick"]
+    # Utensils
+    "spoon": ["plate"]
+    "fork": ["plate"]
+    "knife": ["plate"]
+    "spatula": ["plate"]
+    "b_cups": ["wood_block", "b_colored_wood_blocks", "plate", "foam_brick"]
+    "c_cups": ["wood_block", "b_colored_wood_blocks", "plate", "foam_brick"]
+    "e_cups": ["wood_block", "b_colored_wood_blocks", "plate", "foam_brick"]
+    "d_cups": ["wood_block", "b_colored_wood_blocks", "plate", "foam_brick"]
+    "a_cups": ["wood_block", "b_colored_wood_blocks", "plate", "foam_brick"]
+    "f_cups": ["wood_block", "b_colored_wood_blocks", "plate", "foam_brick"]
+    "mug": ["plate", "b_colored_wood_blocks", "wood_block", "foam_brick"]
+    "bowl": ["plate", "b_colored_wood_blocks", "wood_block", "foam_brick"]
+    "plate": ["b_colored_wood_blocks", "wood_block", "foam_brick"]
+    "pitcher_base": ["wood_block", "b_colored_wood_blocks", "foam_brick"]
+    # Toys
+    "rubiks_cube": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    "toy_airplane": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    "b_lego_duplo": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    "e_lego_duplo": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    "a_lego_duplo": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    "b_toy_airplane": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    "baseball": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    "tennis_ball": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    "softball": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    "racquetball": ["colored_wood_blocks", "b_colored_wood_blocks", "foam_brick"]
+    # Hardware tools
+    "hammer": ["b_colored_wood_blocks", "wood_block", "foam_brick"]
+    "adjustable_wrench": ["b_colored_wood_blocks", "wood_block", "foam_brick"]
+    "power_drill": ["b_colored_wood_blocks", "wood_block", "foam_brick"]
+    "phillips_screwdriver": ["b_colored_wood_blocks", "wood_block", "foam_brick"]    
+    "large_clamp": ["b_colored_wood_blocks", "wood_block", "foam_brick"]
+    "scissors": ["b_colored_wood_blocks", "wood_block", "foam_brick"]
+    # 117 object receptacle pair
+    
 
 DATASET:
   TYPE: "Interactive"

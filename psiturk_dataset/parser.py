@@ -212,22 +212,24 @@ def convert_to_episode(csv_reader):
             is_viewer_step_finished = handle_step(data, episode, unique_id, timestamp)
         end_ts = int(timestamp)
     
-    episode["reference_replay"] = post_process_episode(copy.deepcopy(episode["reference_replay"]))
+    actual_episode_length = len(episode["reference_replay"])
+    post_processed_ref_replay = post_process_episode(copy.deepcopy(episode["reference_replay"]))
+    episode["reference_replay"] = prune_episode_end(copy.deepcopy(post_processed_ref_replay))
+    
+    post_processed_episode_length = len(post_processed_ref_replay)
+    pruned_episode_length = len(episode["reference_replay"])    
+
     start_dt = datetime.datetime.fromtimestamp(start_ts / 1000)
     end_dt = datetime.datetime.fromtimestamp(end_ts / 1000)
+    hit_duration = (end_dt - start_dt).total_seconds()
 
-    global max_num_actions
-    global total_episodes
-    global num_actions_lte_tenk
-    global excluded_ep
-
-    ep_len_in_sec = (end_dt - start_dt).total_seconds()
-    max_num_actions += ep_len_in_sec
-    if len(episode["reference_replay"]) < 9500:
-        num_actions_lte_tenk += ep_len_in_sec
-        excluded_ep += 1
-    total_episodes += 1
-    return episode
+    episode_length = {
+        "actual_episode_length": actual_episode_length,
+        "post_processed_episode_length": post_processed_episode_length,
+        "pruned_episode_length": pruned_episode_length,
+        "hit_duration": hit_duration
+    }
+    return episode, episode_length
 
 
 def merge_replay_data_for_action(action_data_list):
@@ -282,8 +284,21 @@ def post_process_episode(reference_replay):
 
         post_processed_ref_replay.append(data)
         i += 1
-    print(unique_action_combo_map, len(post_processed_ref_replay), len(reference_replay))
     return post_processed_ref_replay
+
+
+def prune_episode_end(reference_replay):
+    last_non_no_op_action_index = -1
+    for i in range(len(reference_replay)):
+        data = reference_replay[i]
+        if "action" in data.keys() and not is_physics_step(get_action(data)):
+            last_non_no_op_action_index = i
+    # Add action buffer for 3 seconds
+    # 3 seconds is same as interface but we can try reducing it
+    if last_non_no_op_action_index != -1:
+        last_non_no_op_action_index += 60
+        reference_replay = reference_replay[:last_non_no_op_action_index]
+    return reference_replay
 
 
 def compute_instruction_tokens(episodes):
@@ -306,37 +321,87 @@ def compute_instruction_tokens(episodes):
 
 
 def replay_to_episode(replay_path, output_path, max_episodes=1):
-    global max_num_actions
-    global total_episodes
-    global num_actions_lte_tenk
-    global excluded_ep
-
     all_episodes = {
         "episodes": []
     }
 
     episodes = []
+    episode_lengths = []
     file_paths = glob.glob(replay_path + "/*.csv")
-    file_paths = file_paths[:max_episodes]
     for file_path in file_paths:
         print(file_path)
         reader = read_csv(file_path)
-        episode = convert_to_episode(reader)
+        episode, counts = convert_to_episode(reader)
         episodes.append(episode)
+        episode_lengths.append(counts)
 
     all_episodes["episodes"] = compute_instruction_tokens(copy.deepcopy(episodes))
     all_episodes["instruction_vocab"] = {
         "sentences": list(set(instruction_list))
     }
-    print("unique action combo map:\n")
-    for key, v in unique_action_combo_map.items():
-        print(key)
 
-    print("Total episodes: {}".format(len(all_episodes["episodes"])))
-    print("Average time per episode: {}, Total actions: {} -- {}".format(max_num_actions / total_episodes, max_num_actions, total_episodes))
-    print("(Exclude > 15 min) Average time per episode: {}, Total actions: {} -- {}".format(num_actions_lte_tenk/excluded_ep, num_actions_lte_tenk, excluded_ep))
+    if len(unique_action_combo_map.keys()) > 0:
+        print("unique action combo map:\n")
+        for key, v in unique_action_combo_map.items():
+            print(key)
+
+    show_average(all_episodes, episode_lengths)
     write_json(all_episodes, output_path)
     write_gzip(output_path, output_path)
+
+
+def show_average(all_episodes, episode_lengths):
+    print("Total episodes: {}".format(len(all_episodes["episodes"])))
+
+    total_episodes = len(all_episodes["episodes"])
+    total_hit_duration = 0
+    total_hit_duration_filtered = 0
+    filtered_episode_count = 0
+
+    total_actions = 0
+    total_actions_postprocessed = 0
+    total_actions_pruned = 0
+    total_actions_filtered = 0
+    total_actions_postprocessed_filtered = 0
+    total_actions_pruned_filtered = 0
+    num_eps_gt_than_2k = 0
+    for episode_length  in episode_lengths:
+        total_hit_duration += episode_length["hit_duration"]
+        total_actions += episode_length["actual_episode_length"]
+        total_actions_postprocessed += episode_length["post_processed_episode_length"]
+        total_actions_pruned += episode_length["pruned_episode_length"]
+        
+        if episode_length["pruned_episode_length"] < 5000:
+            total_hit_duration_filtered += episode_length["hit_duration"]
+            total_actions_filtered += episode_length["actual_episode_length"]
+            total_actions_postprocessed_filtered += episode_length["post_processed_episode_length"]
+            total_actions_pruned_filtered += episode_length["pruned_episode_length"]
+            filtered_episode_count += 1
+        num_eps_gt_than_2k += 1 if episode_length["pruned_episode_length"] > 1900 else 0
+        print(episode_length["pruned_episode_length"])
+
+    print("\n\n")
+    print("Average hit duration")
+    print("All hits: {}, Total duration: {}, Num episodes: {}".format(round(total_hit_duration / total_episodes, 2), total_hit_duration, total_episodes))
+    print("Filtered hits: {}, Total duration: {}, Num episodes: {}".format(round(total_hit_duration_filtered / filtered_episode_count, 2), total_hit_duration_filtered, filtered_episode_count))
+    
+    print("\n\n")
+    print("Average episode length:")
+    print("All Hits: {}, Num actions: {}, Num episodes: {}".format(round(total_actions / total_episodes, 2), total_actions, total_episodes))
+    print("Filtered Hits: {}, Num actions: {}, Num episodes {}".format(round(total_actions_filtered / filtered_episode_count, 2), total_actions_filtered, filtered_episode_count))
+
+    print("\n\n")
+    print("Average postprocessed episode length:")
+    print("All Hits: {}, Num actions: {}, Num episodes: {}".format(round(total_actions_postprocessed / total_episodes, 2), total_actions_postprocessed, total_episodes))
+    print("Filtered Hits: {}, Num actions: {}, Num episodes {}".format(round(total_actions_postprocessed_filtered / filtered_episode_count, 2), total_actions_postprocessed_filtered, filtered_episode_count))
+
+    print("\n\n")
+    print("Average pruned episode length:")
+    print("All Hits: {}, Num actions: {}, Num episodes: {}".format(round(total_actions_pruned / total_episodes, 2), total_actions_pruned, total_episodes))
+    print("Filtered Hits: {}, Num actions: {}, Num episodes {}".format(round(total_actions_pruned_filtered / filtered_episode_count, 2), total_actions_pruned_filtered, filtered_episode_count))
+
+    print("\n\n")
+    print("Pruned episodes greater than 1.5k actions: {}".format(num_eps_gt_than_2k))
 
 
 def main():
