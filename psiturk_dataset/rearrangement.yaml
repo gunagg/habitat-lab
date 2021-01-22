@@ -15,8 +15,8 @@ TASK:
   TYPE: "arrangement"
 
   Y_LIMIT: [
-    -6.0,
-    1.0
+    -3.0,
+    -3.0
   ]
 
   NUM_OBJECTS: 1

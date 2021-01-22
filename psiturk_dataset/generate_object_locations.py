@@ -175,7 +175,9 @@ def get_bad_points(
         bad_points[points[:, 2] > zlim[1]] = 1
     
     for i, point in enumerate(points):
-        if VISITED_POINT_DICT.get(str(point)) == 1 or is_less_than_island_radius_limit(sim, point):
+        point_list = point.tolist()
+        existing_point_count = VISITED_POINT_DICT.get(str(point_list))
+        if existing_point_count is not None and existing_point_count >= 1 or is_less_than_island_radius_limit(sim, point):
             bad_points[i] = 1
 
     # Too close to another object or receptacle
@@ -285,8 +287,10 @@ def get_random_object_position(sim, object_name):
     return np.array(translation), rotation
 
 
-def populate_episodes_points(episodes):
+def populate_episodes_points(episodes, scene_id):
     for episode in episodes["episodes"]:
+        if scene_id != episode["scene_id"]:
+            continue
         point = str(episode["start_position"])
         if VISITED_POINT_DICT.get(point):
             VISITED_POINT_DICT[point] += 1
@@ -303,11 +307,11 @@ def populate_episodes_points(episodes):
                 VISITED_POINT_DICT[point] = 1
 
 
-def populate_prev_generated_points(path):
+def populate_prev_generated_points(path, scene_id):
     for file_path in glob.glob(path + "/*.json"):
         with open(file_path, "r") as file:
             data = json.loads(file.read())
-            populate_episodes_points(data)
+            populate_episodes_points(data, scene_id)
     print("Total previously generated points {}".format(len(VISITED_POINT_DICT.keys())))
 
 
@@ -326,13 +330,14 @@ def generate_points(
     d_lower_lim=50.0,
     d_upper_lim=500.0,
     geodesic_to_euclid_min_ratio=1.1,
-    prev_episodes="data/tasks"
+    prev_episodes="data/tasks",
+    scene_id="empty_house.glb"
 ):
     # Initialize simulator
     sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
 
     # Populate previously generated points
-    populate_prev_generated_points(prev_episodes)
+    populate_prev_generated_points(prev_episodes, scene_id)
 
     episode_count = 0
     episodes = []
@@ -377,8 +382,9 @@ def generate_points(
             )
 
             # Mark valid points as visited to get unique points
+            print("Total unique points: {}".format(len(VISITED_POINT_DICT.keys())))
             for point in points:
-                VISITED_POINT_DICT[str(point)] = 1
+                VISITED_POINT_DICT[str(point.tolist())] = 1
                 all_points.append(point.tolist())
                 
             agent_position = points[0].tolist()
@@ -490,11 +496,13 @@ if __name__ == "__main__":
     config = habitat.get_config(args.task_config.split(","), opts)
 
     dataset_type = config.DATASET.TYPE
+    scene_id = ""
     if args.scenes is not None:
         config.defrost()
         config.SIMULATOR.SCENE = args.scenes
         config.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS = True
         config.freeze()
+        scene_id = args.scenes.split("/")[-1]
 
     if dataset_type == "Interactive":
         dataset = generate_points(
@@ -506,7 +514,8 @@ if __name__ == "__main__":
             args.d_lower_lim,
             args.d_upper_lim,
             args.geodesic_to_euclid_min_ratio,
-            args.prev_episodes
+            args.prev_episodes,
+            scene_id
         )
         write_episode(dataset, args.output)
     else:

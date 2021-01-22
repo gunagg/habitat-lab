@@ -479,7 +479,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             current_episodes = self.envs.current_episodes()
 
             input_data = gt_batch
-            episode_done = gt_batch[2]
             gt_next_action = gt_batch[3]
             gt_prev_action = gt_batch[1]
 
