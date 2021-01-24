@@ -173,11 +173,14 @@ def get_bad_points(
     if zlim:
         bad_points[points[:, 2] < zlim[0]] = 1
         bad_points[points[:, 2] > zlim[1]] = 1
-    
+
     for i, point in enumerate(points):
         point_list = point.tolist()
         existing_point_count = VISITED_POINT_DICT.get(str(point_list))
-        if existing_point_count is not None and existing_point_count >= 1 or is_less_than_island_radius_limit(sim, point):
+        is_colliding = False
+        if i > 0:
+            is_colliding = test_contact_on_settled_point(sim, object_names[i-1], point)
+        if existing_point_count is not None and existing_point_count >= 1 or is_colliding:
             bad_points[i] = 1
 
     # Too close to another object or receptacle
@@ -256,12 +259,23 @@ def add_contact_test_object(sim, object_name):
     sim.add_contact_test_object(object_handle)
 
 
+def remove_contact_test_object(sim, object_name):
+    object_handle = get_object_handle(object_name)
+    sim.remove_contact_test_object(object_handle)
+
+
 def step_physics_n_times(sim, n=50, dt = 1.0 / 10.0):
     sim.step_world(n * dt)
 
 
 def is_num_active_collision_points_zero(sim):
     return (sim.get_num_active_contact_points() == 0)
+
+
+def test_contact_on_settled_point(sim, object_name, position):
+    object_handle = get_object_handle(object_name)
+    temp_pos = mn.Vector3(position[0], position[1] + 0.2, position[2])
+    return contact_test(sim, object_name, temp_pos)
 
 
 def get_random_object_position(sim, object_name):
@@ -274,7 +288,7 @@ def get_random_object_position(sim, object_name):
     step_physics_n_times(sim)
 
     step_count = 0
-    while step_count < 5:
+    while step_count < 1:
         step_physics_n_times(sim)
         step_count += 1
 
@@ -327,8 +341,8 @@ def generate_points(
     num_episodes,
     num_targets,
     number_retries_per_target=1000,
-    d_lower_lim=50.0,
-    d_upper_lim=500.0,
+    d_lower_lim=5.0,
+    d_upper_lim=30.0,
     geodesic_to_euclid_min_ratio=1.1,
     prev_episodes="data/tasks",
     scene_id="empty_house.glb"
@@ -362,6 +376,9 @@ def generate_points(
 
             object_name = object_name_map[object_]
             receptacle_name = object_name_map[receptacle]
+
+            add_contact_test_object(sim, object_)
+            add_contact_test_object(sim, receptacle)
 
             points = []
             rotations = []
@@ -464,7 +481,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--d_lower_lim",
         type=float,
-        default=0.5,
+        default=5.0,
         help="Closest distance between objects allowed.",
     )
     parser.add_argument(
