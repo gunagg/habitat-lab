@@ -32,6 +32,20 @@ def get_geodesic_distance(sim, position_a, position_b):
     return sim.geodesic_distance(position_a, position_b)
 
 
+def get_object_handle(object_name):
+    return "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
+
+
+def add_contact_test_object(sim, object_name):
+    object_handle = get_object_handle(object_name)
+    sim.add_contact_test_object(object_handle)
+
+
+def contact_test_rotation(sim, object_name, position, rotation):
+    object_handle = "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
+    return sim.pre_add_contact_test(object_handle, mn.Vector3(position), quat_from_coeffs(rotation))
+
+
 def populate_episodes_points(episodes, scene_id):
     for episode in episodes:
         if scene_id != episode["scene_id"]:
@@ -55,9 +69,21 @@ def populate_episodes_points(episodes, scene_id):
 def is_valid_episode(sim, episode, near_dist, far_dist):
     agent_position = episode["start_position"]
     positions = [agent_position]
+    objects = []
     for object_ in episode["objects"]:
+        object_name = object_["objectHandle"].split("/")[-1].split(".")[0]
         position = object_["position"]
         positions.append(position)
+        rotation = get_random_rotation()
+        if "bowl" in object_name or "plate" in object_name:
+            object_["rotation"] = rotation
+        objects.append(object_)
+        add_contact_test_object(sim, object_name)
+        contact = contact_test_rotation(sim, object_name, position, rotation)
+
+        if contact:
+            return False, episode
+    episode["objects"] = objects
 
     for i in range(len(positions)):
         for j in range(len(positions)):
@@ -65,9 +91,15 @@ def is_valid_episode(sim, episode, near_dist, far_dist):
                 continue
             dist = get_geodesic_distance(sim, positions[i], positions[j])
             if not near_dist <= dist <= far_dist:
-                return False
-    return True
-    
+                return False, episode
+    return True, episode
+
+
+def get_random_rotation():
+    angle = np.random.uniform(0, 2 * np.pi)
+    rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
+    return rotation
+
 
 def get_all_tasks(path, scene_id):
     tasks = []
@@ -75,7 +107,7 @@ def get_all_tasks(path, scene_id):
         with open(file_path, "r") as file:
             data = json.loads(file.read())
             if data["episodes"][0]["scene_id"] == scene_id:
-                tasks.append(data)
+                tasks.append((data, file_path))
                 populate_episodes_points(data["episodes"], scene_id)
                 print(file_path)
     unique_points_count = len(VISITED_POINT_DICT.keys())
@@ -88,6 +120,12 @@ def get_sim(config):
     # Initialize simulator
     sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
     return sim
+
+
+def write_episode(dataset, filename):
+    prefix = "data/tasks/" + filename
+    with open(prefix, "w") as output_file:
+        output_file.write(json.dumps(dataset))
 
 
 def validate_tasks(
@@ -104,12 +142,21 @@ def validate_tasks(
 
     results = []
     i = 0
-    for task in tasks:
+    for task, file_path in tasks:
         episodes = task["episodes"]
         count = 0
+        file_name = file_path.split("/")[-1].split(".")[0] + "_rot_fixed.json"
+        rot_fixed_episodes = []
         for episode in episodes:
-            is_valid = is_valid_episode(sim, episode, d_lower_lim, d_upper_lim)
+            is_valid, ep_fixed = is_valid_episode(sim, episode, d_lower_lim, d_upper_lim)
             count += int(is_valid)
+            rot_fixed_episodes.append(ep_fixed)
+
+        new_task = {
+            "episodes": episodes
+        }
+
+        write_episode(new_task, file_name)
         i += 1
 
         print("\nScene: {}, Num valid episodes: {}, Total episodes: {}\n".format(scene_id, count, len(episodes)))

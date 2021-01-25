@@ -378,7 +378,6 @@ def show_average(all_episodes, episode_lengths):
             total_actions_pruned_filtered += episode_length["pruned_episode_length"]
             filtered_episode_count += 1
         num_eps_gt_than_2k += 1 if episode_length["pruned_episode_length"] > 1900 else 0
-        print(episode_length["pruned_episode_length"])
 
     print("\n\n")
     print("Average hit duration")
