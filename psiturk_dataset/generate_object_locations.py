@@ -18,7 +18,6 @@ import numpy as np
 import magnum as mn
 import matplotlib.pyplot as plt
 
-
 from habitat.sims import make_sim
 from habitat_sim.utils.common import quat_from_coeffs, quat_from_magnum, quat_to_coeffs
 from mpl_toolkits.mplot3d import Axes3D
@@ -424,6 +423,8 @@ def generate_points(
 
             remove_all_objects(sim)
             episode_count += 1
+            break
+        break
 
     dataset = {
         "episodes": episodes

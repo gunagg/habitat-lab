@@ -46,6 +46,14 @@ def contact_test_rotation(sim, object_name, position, rotation):
     return sim.pre_add_contact_test(object_handle, mn.Vector3(position), quat_from_coeffs(rotation))
 
 
+def contact_test(sim, object_name, position):
+    object_handle = "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
+    return sim.pre_add_contact_test(object_handle, mn.Vector3(position))
+
+
+def get_object_handle(object_name):
+    return "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
+
 def populate_episodes_points(episodes, scene_id):
     for episode in episodes:
         if scene_id != episode["scene_id"]:
@@ -81,6 +89,21 @@ def is_valid_episode(sim, episode, near_dist, far_dist):
         add_contact_test_object(sim, object_name)
         contact = contact_test_rotation(sim, object_name, position, rotation)
 
+        tilt_contact = contact_test(sim, object_name, position)
+        # agent pos = -0.2089587301015854 empty_house
+        # agent pos = 0.08012409508228302 house
+        # agent pos = 0.12102930247783661 big_house
+        # agent pos = 0.12102930247783661 big_house_2
+        # agent pos = 0.12102930247783661 bigger_house
+        y_dist_from_agent = -0.2089587301015854 - position[1]
+        object_handle = get_object_handle(object_name)
+        object_id  = sim.add_object_by_handle(object_handle)
+        bb_y = sim.get_object_bb_y_coord(object_id)
+        sim.remove_object(object_id)
+        # if episode["episode_id"] == 281:
+        #     print("\nEpsiode {}, tilted object: {}, y: {}, pos: {}, agent diff: {}, bb y coord: {}\n".format(episode["episode_id"], object_name, position[1], episode["start_position"][1], y_dist_from_agent, bb_y))
+        if ((not tilt_contact or abs(y_dist_from_agent) >= bb_y) and object_name in ["wood_block", "foam_brick", "b_colored_wood_block"]):
+            print("\nEpsiode {}, tilted object: {}, contact: {}, y: {}, pos: {}, agent diff: {}, bb y coord: {}\n".format(episode["episode_id"], object_name, tilt_contact, position[1], episode["start_position"][1], y_dist_from_agent, bb_y))
         if contact:
             return False, episode
     episode["objects"] = objects
@@ -107,9 +130,10 @@ def get_all_tasks(path, scene_id):
         with open(file_path, "r") as file:
             data = json.loads(file.read())
             if data["episodes"][0]["scene_id"] == scene_id:
-                tasks.append((data, file_path))
-                populate_episodes_points(data["episodes"], scene_id)
-                print(file_path)
+                if "2_rot_fixed" in file_path:
+                    tasks.append((data, file_path))
+                    populate_episodes_points(data["episodes"], scene_id)
+                    print(file_path)
     unique_points_count = len(VISITED_POINT_DICT.keys())
     print("Total tasks: {}".format(len(tasks)))
     print("Total unique points: {} -- {}".format(unique_points_count, unique_points_count / 3))
@@ -156,7 +180,7 @@ def validate_tasks(
             "episodes": episodes
         }
 
-        write_episode(new_task, file_name)
+        # write_episode(new_task, file_name)
         i += 1
 
         print("\nScene: {}, Num valid episodes: {}, Total episodes: {}\n".format(scene_id, count, len(episodes)))

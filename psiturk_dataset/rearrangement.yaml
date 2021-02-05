@@ -15,7 +15,7 @@ TASK:
   TYPE: "arrangement"
 
   Y_LIMIT: [
-    -4.0, -1.0
+    -6.0, 6.0
   ]
 
   NUM_OBJECTS: 1
@@ -181,7 +181,13 @@ TASK:
     "large_clamp": ["b_colored_wood_blocks", "wood_block", "foam_brick"]
     "scissors": ["b_colored_wood_blocks", "wood_block", "foam_brick"]
     # 117 object receptacle pair
-    
+
+  EXCLUDE_OBJECTS: [
+    "b_colored_wood_blocks",
+    "wood_block",
+    "hammer",
+    "adjustable_wrench"
+  ]
 
 DATASET:
   TYPE: "Interactive"

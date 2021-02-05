@@ -4,6 +4,7 @@ import habitat
 import json
 import sys
 import time
+import os
 
 from habitat import Config
 from habitat_sim.utils import viz_utils as vut
@@ -89,7 +90,8 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             i = 0
             data = {
                 "episodeId": env.current_episode.episode_id,
-                "video": "demo_{}.mp4".format(ep_id),
+                "sceneId": env.current_episode.scene_id,
+                "video": "{}_{}.mp4".format(output_prefix, ep_id),
                 "task": env.current_episode.instruction.instruction_text,
                 "episodeLength": len(env.current_episode.reference_replay)
             }
@@ -109,8 +111,13 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     observations = env._sim.get_observations_at(agent_state["position"], agent_state["rotation"], sensor_states, object_states)
                 observation_list.append(observations)
                 i+=1
-            # obs_list.append(observation_list)
             make_videos([observation_list], output_prefix, ep_id)
+
+        if os.path.isfile("instructions.json"):
+            inst_file = open("instructions.json", "r")
+            existing_instructions = json.loads(inst_file.read())
+            instructions.extend(existing_instructions)
+
         inst_file = open("instructions.json", "w")
         inst_file.write(json.dumps(instructions))
         return obs_list

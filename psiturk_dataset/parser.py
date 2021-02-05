@@ -18,6 +18,7 @@ max_num_actions = 0
 num_actions_lte_tenk = 0
 total_episodes = 0
 excluded_ep = 0
+task_episode_map = {}
 
 def read_csv(path, delimiter=","):
     file = open(path, "r")
@@ -144,6 +145,11 @@ def handle_step(step, episode, unique_id, timestamp):
     if step.get("event"):
         if step["event"] == "setEpisode":
             data = copy.deepcopy(step["data"]["episode"])
+            ep_id = "{}:{}".format(data["sceneID"], data["episodeID"])
+            if ep_id not in task_episode_map.keys():
+                task_episode_map[ep_id] = 0
+            task_episode_map[ep_id] += 1
+
             episode["episode_id"] = unique_id
             episode["scene_id"] = data["sceneID"]
             episode["start_position"] = data["startState"]["position"]
@@ -164,7 +170,6 @@ def handle_step(step, episode, unique_id, timestamp):
             instruction_text = data["task"]["instruction"]
             episode["instruction"] = {
                 "instruction_text": instruction_text,
-                #"preprocessed_instruction": preprocess(instruction_text)
             }
             append_instruction(instruction_text)
             object_receptacle_map = {}
@@ -287,17 +292,42 @@ def post_process_episode(reference_replay):
     return post_processed_ref_replay
 
 
+def is_redundant_state_action_pair(current_state, prev_state):
+    if prev_state is None:
+        return False
+    current_state = copy.deepcopy(current_state)
+    prev_state = copy.deepcopy(prev_state)
+    del current_state["timestamp"]
+    del prev_state["timestamp"]
+    current_state_json_string = json.dumps(current_state)
+    prev_state_json_string = json.dumps(prev_state)
+    return current_state_json_string == prev_state_json_string
+
+
 def prune_episode_end(reference_replay):
     last_non_no_op_action_index = -1
+    pruned_reference_replay = []
+    prev_state = None
+    redundant_state_count = 0
     for i in range(len(reference_replay)):
         data = reference_replay[i]
+        if "action" in data.keys() and is_physics_step(get_action(data)) and not is_redundant_state_action_pair(data, prev_state):
+            pruned_reference_replay.append(data)
+        elif "action" in data.keys() and not is_physics_step(get_action(data)):
+            pruned_reference_replay.append(data)
+        else:
+            redundant_state_count += 1
+
         if "action" in data.keys() and not is_physics_step(get_action(data)):
-            last_non_no_op_action_index = i
+            last_non_no_op_action_index = len(pruned_reference_replay) - 1
+        prev_state = copy.deepcopy(data)
+
+    print("Original replay size: {}, pruned replay: {}, redundant steps: {}".format(len(reference_replay), len(pruned_reference_replay), redundant_state_count))
     # Add action buffer for 3 seconds
     # 3 seconds is same as interface but we can try reducing it
     if last_non_no_op_action_index != -1:
         last_non_no_op_action_index += 60
-        reference_replay = reference_replay[:last_non_no_op_action_index]
+        reference_replay = pruned_reference_replay[:last_non_no_op_action_index]
     return reference_replay
 
 
@@ -401,6 +431,13 @@ def show_average(all_episodes, episode_lengths):
 
     print("\n\n")
     print("Pruned episodes greater than 1.5k actions: {}".format(num_eps_gt_than_2k))
+
+    scenes = ["empty_house.glb", "big_house.glb", "big_house_2.glb", "bigger_house.glb", "house.glb"]
+    for scene in scenes:
+        for i in range(0, 585):
+            ep_id = "{}:{}".format(scene, i)
+            if ep_id not in task_episode_map.keys():
+                print("{} missing".format(ep_id))
 
 
 def main():

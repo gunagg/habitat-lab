@@ -56,6 +56,7 @@ class RearrangementSim(HabitatSim):
         self.default_agent_id = agent_id
 
     def reconfigure(self, config: Config) -> None:
+        self.remove_existing_objects()
         super().reconfigure(config)
         self._initialize_objects(config)
 
@@ -75,22 +76,19 @@ class RearrangementSim(HabitatSim):
         # first remove all existing objects
         existing_object_ids = self.get_existing_object_ids()
 
-        if len(existing_object_ids) > 0:
-            for obj_id in existing_object_ids:
-                self.remove_object(obj_id)
-                object_ = self.get_object_from_scene(obj_id)
-                if object_ is not None:
-                    self.remove_contact_test_object(object_["object_handle"])
-            self.clear_recycled_object_ids()
-            self.clear_scene_objects()
+        for obj_id in existing_object_ids:
+            self.remove_object(obj_id)
+            object_ = self.get_object_from_scene(obj_id)
+            if object_ is not None:
+                self.remove_contact_test_object(object_["object_handle"])
+        self.clear_recycled_object_ids()
+        self.clear_scene_objects()
 
     def _initialize_objects(self, sim_config):
         # contact test object for agent
         self.add_contact_test_object(self.agent_object_handle)
         objects = sim_config.objects
         obj_attr_mgr = self.get_object_template_manager()
-
-        self.remove_existing_objects()
 
         self.sim_objid_to_replay_objid_mapping = {}
         self.replay_objid_to_sim_objid_mapping = {}
@@ -280,8 +278,10 @@ class RearrangementSim(HabitatSim):
                 self.gripped_object_transformation = self.get_transformation(
                     nearest_object_id
                 )
-                self.remove_object(nearest_object_id)
-                self.gripped_object_id = nearest_object_id
+                object_ = self.get_object_from_scene(nearest_object_id)
+                if object_["is_receptacle"] != True:
+                    self.remove_object(nearest_object_id)
+                    self.gripped_object_id = nearest_object_id
         elif action_spec.name == "no_op":
             pass
         else:
@@ -465,7 +465,7 @@ class RearrangementSim(HabitatSim):
             success = True
         else:
             success = self.set_agent_state(
-                position, rotation, reset_sensors=False
+                np.array(position), np.array(rotation), reset_sensors=False
             )
         if sensor_states is not None:
             self.restore_sensor_states(sensor_states)
