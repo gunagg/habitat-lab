@@ -175,9 +175,13 @@ def handle_step(step, episode, unique_id, timestamp):
             object_receptacle_map = {}
             if "goals" in data["task"].keys():
                 object_receptacle_map = data["task"]["goals"]["objectToReceptacleMap"]
-            episode["goals"] = {
-                "object_receptacle_map": object_receptacle_map
-            }
+                goals = []
+                for object_ in episode["objects"]:
+                    goals.append({
+                        "position": object_["position"],
+                        "rotation": object_["rotation"],
+                    })
+                episode["goals"] = goals
             episode["reference_replay"] = []
 
         elif step["event"] == "handleAction":
@@ -431,13 +435,6 @@ def show_average(all_episodes, episode_lengths):
 
     print("\n\n")
     print("Pruned episodes greater than 1.5k actions: {}".format(num_eps_gt_than_2k))
-
-    scenes = ["empty_house.glb", "big_house.glb", "big_house_2.glb", "bigger_house.glb", "house.glb"]
-    for scene in scenes:
-        for i in range(0, 585):
-            ep_id = "{}:{}".format(scene, i)
-            if ep_id not in task_episode_map.keys():
-                print("{} missing".format(ep_id))
 
 
 def main():

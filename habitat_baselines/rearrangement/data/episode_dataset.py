@@ -152,17 +152,6 @@ class RearrangementEpisodeDataset(Dataset):
             )
 
             self.count = 0
-            print("HabitatSimActions.TURN_RIGHT", HabitatSimActions.TURN_RIGHT)
-            print("HabitatSimActions.TURN_LEFT", HabitatSimActions.TURN_LEFT)
-            print("HabitatSimActions.MOVE_FORWARD", HabitatSimActions.MOVE_FORWARD)
-            print("HabitatSimActions.MOVE_BACKWARD", HabitatSimActions.MOVE_BACKWARD)
-            print("HabitatSimActions.LOOK_UP", HabitatSimActions.LOOK_UP)
-            print("HabitatSimActions.LOOK_DOWN", HabitatSimActions.LOOK_DOWN)
-            print("HabitatSimActions.NO_OP", HabitatSimActions.NO_OP)
-            print("HabitatSimActions.GRAB_RELEASE", HabitatSimActions.GRAB_RELEASE)
-            print("HabitatSimActions.START", HabitatSimActions.START)
-            print("HabitatSimActions.STOP", HabitatSimActions.STOP)
-
             for scene in tqdm(list(self.scene_episode_dict.keys())):
                 for episode in tqdm(self.scene_episode_dict[scene]):
                     self.load_scene(scene, episode)
@@ -178,16 +167,6 @@ class RearrangementEpisodeDataset(Dataset):
             logger.info("Rearrangement database ready!")
 
         else:
-            print("HabitatSimActions.TURN_RIGHT", HabitatSimActions.TURN_RIGHT)
-            print("HabitatSimActions.TURN_LEFT", HabitatSimActions.TURN_LEFT)
-            print("HabitatSimActions.MOVE_FORWARD", HabitatSimActions.MOVE_FORWARD)
-            print("HabitatSimActions.MOVE_BACKWARD", HabitatSimActions.MOVE_BACKWARD)
-            print("HabitatSimActions.LOOK_UP", HabitatSimActions.LOOK_UP)
-            print("HabitatSimActions.LOOK_DOWN", HabitatSimActions.LOOK_DOWN)
-            print("HabitatSimActions.NO_OP", HabitatSimActions.NO_OP)
-            print("HabitatSimActions.GRAB_RELEASE", HabitatSimActions.GRAB_RELEASE)
-            print("HabitatSimActions.START", HabitatSimActions.START)
-            print("HabitatSimActions.STOP", HabitatSimActions.STOP)
             logger.info("Dataset cache found.")
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
@@ -276,7 +255,7 @@ class RearrangementEpisodeDataset(Dataset):
             txn.put((sample_key + "_weights").encode(), inflection_weights.tobytes())
         
         self.count += 1
-        images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
+        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
 
     def cache_exists(self) -> bool:
         if os.path.exists(self.dataset_path):

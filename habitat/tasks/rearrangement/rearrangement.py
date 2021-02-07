@@ -49,12 +49,12 @@ class RearrangementObjectSpec(RearrangementSpec):
     """
     object_id: str = attr.ib(default=None, validator=not_none_validator)
     object_handle: Optional[str] = attr.ib(
-        default="data/test_assets/objects/chair", validator=not_none_validator
+        default="", validator=not_none_validator
     )
-    object_icon: Optional[str] = attr.ib(default="data/test_assets/objects/chair.png")
-    position: List[float] = attr.ib(
-        default=None, validator=not_none_validator
+    object_template: Optional[str] = attr.ib(
+        default="", validator=not_none_validator
     )
+    object_icon: Optional[str] = attr.ib(default="")
     motion_type: Optional[str] = attr.ib(default=None)
     is_receptacle: Optional[bool] = attr.ib(default=None)
 
@@ -64,14 +64,6 @@ class ReplayActionSpec:
     r"""Replay specifications that capture metadata associated with action.
     """
     action: str = attr.ib(default=None, validator=not_none_validator)
-
-
-@attr.s(auto_attribs=True, kw_only=True)
-class RearrangementGoal:
-    r"""Base class for a goal specification hierarchy."""
-
-    object_receptacle_map: Dict = attr.ib(default=None, validator=not_none_validator)
-    radius: Optional[float] = None
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -91,7 +83,7 @@ class RearrangementEpisode(Episode):
         reference_replay: List of keypresses which gives the reference
             actions to the goal that aligns with the instruction.
     """
-    goals: List[RearrangementGoal] = attr.ib(
+    goals: List[RearrangementSpec] = attr.ib(
         default=None, validator=not_none_validator
     )
     reference_replay: List[Dict] = attr.ib(

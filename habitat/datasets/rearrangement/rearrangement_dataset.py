@@ -15,7 +15,7 @@ from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.core.utils import not_none_validator
 from habitat.datasets.utils import VocabFromText
-from habitat.tasks.rearrangement.rearrangement import InstructionData, RearrangementEpisode
+from habitat.tasks.rearrangement.rearrangement import InstructionData, RearrangementEpisode, RearrangementSpec, RearrangementObjectSpec
 
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
@@ -70,4 +70,8 @@ class RearrangementDatasetV1(Dataset):
                 episode.scene_id = os.path.join(scenes_dir, episode.scene_id)
 
             episode.instruction = InstructionData(**episode.instruction)
+            for i, goal in enumerate(episode.goals):
+                episode.goals[i] = RearrangementSpec(**goal)
+            # for i, obj in enumerate(episode.objects):
+            #     episode.objects[i] = RearrangementObjectSpec(**obj)
             self.episodes.append(episode)

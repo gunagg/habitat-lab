@@ -10,7 +10,7 @@ from habitat import Config
 from habitat_sim.utils import viz_utils as vut
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_sim.utils.common import quat_to_coeffs
-from habitat.utils.visualizations.utils import make_video_cv2
+from habitat.utils.visualizations.utils import make_video_cv2, observations_to_image, images_to_video
 
 from threading import Thread
 from time import sleep
@@ -36,9 +36,10 @@ def save_grab_release_frames(env, i):
 
 
 def make_videos(observations_list, output_prefix, ep_id):
-    #for idx in range(len(observations_list)):
+    #print(observations_list[0][0].keys(), type(observations_list[0][0]))
     prefix = output_prefix + "_{}".format(ep_id)
-    make_video_cv2(observations_list[0], prefix=prefix, open_vid=False)
+    # make_video_cv2(observations_list[0], prefix=prefix, open_vid=False)
+    images_to_video(observations_list[0], output_dir="demos", video_name=prefix)
 
 
 def get_habitat_sim_action(data):
@@ -81,7 +82,6 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             observation_list = []
 
             obs = env.reset()
-            observation_list.append(obs)
 
             print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
@@ -109,7 +109,10 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     sensor_states = data["agent_state"]["sensor_data"]
                     object_states = data["object_states"]
                     observations = env._sim.get_observations_at(agent_state["position"], agent_state["rotation"], sensor_states, object_states)
-                observation_list.append(observations)
+
+                info = env.get_metrics()
+                frame = observations_to_image({"rgb": observations["rgb"]}, info)
+                observation_list.append(frame)
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
 
