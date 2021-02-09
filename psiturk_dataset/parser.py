@@ -8,6 +8,7 @@ import json
 import re
 import sys
 
+from tqdm import tqdm
 from habitat.datasets.utils import VocabFromText
 
 
@@ -326,7 +327,7 @@ def prune_episode_end(reference_replay):
             last_non_no_op_action_index = len(pruned_reference_replay) - 1
         prev_state = copy.deepcopy(data)
 
-    print("Original replay size: {}, pruned replay: {}, redundant steps: {}".format(len(reference_replay), len(pruned_reference_replay), redundant_state_count))
+    # print("Original replay size: {}, pruned replay: {}, redundant steps: {}".format(len(reference_replay), len(pruned_reference_replay), redundant_state_count))
     # Add action buffer for 3 seconds
     # 3 seconds is same as interface but we can try reducing it
     if last_non_no_op_action_index != -1:
@@ -362,8 +363,7 @@ def replay_to_episode(replay_path, output_path, max_episodes=1):
     episodes = []
     episode_lengths = []
     file_paths = glob.glob(replay_path + "/*.csv")
-    for file_path in file_paths:
-        print(file_path)
+    for file_path in tqdm(file_paths):
         reader = read_csv(file_path)
         episode, counts = convert_to_episode(reader)
         episodes.append(episode)

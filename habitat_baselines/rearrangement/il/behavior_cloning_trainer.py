@@ -460,37 +460,11 @@ class RearrangementBCTrainer(BaseILTrainer):
         prev_actions[0][0] = HabitatSimActions.START
 
         current_episodes = self.envs.current_episodes()
-        reference_replay = current_episodes[0].reference_replay
-        tr_itr = iter(train_loader)
-        gt_batch = next(tr_itr)
-        mismatch_actions = 0
-        mismatch_ids = []
-        gt_actions = []
-        pred_actions = []
-        pred_data = []
-        gt_prev_actions = []
-        pred_prev_actions = []
-        gt_agent_state = self.envs.get_agent_pose()[0]
-        gt_object_states = self.envs.get_current_object_states()[0]
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
-
-            input_data = gt_batch
-            gt_next_action = gt_batch[3]
-            gt_prev_action = gt_batch[1]
-
-            obs_rgb = input_data[0]["rgb"]
-
-            pred_prev_actions.append(get_habitat_sim_action_str(prev_actions[0][0]))
-            gt_prev_actions.append(get_habitat_sim_action_str(gt_prev_action[count][0]))
-
-            (agent_l2_distance,
-             agent_quat_distance,
-             sensor_quat_distance,
-             object_dist_map) = self.get_agent_object_distance(gt_agent_state, gt_object_states, batch, obs_rgb)
 
             with torch.no_grad():
                 (
@@ -508,41 +482,12 @@ class RearrangementBCTrainer(BaseILTrainer):
                 actions = torch.argmax(logits, dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))
 
-            gt_actions.append(get_habitat_sim_action_str(gt_next_action[count][0].item()))
-            pred_actions.append(get_habitat_sim_action_str(actions[0].item()))
-            if not (gt_next_action[count][0].item() == actions[0].item()):
-                print("{} actual action: ", gt_next_action[count][0])
-
-                print("pred action: {}".format(actions))
-                print("match: {}".format(gt_next_action[count][0].item() == actions[0].item()))
-                print("\n")
-                mismatch_actions += 1
-                mismatch_ids.append(count)
-            else:
-                print("{} gt_action: {}, pred action: {}".format(count, gt_next_action[count][0].item(), actions[0].item()))
-
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
             # an int
             step_data = [a.item() for a in actions.to(device="cpu")]
-
-            pred_data.append({
-                # "gt_img": gt_img,
-                # "pred_img": pred_img,
-                "gt_next_action": gt_actions[-1],
-                "pred_next_action": pred_actions[-1],
-                "gt_prev_action": gt_prev_actions[-1],
-                "pred_prev_action": pred_prev_actions[-1],
-                "obs_l2_dist": torch.dist(batch["rgb"].squeeze(0).float() / 255.0, obs_rgb[count][0].float() / 255.0).item(),
-                "agent_l2_distance": agent_l2_distance,
-                "agent_rot_distance": agent_quat_distance,
-                "sensor_quat_distance": sensor_quat_distance,
-                "object_dist_map": object_dist_map,
-                "match": (gt_next_action[count][0].item() == actions[0].item()),
-            })
-
             outputs = self.envs.step(step_data)
 
             observations, rewards_l, dones, infos = [
@@ -554,9 +499,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                 dtype=torch.float,
                 device=self.device,
             )
-
-            # gt_agent_state = reference_replay[count]["agent_state"]
-            # gt_object_states = reference_replay[count]["object_states"]
 
             rewards = torch.tensor(
                 rewards_l, dtype=torch.float, device=self.device
@@ -593,7 +535,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                     prev_actions[i][0] = HabitatSimActions.START
                     count = -1
                     next_episodes = self.envs.current_episodes()
-                    reference_replay = current_episodes[0].reference_replay
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
@@ -607,7 +548,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                         )
 
                         rgb_frames[i] = []
-                    gt_batch = next(tr_itr)
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here

@@ -30,6 +30,7 @@ from habitat_sim.nav import NavMeshSettings
 from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, quat_to_coeffs, quat_from_magnum
 from habitat_sim.physics import MotionType
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+from habitat.tasks.rearrangement.rearrangement import RearrangementObjectSpec, ObjectStateSpec
 
 
 @registry.register_simulator(name="RearrangementSim-v0")
@@ -80,7 +81,7 @@ class RearrangementSim(HabitatSim):
             self.remove_object(obj_id)
             object_ = self.get_object_from_scene(obj_id)
             if object_ is not None:
-                self.remove_contact_test_object(object_["object_handle"])
+                self.remove_contact_test_object(object_.object_handle)
         self.clear_recycled_object_ids()
         self.clear_scene_objects()
 
@@ -90,21 +91,18 @@ class RearrangementSim(HabitatSim):
         objects = sim_config.objects
         obj_attr_mgr = self.get_object_template_manager()
 
-        self.sim_objid_to_replay_objid_mapping = {}
-        self.replay_objid_to_sim_objid_mapping = {}
-
         if objects is not None:
             # Sort objects by object id
             object_map = {}
             for object_ in objects:
-                object_map[object_["object_id"]] = object_
+                object_map[object_.object_id] = object_
 
             for key in sorted(object_map.keys()):
                 object_ = object_map[key]
-                object_handle = object_["object_template"].split('/')[-1].split('.')[0]
+                object_handle = object_.object_template.split('/')[-1]
                 object_template = "data/test_assets/objects/{}".format(object_handle)
-                object_pos = object_["position"]
-                rotation = quat_from_coeffs(object_["rotation"])
+                object_pos = object_.position
+                rotation = quat_from_coeffs(object_.rotation)
                 object_rotation = quat_to_magnum(rotation)
 
                 object_template_id = obj_attr_mgr.load_object_configs(
@@ -119,13 +117,11 @@ class RearrangementSim(HabitatSim):
                 self.set_translation(object_pos, object_id)
                 self.set_rotation(object_rotation, object_id)
 
-                object_['object_handle'] = "data/test_assets/objects/{}.object_config.json".format(object_handle)
+                object_.object_handle = "data/test_assets/objects/{}".format(object_handle)
                 self.add_object_in_scene(object_id, object_)
 
                 self.set_object_motion_type(MotionType.DYNAMIC, object_id)
 
-                self.sim_objid_to_replay_objid_mapping[object_id] = object_["object_id"]
-                self.replay_objid_to_sim_objid_mapping[object_["object_id"]] = object_id
 
     def get_resolution(self):
         resolution = self._default_agent.agent_config.sensor_specifications[
@@ -137,17 +133,17 @@ class RearrangementSim(HabitatSim):
         self._scene_objects = []
 
     def add_object_in_scene(self, objectId, data):
-        data["object_id"] = objectId
+        data.object_id = objectId
         self._scene_objects.append(data)
 
     def update_object_in_scene(self, prevObjectId, newObjectId):
         for index in range(len(self._scene_objects)):
-            if self._scene_objects[index]["object_id"] == prevObjectId:
-                self._scene_objects[index]["object_id"] = newObjectId
+            if self._scene_objects[index].object_id == prevObjectId:
+                self._scene_objects[index].object_id = newObjectId
 
     def get_object_from_scene(self, objectId):
         for index in range(len(self._scene_objects)):
-            if self._scene_objects[index]["object_id"] == objectId:
+            if self._scene_objects[index].object_id == objectId:
                 return self._scene_objects[index]
         return None
     
@@ -214,7 +210,7 @@ class RearrangementSim(HabitatSim):
                 self.set_object_bb_draw(False, self.nearest_object_id)
                 self.nearest_object_id = -1
             object_ = self.get_object_from_scene(object_id)
-            if object_["is_receptacle"] == True:
+            if object_.is_receptacle == True:
                 return
             if self.nearest_object_id != object_id:
                 self.nearest_object_id = object_id
@@ -258,17 +254,17 @@ class RearrangementSim(HabitatSim):
                 scene_object = self.get_object_from_scene(self.gripped_object_id)
 
                 # find no collision point
-                contact = self.is_collision(scene_object["object_handle"], new_object_position)
+                contact = self.is_collision(scene_object.object_handle, new_object_position)
                 while contact:
                     new_object_position = mn.Vector3(
                         new_object_position.x,
                         new_object_position.y + 0.25,
                         new_object_position.z,
                     )
-                    contact = self.is_collision(scene_object["object_handle"], new_object_position)
+                    contact = self.is_collision(scene_object.object_handle, new_object_position)
 
                 new_object_id = self.add_object_by_handle(
-                    scene_object["object_handle"]
+                    scene_object.object_handle
                 )
                 self.set_translation(new_object_position, new_object_id)
 
@@ -279,7 +275,7 @@ class RearrangementSim(HabitatSim):
                     nearest_object_id
                 )
                 object_ = self.get_object_from_scene(nearest_object_id)
-                if object_["is_receptacle"] != True:
+                if object_.is_receptacle != True:
                     self.remove_object(nearest_object_id)
                     self.gripped_object_id = nearest_object_id
         elif action_spec.name == "no_op":
@@ -306,9 +302,9 @@ class RearrangementSim(HabitatSim):
     def restore_object_states(self, object_states: Dict = {}):
         object_ids = []
         for object_state in object_states:
-            object_id = object_state["object_id"]
-            translation = object_state["translation"]
-            object_rotation = object_state["rotation"]
+            object_id = object_state.object_id
+            translation = object_state.translation
+            object_rotation = object_state.rotation
 
             object_translation = mn.Vector3(translation)
             if isinstance(object_rotation, list):
@@ -329,11 +325,11 @@ class RearrangementSim(HabitatSim):
             rotation = quat_from_magnum(rotation)
             scene_object = self.get_object_from_scene(object_id)
 
-            object_state = {}
-            object_state["object_id"] = object_id
-            object_state["translation"] = np.array(translation).tolist()
-            object_state["rotation"] = quat_to_coeffs(rotation).tolist()
-            object_state["object_handle"] = scene_object["object_handle"]
+            object_state = ObjectStateSpec(
+                object_id=object_id,
+                translation=np.array(translation).tolist(),
+                rotation=quat_to_coeffs(rotation).tolist()
+            )
             object_states.append(object_state)
         return object_states
     
@@ -380,7 +376,7 @@ class RearrangementSim(HabitatSim):
 
     def add_objects_by_handle(self, objects):
         for object_ in objects:
-            object_handle = object_["object_handle"]
+            object_handle = object_.object_handle
             self.add_object_by_handle(object_handle)
     
     def update_drop_point(self, replay_data=None, show=False):
@@ -389,8 +385,8 @@ class RearrangementSim(HabitatSim):
             position = mn.Vector3(position.x, position.y - 0.5, position.z)
             self.update_drop_point_node(position)
         else:
-            if "object_drop_point" in replay_data.keys() and len(replay_data["object_drop_point"]) > 0:
-                position = mn.Vector3(replay_data["object_drop_point"])
+            if replay_data.object_drop_point is not None and len(replay_data.object_drop_point) > 0:
+                position = mn.Vector3(replay_data.object_drop_point)
                 self.update_drop_point_node(position)
 
     def step_from_replay(self, action: int, replay_data: Dict = {}):
@@ -402,48 +398,48 @@ class RearrangementSim(HabitatSim):
         action_spec = agent_config.action_space[action]
 
         if action_spec.name == "grab_or_release_object_under_crosshair":
-            action_data = replay_data["action_data"]
-            if len(action_data.keys()) == 0 or action_data["gripped_object_id"] != -1:
-                if replay_data["is_release_action"]:
+            action_data = replay_data.action_data
+            if action_data is not None or action_data.gripped_object_id != -1:
+                if replay_data.is_release_action:
                     # Fetch object handle and drop point from replay
-                    new_object_position = mn.Vector3(action_data["new_object_translation"])
+                    new_object_position = mn.Vector3(action_data.new_object_translation)
                     new_object_position.y = new_object_position.y + 0.5
-                    scene_object = self.get_object_from_scene(action_data["gripped_object_id"])
+                    scene_object = self.get_object_from_scene(action_data.gripped_object_id)
                     new_object_id = self.add_object_by_handle(
-                        scene_object["object_handle"]
+                        scene_object.object_handle
                     )
                     self.set_translation(new_object_position, new_object_id)
 
-                    self.update_object_in_scene(new_object_id, action_data["gripped_object_id"])
-                    self.gripped_object_id = replay_data["gripped_object_id"]
-                elif replay_data["is_grab_action"]:
+                    self.update_object_in_scene(new_object_id, action_data.gripped_object_id)
+                    self.gripped_object_id = replay_data.gripped_object_id
+                elif replay_data.is_grab_action:
                     self.gripped_object_transformation = self.get_transformation(
-                        action_data["gripped_object_id"]
+                        action_data.gripped_object_id
                     )
-                    self.remove_object(action_data["gripped_object_id"])
-                    self.gripped_object_id = replay_data["gripped_object_id"]
+                    self.remove_object(action_data.gripped_object_id)
+                    self.gripped_object_id = replay_data.gripped_object_id
         elif action_spec.name == "no_op":
-            self.restore_object_states(replay_data["object_states"])
+            self.restore_object_states(replay_data.object_states)
         else:
-            if "agent_state" in replay_data.keys():
+            if replay_data.agent_state is not None:
                 if action_spec.name == "look_up" or action_spec.name == "look_down":
-                    sensor_data = replay_data["agent_state"]["sensor_data"]
+                    sensor_data = replay_data.agent_state.sensor_data
                     self.restore_sensor_states(sensor_data)
                 else:
                     success = self.set_agent_state(
-                        replay_data["agent_state"]["position"], replay_data["agent_state"]["rotation"], reset_sensors=False
+                        replay_data.agent_state.position, replay_data.agent_state.rotation, reset_sensors=False
                     )
-                collided = replay_data["collision"]
+                collided = replay_data.collision
                 self._last_state = self._default_agent.get_state()
             else:
-                collided = replay_data["collision"]
+                collided = replay_data.collision
                 if not collided:
                     self._default_agent.act(action)
 
         # self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=False)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=True)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 

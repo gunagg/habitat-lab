@@ -15,7 +15,16 @@ from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.core.utils import not_none_validator
 from habitat.datasets.utils import VocabFromText
-from habitat.tasks.rearrangement.rearrangement import InstructionData, RearrangementEpisode, RearrangementSpec, RearrangementObjectSpec
+from habitat.tasks.rearrangement.rearrangement import (
+    InstructionData,
+    RearrangementEpisode,
+    RearrangementSpec,
+    RearrangementObjectSpec,
+    ReplayActionSpec,
+    GrabReleaseActionSpec,
+    AgentStateSpec,
+    ObjectStateSpec
+)
 
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
@@ -70,8 +79,17 @@ class RearrangementDatasetV1(Dataset):
                 episode.scene_id = os.path.join(scenes_dir, episode.scene_id)
 
             episode.instruction = InstructionData(**episode.instruction)
+            for i, replay_step in enumerate(episode.reference_replay):
+                if "action_data" in replay_step.keys():
+                    replay_step["action_data"] = GrabReleaseActionSpec(**replay_step["action_data"])
+                if "agent_state" in replay_step.keys():
+                    replay_step["agent_state"] = AgentStateSpec(**replay_step["agent_state"])
+                if "object_states" in replay_step.keys():
+                    for j in range(len(replay_step["object_states"])):
+                        replay_step["object_states"][j] = ObjectStateSpec(**replay_step["object_states"][j])
+                episode.reference_replay[i] = ReplayActionSpec(**replay_step)
             for i, goal in enumerate(episode.goals):
                 episode.goals[i] = RearrangementSpec(**goal)
-            # for i, obj in enumerate(episode.objects):
-            #     episode.objects[i] = RearrangementObjectSpec(**obj)
+            for i, obj in enumerate(episode.objects):
+                episode.objects[i] = RearrangementObjectSpec(**obj)
             self.episodes.append(episode)

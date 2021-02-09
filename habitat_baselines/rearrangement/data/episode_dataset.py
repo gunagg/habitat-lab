@@ -147,7 +147,7 @@ class RearrangementEpisodeDataset(Dataset):
 
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(1e11),
+                map_size=int(2e12),
                 writemap=True,
             )
 
@@ -206,10 +206,10 @@ class RearrangementEpisodeDataset(Dataset):
 
             if state_index != -1:
                 state = reference_replay[state_index]
-                position = state["agent_state"]["position"]
-                rotation = state["agent_state"]["rotation"]
-                object_states = state["object_states"]
-                sensor_states = state["agent_state"]["sensor_data"]
+                position = state.agent_state.position
+                rotation = state.agent_state.rotation
+                object_states = state.object_states
+                sensor_states = state.agent_state.sensor_data
 
                 observation = self.env.sim.get_observations_at(
                     position, rotation, sensor_states, object_states
@@ -218,12 +218,12 @@ class RearrangementEpisodeDataset(Dataset):
             next_action = HabitatSimActions.STOP
             if state_index < len(reference_replay) - 1:
                 next_state = reference_replay[state_index + 1]
-                next_action = get_habitat_sim_action(next_state["action"])
+                next_action = get_habitat_sim_action(next_state.action)
 
             prev_action = HabitatSimActions.START
             if state_index != -1:
                 prev_state = reference_replay[state_index]
-                prev_action = get_habitat_sim_action(prev_state["action"])
+                prev_action = get_habitat_sim_action(prev_state.action)
 
             not_done = 1
             if state_index == len(reference_replay) -1:
@@ -255,7 +255,7 @@ class RearrangementEpisodeDataset(Dataset):
             txn.put((sample_key + "_weights").encode(), inflection_weights.tobytes())
         
         self.count += 1
-        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
+        images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
 
     def cache_exists(self) -> bool:
         if os.path.exists(self.dataset_path):

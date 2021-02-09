@@ -126,7 +126,7 @@ class NoOpAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+        if "replay_data" in kwargs.keys():
             return self._sim.step_from_replay(
                 HabitatSimActions.NO_OP,
                 replay_data=kwargs["replay_data"]
@@ -138,7 +138,7 @@ class NoOpAction(SimulatorTaskAction):
 class GrabOrReleaseAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""This method is called from ``Env`` on each ``step``."""
-        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+        if "replay_data" in kwargs.keys():
             return self._sim.step_from_replay(
                 HabitatSimActions.GRAB_RELEASE,
                 replay_data=kwargs["replay_data"]
@@ -154,7 +154,7 @@ class MoveBackwardAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        if "replay_data" in kwargs.keys() and len(kwargs["replay_data"].keys()) > 0:
+        if "replay_data" in kwargs.keys():
             return self._sim.step_from_replay(
                 HabitatSimActions.MOVE_BACKWARD,
                 replay_data=kwargs["replay_data"]

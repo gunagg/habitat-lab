@@ -60,10 +60,52 @@ class RearrangementObjectSpec(RearrangementSpec):
 
 
 @attr.s(auto_attribs=True, kw_only=True)
+class GrabReleaseActionSpec:
+    r"""Grab/Release action reaply data specifications that capture states
+     of each grab/release action.
+    """
+    new_object_translation: Optional[List[float]] = attr.ib(default=None)
+    gripped_object_id: Optional[int] = attr.ib(default=None)
+    new_object_id: Optional[int] = attr.ib(default=None)
+    object_handle: Optional[str] = attr.ib(default=None)
+
+
+@attr.s(auto_attribs=True, kw_only=True)
+class ObjectStateSpec:
+    r"""Object data specifications that capture states of each object in replay state.
+    """
+    object_id: Optional[int] = attr.ib(default=None)
+    translation: Optional[List[float]] = attr.ib(default=None)
+    rotation: Optional[List[float]] = attr.ib(default=None)
+    motion_type: Optional[str] = attr.ib(default=None)
+    object_handle: Optional[str] = attr.ib(default=None)
+
+
+@attr.s(auto_attribs=True, kw_only=True)
+class AgentStateSpec:
+    r"""Agent data specifications that capture states of agent and sensor in replay state.
+    """
+    position: Optional[List[float]] = attr.ib(default=None)
+    rotation: Optional[List[float]] = attr.ib(default=None)
+    sensor_data: Optional[dict] = attr.ib(default=None)
+
+
+@attr.s(auto_attribs=True, kw_only=True)
 class ReplayActionSpec:
     r"""Replay specifications that capture metadata associated with action.
     """
     action: str = attr.ib(default=None, validator=not_none_validator)
+    object_under_cross_hair: Optional[int] = attr.ib(default=None)
+    object_drop_point: Optional[List[float]] = attr.ib(default=None)
+    action_data: Optional[GrabReleaseActionSpec] = attr.ib(default=None)
+    is_grab_action: Optional[bool] = attr.ib(default=None)
+    is_release_action: Optional[bool] = attr.ib(default=None)
+    object_states: Optional[List[ObjectStateSpec]] = attr.ib(default=None)
+    agent_state: Optional[AgentStateSpec] = attr.ib(default=None)
+    collision: Optional[dict] = attr.ib(default=None)
+    timestamp: Optional[int] = attr.ib(default=None)
+    nearest_object_id: Optional[int] = attr.ib(default=None)
+    gripped_object_id: Optional[int] = attr.ib(default=None)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -153,10 +195,10 @@ class ObjectToReceptacleDistance(Measure):
         receptacle_id = -1
         for object_id in object_ids:
             scene_object = self._sim.get_object_from_scene(object_id)
-            if scene_object["is_receptacle"] == False:
-                obj_id = scene_object["object_id"]
+            if scene_object.is_receptacle == False:
+                obj_id = scene_object.object_id
             else:
-                receptacle_id = scene_object["object_id"]
+                receptacle_id = scene_object.object_id
 
         if receptacle_id == -1:
             self._metric = 100
@@ -220,8 +262,8 @@ class AgentToObjectDistance(Measure):
         sim_obj_id = -1
         for object_id in object_ids:
             scene_object = self._sim.get_object_from_scene(object_id)
-            if scene_object["is_receptacle"] == False:
-                sim_obj_id = scene_object["object_id"]
+            if scene_object.is_receptacle == False:
+                sim_obj_id = scene_object.object_id
 
         if sim_obj_id != -1:
             previous_position = np.array(
@@ -273,8 +315,8 @@ class AgentToReceptacleDistance(Measure):
         sim_obj_id = -1
         for object_id in object_ids:
             scene_object = self._sim.get_object_from_scene(object_id)
-            if scene_object["is_receptacle"] == True:
-                sim_obj_id = scene_object["object_id"]
+            if scene_object.is_receptacle == True:
+                sim_obj_id = scene_object.object_id
 
         if sim_obj_id != -1:
             previous_position = np.array(
@@ -329,10 +371,10 @@ class RearrangementSuccess(Measure):
         receptacle_id = -1
         for object_id in object_ids:
             scene_object = self._sim.get_object_from_scene(object_id)
-            if scene_object["is_receptacle"] == False:
-                obj_id = scene_object["object_id"]
+            if scene_object.is_receptacle == False:
+                obj_id = scene_object.object_id
             else:
-                receptacle_id = scene_object["object_id"]
+                receptacle_id = scene_object.object_id
 
         is_object_stacked = False
         is_object_not_in_air = False

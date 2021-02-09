@@ -24,13 +24,13 @@ def save_grab_release_frames(env, i):
     if i + 1 <= len(env.current_episode.reference_replay) - 1:
         prev_action = env.current_episode.reference_replay[i - 1]
         prev_prev_action = env.current_episode.reference_replay[i - 2]
-        if data["action"] == "grabReleaseObject":
+        if data.action == "grabReleaseObject":
             im = Image.fromarray(observations["rgb"])
             im.save('outfile{}.jpg'.format(i))
-        if prev_action["action"] == "grabReleaseObject" and data["action"] == "stepPhysics":
+        if prev_action.action == "grabReleaseObject" and data.action == "stepPhysics":
             im = Image.fromarray(observations["rgb"])
             im.save('outfile{}.jpg'.format(i))
-        if prev_prev_action["action"] == "grabReleaseObject" and prev_action["action"] == "stepPhysics":
+        if prev_prev_action.action == "grabReleaseObject" and prev_action.action == "stepPhysics":
             im = Image.fromarray(observations["rgb"])
             im.save('outfile{}.jpg'.format(i))
 
@@ -43,30 +43,30 @@ def make_videos(observations_list, output_prefix, ep_id):
 
 
 def get_habitat_sim_action(data):
-    if data["action"] == "turnRight":
+    if data.action == "turnRight":
         return HabitatSimActions.TURN_RIGHT
-    elif data["action"] == "turnLeft":
+    elif data.action == "turnLeft":
         return HabitatSimActions.TURN_LEFT
-    elif data["action"] == "moveForward":
+    elif data.action == "moveForward":
         return HabitatSimActions.MOVE_FORWARD
-    elif data["action"] == "moveBackward":
+    elif data.action == "moveBackward":
         return HabitatSimActions.MOVE_BACKWARD
-    elif data["action"] == "lookUp":
+    elif data.action == "lookUp":
         return HabitatSimActions.LOOK_UP
-    elif data["action"] == "lookDown":
+    elif data.action == "lookDown":
         return HabitatSimActions.LOOK_DOWN
-    elif data["action"] == "grabReleaseObject":
+    elif data.action == "grabReleaseObject":
         return HabitatSimActions.GRAB_RELEASE
-    elif data["action"] == "stepPhysics":
+    elif data.action == "stepPhysics":
         return HabitatSimActions.NO_OP
     return HabitatSimActions.STOP
 
 
 def log_action_data(data, i):
-    if data["action"] != "stepPhysics":
-        print("Action: {} - {}".format(data["action"], i))
+    if data.action != "stepPhysics":
+        print("Action: {} - {}".format(data.action, i))
     else:
-        print("Action {} - {}".format(data["action"], i))
+        print("Action {} - {}".format(data.action, i))
 
 
 def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=False, num_episodes=None, output_prefix=None):
@@ -87,6 +87,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             physics_simulation_library = env._sim.get_physics_simulation_library()
             print("Physics simulation library: {}".format(physics_simulation_library))
             print("Episode length: {}, Episode index: {}".format(len(env.current_episode.reference_replay), ep_id))
+            print("Scene Id : {}".format(env.current_episode.scene_id))
             i = 0
             data = {
                 "episodeId": env.current_episode.episode_id,
@@ -105,9 +106,9 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 elif not restore_state:
                     observations = env.step(action=action, replay_data=data)
                 else:
-                    agent_state = data["agent_state"]
-                    sensor_states = data["agent_state"]["sensor_data"]
-                    object_states = data["object_states"]
+                    agent_state = data.agent_state
+                    sensor_states = data.agent_state["sensor_data"]
+                    object_states = data.object_states
                     observations = env._sim.get_observations_at(agent_state["position"], agent_state["rotation"], sensor_states, object_states)
 
                 info = env.get_metrics()
