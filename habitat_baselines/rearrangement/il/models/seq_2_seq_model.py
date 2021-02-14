@@ -93,12 +93,6 @@ class Seq2SeqNet(Net):
             rnn_type=model_config.STATE_ENCODER.rnn_type,
         )
 
-        self.progress_monitor = nn.Linear(
-            self.model_config.STATE_ENCODER.hidden_size, 1
-        )
-
-        self._init_layers()
-
         self.train()
 
     @property
@@ -112,10 +106,6 @@ class Seq2SeqNet(Net):
     @property
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
-
-    def _init_layers(self):
-        nn.init.kaiming_normal_(self.progress_monitor.weight, nonlinearity="tanh")
-        nn.init.constant_(self.progress_monitor.bias, 0)
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         r"""

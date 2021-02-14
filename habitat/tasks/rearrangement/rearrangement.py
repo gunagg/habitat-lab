@@ -16,7 +16,7 @@ from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, Simulator
 from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav import merge_sim_episode_config
+from habitat.tasks.nav.nav import merge_sim_episode_config, DistanceToGoal
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import SimulatorTaskAction, Measure
 from habitat.sims.habitat_simulator.actions import (
@@ -164,7 +164,7 @@ class InstructionSensor(Sensor):
 class ObjectToReceptacleDistance(Measure):
     """The measure calculates distance of object towards the goal."""
 
-    cls_uuid: str = "object_to_receptacle_distance"
+    cls_uuid: str = "object_receptacle_distance"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -231,7 +231,7 @@ class ObjectToReceptacleDistance(Measure):
 class AgentToObjectDistance(Measure):
     """The measure calculates the distance of objects from the agent"""
 
-    cls_uuid: str = "agent_to_object_distance"
+    cls_uuid: str = "agent_object_distance"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -284,7 +284,7 @@ class AgentToObjectDistance(Measure):
 class AgentToReceptacleDistance(Measure):
     """The measure calculates the distance of receptacle from the agent"""
 
-    cls_uuid: str = "agent_to_receptacle_distance"
+    cls_uuid: str = "agent_receptacle_distance"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -318,19 +318,16 @@ class AgentToReceptacleDistance(Measure):
             if scene_object.is_receptacle == True:
                 sim_obj_id = scene_object.object_id
 
-        if sim_obj_id != -1:
-            previous_position = np.array(
-                self._sim.get_translation(sim_obj_id)
-            ).tolist()
+        recceptacle_position = np.array(
+            self._sim.get_translation(sim_obj_id)
+        ).tolist()
 
-            agent_state = self._sim.get_agent_state()
-            agent_position = agent_state.position
+        agent_state = self._sim.get_agent_state()
+        agent_position = agent_state.position
 
-            self._metric = self._geo_dist(
-                previous_position, agent_position
-            )
-        else:
-            self._metric = 100
+        self._metric = self._geo_dist(
+            recceptacle_position, agent_position
+        )
 
 
 @registry.register_measure
@@ -340,7 +337,7 @@ class RearrangementSuccess(Measure):
     This measure depends on DistanceToGoal measure.
     """
 
-    cls_uuid: str = "rearrangement_success"
+    cls_uuid: str = "success"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -398,6 +395,69 @@ class RearrangementSuccess(Measure):
             self._metric = 1.0
         else:
             self._metric = 0.0
+
+
+@registry.register_measure
+class RearrangementSPL(Measure):
+    r"""SPL (Success weighted by Path Length)
+
+    ref: On Evaluation of Embodied Agents - Anderson et. al
+    https://arxiv.org/pdf/1807.06757.pdf
+    The measure depends on Distance to Goal measure and Success measure
+    to improve computational
+    performance for sophisticated goal areas.
+    """
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._previous_position = None
+        self._start_end_episode_distance = None
+        self._agent_episode_distance: Optional[float] = None
+        self._episode_view_points = None
+        self._sim = sim
+        self._config = config
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "spl"
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [DistanceToGoal.cls_uuid, RearrangementSuccess.cls_uuid]
+        )
+
+        self._previous_position = self._sim.get_agent_state().position
+        self._agent_episode_distance = 0.0
+        self._start_end_episode_distance = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
+        self.update_metric(  # type:ignore
+            episode=episode, task=task, *args, **kwargs
+        )
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(position_b - position_a, ord=2)
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
+        ep_success = task.measurements.measures[RearrangementSuccess.cls_uuid].get_metric()
+
+        current_position = self._sim.get_agent_state().position
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        self._metric = ep_success * (
+            self._start_end_episode_distance
+            / max(
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
+        )
 
 
 def merge_sim_episode_with_object_config(

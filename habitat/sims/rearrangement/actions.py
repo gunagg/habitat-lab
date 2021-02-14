@@ -27,14 +27,14 @@ from habitat.sims.habitat_simulator.actions import (
 @attr.s(auto_attribs=True, slots=True)
 class GrabReleaseActuationSpec(ActuationSpec):
     visual_sensor_name: str = "rgb"
-    crosshair_pos: List[int] = [320, 240]
+    crosshair_pos: List[int] = [128, 128]
     amount: float = 1.5
 
 
 @registry.register_action_space_configuration(name="RearrangementActions-v0")
 class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
     def __init__(self, config):
-        # super().__init__(config)
+        super().__init__(config)
         self.config = config
         if not HabitatSimActions.has_action("GRAB_RELEASE"):
             HabitatSimActions.extend_action_space("GRAB_RELEASE")
@@ -46,14 +46,6 @@ class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
             HabitatSimActions.extend_action_space("STOP")
         if not HabitatSimActions.has_action("START"):
             HabitatSimActions.extend_action_space("START")
-        if not HabitatSimActions.has_action("TURN_LEFT_TWICE"):
-            HabitatSimActions.extend_action_space("TURN_LEFT_TWICE")
-        if not HabitatSimActions.has_action("TURN_RIGHT_TWICE"):
-            HabitatSimActions.extend_action_space("TURN_RIGHT_TWICE")
-        if not HabitatSimActions.has_action("MOVE_FORWARD_TWICE"):
-            HabitatSimActions.extend_action_space("MOVE_FORWARD_TWICE")
-        if not HabitatSimActions.has_action("MOVE_BACKWARD_TWICE"):
-            HabitatSimActions.extend_action_space("MOVE_BACKWARD_TWICE")
 
     def get(self):
         config = self.config
@@ -86,7 +78,7 @@ class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
             ),
             HabitatSimActions.NO_OP: habitat_sim.ActionSpec(
                 "no_op",
-                habitat_sim.ActuationSpec(amount=0.1),
+                habitat_sim.ActuationSpec(amount=0.05),
             ),
             HabitatSimActions.GRAB_RELEASE: habitat_sim.ActionSpec(
                 "grab_or_release_object_under_crosshair",
@@ -95,22 +87,6 @@ class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
                     crosshair_pos=self.config.CROSSHAIR_POS,
                     amount=self.config.GRAB_DISTANCE,
                 ),
-            ),
-            HabitatSimActions.TURN_LEFT_TWICE: habitat_sim.ActionSpec(
-                "turn_left",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE * 2.0),
-            ),
-            HabitatSimActions.TURN_RIGHT_TWICE: habitat_sim.ActionSpec(
-                "turn_right",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE * 2.0),
-            ),
-            HabitatSimActions.MOVE_FORWARD_TWICE: habitat_sim.ActionSpec(
-                "move_forward",
-                habitat_sim.ActuationSpec(amount=self.config.FORWARD_STEP_SIZE * 2.0),
-            ),
-            HabitatSimActions.MOVE_BACKWARD_TWICE: habitat_sim.ActionSpec(
-                "move_backward",
-                habitat_sim.ActuationSpec(amount=self.config.FORWARD_STEP_SIZE * 2.0),
             ),
         }
 

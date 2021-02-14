@@ -147,7 +147,7 @@ class RearrangementEpisodeDataset(Dataset):
 
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(2e12),
+                map_size=int(1e11),
                 writemap=True,
             )
 
@@ -173,7 +173,7 @@ class RearrangementEpisodeDataset(Dataset):
                 readonly=True,
                 lock=False,
             )
-        
+
         self.env.close()
 
         self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 4)
@@ -220,7 +220,7 @@ class RearrangementEpisodeDataset(Dataset):
                 next_state = reference_replay[state_index + 1]
                 next_action = get_habitat_sim_action(next_state.action)
 
-            prev_action = HabitatSimActions.START
+            prev_action = HabitatSimActions.STOP
             if state_index != -1:
                 prev_state = reference_replay[state_index]
                 prev_action = get_habitat_sim_action(prev_state.action)
