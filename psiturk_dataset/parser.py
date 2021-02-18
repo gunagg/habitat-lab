@@ -260,7 +260,7 @@ def append_episode_start_and_end_steps(reference_replay, episode):
                 step_object_state["rotation"] = object_["rotation"]
                 break
     
-    # reference_replay = [start_step] + reference_replay + [stop_step]
+    reference_replay = [start_step] + reference_replay + [stop_step]
     # print("Add start/stop action replay size: {}".format(len(reference_replay)))
     return reference_replay[:]
 
