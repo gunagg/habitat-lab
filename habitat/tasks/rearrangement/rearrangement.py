@@ -23,6 +23,7 @@ from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
 )
+from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
 
 
 @attr.s(auto_attribs=True)
@@ -155,6 +156,40 @@ class InstructionSensor(Sensor):
         **kwargs
     ):
         return episode.instruction.instruction_tokens
+
+    def get_observation(self, **kwargs):
+        return self._get_observation(**kwargs)
+
+
+@registry.register_sensor(name="DemonstrationSensor")
+class DemonstrationSensor(Sensor):
+    def __init__(self, **kwargs):
+        self.uuid = "demonstration"
+        self.observation_space = spaces.Discrete(0)
+        self.timestep = 0
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.uuid
+
+    def _get_observation(
+        self,
+        observations: Dict[str, Observations],
+        episode: RearrangementEpisode,
+        task: EmbodiedTask,
+        **kwargs
+    ):
+        if not task.is_episode_active:  # reset
+            self.timestep = 0
+        
+        if self.timestep < len(episode.reference_replay):
+            action_name = episode.reference_replay[self.timestep].action
+            action = get_habitat_sim_action(action_name)
+        else:
+            action = -1
+
+        # print("{} -- {}".format(self.timestep, get_habitat_sim_action_str(action)))
+        self.timestep += 1
+        return action
 
     def get_observation(self, **kwargs):
         return self._get_observation(**kwargs)
@@ -374,8 +409,6 @@ class RearrangementSuccess(Measure):
                 receptacle_id = scene_object.object_id
 
         is_object_stacked = False
-        is_object_not_in_air = False
-        is_receptacle_not_in_air = False
         if obj_id != -1 and receptacle_id != -1:
             object_position = self._sim.get_translation(obj_id)
             receptacle_position = self._sim.get_translation(receptacle_id)
@@ -383,8 +416,6 @@ class RearrangementSuccess(Measure):
             object_y = object_position.y
             receptacle_y = receptacle_position.y + self._sim.get_object_bb_y_coord(receptacle_id)
             is_object_stacked = (object_y > receptacle_y)
-            is_object_not_in_air = self._sim.contact_test(obj_id)
-            is_receptacle_not_in_air = self._sim.contact_test(receptacle_id)
 
         if (
             hasattr(task, "is_stop_called")
@@ -460,6 +491,36 @@ class RearrangementSPL(Measure):
         )
 
 
+@registry.register_measure
+class GrabSuccess(Measure):
+    r"""Grab Success - whether an object was grabbed during episode or not
+    """
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._config = config
+        self._count = 0
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "grab_success"
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        self._count = 0
+        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
+        gripped_object_id = self._sim.gripped_object_id
+        self._count += (gripped_object_id != -1 and task.is_grab_release_called)
+        self._metric = self._count
+        task.is_grab_release_called = False  # type: ignore
+
+
 def merge_sim_episode_with_object_config(
     sim_config: Config, episode: Type[Episode]
 ) -> Any:
@@ -482,6 +543,13 @@ class RearrangementTask(EmbodiedTask):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self._is_episode_active = False
+    
+    def reset(self, **kwargs):
+        self._is_episode_active = False
+        observations = super().reset(**kwargs)
+        self._is_episode_active = True
+        return observations
 
     def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
         return not getattr(self, "is_stop_called", False)

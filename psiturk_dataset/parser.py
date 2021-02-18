@@ -151,7 +151,7 @@ def handle_step(step, episode, unique_id, timestamp):
                 task_episode_map[ep_id] = 0
             task_episode_map[ep_id] += 1
 
-            episode["episode_id"] = unique_id
+            episode["episode_id"] = data["episodeID"]
             episode["scene_id"] = data["sceneID"]
             episode["start_position"] = data["startState"]["position"]
             episode["start_rotation"] = data["startState"]["rotation"]
@@ -181,6 +181,9 @@ def handle_step(step, episode, unique_id, timestamp):
                     goals.append({
                         "position": object_["position"],
                         "rotation": object_["rotation"],
+                        "info": {
+                            "is_receptacle": object_["is_receptacle"],
+                        }
                     })
                 episode["goals"] = goals
             episode["reference_replay"] = []
@@ -224,8 +227,9 @@ def convert_to_episode(csv_reader):
     
     actual_episode_length = len(episode["reference_replay"])
     post_processed_ref_replay = post_process_episode(copy.deepcopy(episode["reference_replay"]))
-    episode["reference_replay"] = prune_episode_end(copy.deepcopy(post_processed_ref_replay))
-    
+    pruned_reference_replay = prune_episode_end(copy.deepcopy(post_processed_ref_replay))
+    episode["reference_replay"] = append_episode_start_and_end_steps(copy.deepcopy(pruned_reference_replay), episode)
+
     post_processed_episode_length = len(post_processed_ref_replay)
     pruned_episode_length = len(episode["reference_replay"])    
 
@@ -240,6 +244,25 @@ def convert_to_episode(csv_reader):
         "hit_duration": hit_duration
     }
     return episode, episode_length
+
+
+def append_episode_start_and_end_steps(reference_replay, episode):
+    stop_step = copy.deepcopy(reference_replay[-1])
+    stop_step["action"] = "stop"
+
+    start_step = copy.deepcopy(reference_replay[0])
+    start_step["action"] = "start"
+
+    for object_ in episode["objects"]:
+        for step_object_state in start_step["object_states"]:
+            if step_object_state["object_id"] == object_["object_id"]:
+                step_object_state["translation"] = object_["position"]
+                step_object_state["rotation"] = object_["rotation"]
+                break
+    
+    # reference_replay = [start_step] + reference_replay + [stop_step]
+    # print("Add start/stop action replay size: {}".format(len(reference_replay)))
+    return reference_replay[:]
 
 
 def merge_replay_data_for_action(action_data_list):
@@ -310,7 +333,6 @@ def is_redundant_state_action_pair(current_state, prev_state):
 
 
 def prune_episode_end(reference_replay):
-    last_non_no_op_action_index = -1
     pruned_reference_replay = []
     prev_state = None
     redundant_state_count = 0
@@ -323,16 +345,12 @@ def prune_episode_end(reference_replay):
         else:
             redundant_state_count += 1
 
-        if "action" in data.keys() and not is_physics_step(get_action(data)):
-            last_non_no_op_action_index = len(pruned_reference_replay) - 1
         prev_state = copy.deepcopy(data)
 
     # print("Original replay size: {}, pruned replay: {}, redundant steps: {}".format(len(reference_replay), len(pruned_reference_replay), redundant_state_count))
     # Add action buffer for 3 seconds
     # 3 seconds is same as interface but we can try reducing it
-    if last_non_no_op_action_index != -1:
-        last_non_no_op_action_index += 60
-        reference_replay = pruned_reference_replay[:last_non_no_op_action_index]
+    reference_replay = pruned_reference_replay[:]
     return reference_replay
 
 
@@ -355,7 +373,7 @@ def compute_instruction_tokens(episodes):
     return episodes
 
 
-def replay_to_episode(replay_path, output_path, max_episodes=1):
+def replay_to_episode(replay_path, output_path, max_episodes=1,  max_episode_length=1500):
     all_episodes = {
         "episodes": []
     }
@@ -366,8 +384,9 @@ def replay_to_episode(replay_path, output_path, max_episodes=1):
     for file_path in tqdm(file_paths):
         reader = read_csv(file_path)
         episode, counts = convert_to_episode(reader)
-        episodes.append(episode)
-        episode_lengths.append(counts)
+        if len(episode["reference_replay"]) <= max_episode_length:
+            episodes.append(episode)
+            episode_lengths.append(counts)
 
     all_episodes["episodes"] = compute_instruction_tokens(copy.deepcopy(episodes))
     all_episodes["instruction_vocab"] = {
@@ -434,7 +453,7 @@ def show_average(all_episodes, episode_lengths):
     print("Filtered Hits: {}, Num actions: {}, Num episodes {}".format(round(total_actions_pruned_filtered / filtered_episode_count, 2), total_actions_pruned_filtered, filtered_episode_count))
 
     print("\n\n")
-    print("Pruned episodes greater than 1.5k actions: {}".format(num_eps_gt_than_2k))
+    print("Pruned episodes greater than 1.9k actions: {}".format(num_eps_gt_than_2k))
 
 
 def main():
@@ -448,8 +467,11 @@ def main():
     parser.add_argument(
         "--max-episodes", type=int, default=1
     )
+    parser.add_argument(
+        "--max-episode-length", type=int, default=1500
+    )
     args = parser.parse_args()
-    replay_to_episode(args.replay_path, args.output_path, args.max_episodes)
+    replay_to_episode(args.replay_path, args.output_path, args.max_episodes, args.max_episode_length)
 
 
 if __name__ == '__main__':

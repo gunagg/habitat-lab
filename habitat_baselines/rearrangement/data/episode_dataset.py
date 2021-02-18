@@ -155,15 +155,14 @@ class RearrangementEpisodeDataset(Dataset):
             for scene in tqdm(list(self.scene_episode_dict.keys())):
                 for episode in tqdm(self.scene_episode_dict[scene]):
                     self.load_scene(scene, episode)
-                    state_index_queue = [-1]
+                    state_index_queue = []
                     try:
                         # TODO: Consider alternative for shortest_paths
-                        state_index_queue.extend(range(0, len(episode.reference_replay)))
+                        state_index_queue.extend(range(0, len(episode.reference_replay) - 1))
                     except AttributeError as e:
                         logger.error(e)
                     self.save_frames(state_index_queue, episode)
             print("Inflection weight coef: {}, N: {}, nI: {}".format(self.total_actions / self.inflections, self.total_actions, self.inflections))
-
             logger.info("Rearrangement database ready!")
 
         else:
@@ -199,35 +198,24 @@ class RearrangementEpisodeDataset(Dataset):
         instruction = episode.instruction
         for state_index in state_index_queue:
             instruction_tokens = np.array(instruction.instruction_tokens)
+
+            state = reference_replay[state_index]
+            position = state.agent_state.position
+            rotation = state.agent_state.rotation
+            object_states = state.object_states
+            sensor_states = state.agent_state.sensor_data
+
             observation = self.env.sim.get_observations_at(
-                episode.start_position,
-                episode.start_rotation
+                position, rotation, sensor_states, object_states
             )
 
-            if state_index != -1:
-                state = reference_replay[state_index]
-                position = state.agent_state.position
-                rotation = state.agent_state.rotation
-                object_states = state.object_states
-                sensor_states = state.agent_state.sensor_data
+            next_state = reference_replay[state_index + 1]
+            next_action = get_habitat_sim_action(next_state.action)
 
-                observation = self.env.sim.get_observations_at(
-                    position, rotation, sensor_states, object_states
-                )
-
-            next_action = HabitatSimActions.STOP
-            if state_index < len(reference_replay) - 1:
-                next_state = reference_replay[state_index + 1]
-                next_action = get_habitat_sim_action(next_state.action)
-
-            prev_action = HabitatSimActions.STOP
-            if state_index != -1:
-                prev_state = reference_replay[state_index]
-                prev_action = get_habitat_sim_action(prev_state.action)
+            prev_state = reference_replay[state_index]
+            prev_action = get_habitat_sim_action(prev_state.action)
 
             not_done = 1
-            if state_index == len(reference_replay) -1:
-                not_done = 0
 
             observations["depth"].append(observation["depth"])
             observations["rgb"].append(observation["rgb"])

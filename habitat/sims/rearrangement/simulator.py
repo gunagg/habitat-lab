@@ -68,7 +68,6 @@ class RearrangementSim(HabitatSim):
 
         self._prev_sim_obs = sim_obs
         self.did_reset = True
-        self.grip_offset = np.eye(4)
         self.gripped_object_id = -1
         self.nearest_object_id = -1
         return self._sensor_suite.get_observations(sim_obs)
@@ -155,7 +154,7 @@ class RearrangementSim(HabitatSim):
         return self.pre_add_contact_test(handle, translation, is_navigation_test)
 
     def is_agent_colliding(self, action, agentTransform):
-        stepSize = self.config.agents[0].action_space.FORWARD_STEP_SIZE
+        stepSize = 0.25
         if action == "move_forward":
             position = agentTransform.backward * (-1 * stepSize)
             newPosition = agentTransform.translation + position
@@ -164,8 +163,8 @@ class RearrangementSim(HabitatSim):
                 newPosition
             )
             filterDiff = filteredPoint - newPosition
-            # adding buffer of 0.1 y to avoid collision with navmesh
-            finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.1, 0.0)
+            # adding buffer of 0.05 y to avoid collision with navmesh
+            finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.05, 0.0)
             collision = self.is_collision(self.agent_object_handle, finalPosition, True)
             return {
                 "collision": collision,
@@ -179,8 +178,8 @@ class RearrangementSim(HabitatSim):
                 newPosition
             )
             filterDiff = filteredPoint - newPosition
-            # adding buffer of 0.1 y to avoid collision with navmesh
-            finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.1, 0.0)
+            # adding buffer of 0.05 y to avoid collision with navmesh
+            finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.05, 0.0)
             collision = self.is_collision(self.agent_object_handle, finalPosition, True)
             return {
                 "collision": collision,
@@ -189,16 +188,6 @@ class RearrangementSim(HabitatSim):
         return {
             "collision": False
         }
-
-    def get_object_under_cross_hair(self):
-        ray = self.unproject(self.get_crosshair_position())
-        cross_hair_point = ray.direction
-        ref_point = self._default_agent.body.object.absolute_translation
-
-        nearest_object_id = self.find_nearest_object_under_crosshair(
-            cross_hair_point, ref_point, self.get_resolution(), 1.5
-        )
-        return nearest_object_id
 
     def draw_bb_around_nearest_object(self, object_id):
         if object_id == -1:
@@ -254,14 +243,16 @@ class RearrangementSim(HabitatSim):
                 scene_object = self.get_object_from_scene(self.gripped_object_id)
 
                 # find no collision point
+                count = 0
                 contact = self.is_collision(scene_object.object_handle, new_object_position)
-                while contact:
+                while contact and count < 5:
                     new_object_position = mn.Vector3(
                         new_object_position.x,
                         new_object_position.y + 0.25,
                         new_object_position.z,
                     )
                     contact = self.is_collision(scene_object.object_handle, new_object_position)
+                    count += 1
 
                 new_object_id = self.add_object_by_handle(
                     scene_object.object_handle
@@ -403,7 +394,6 @@ class RearrangementSim(HabitatSim):
                 if replay_data.is_release_action:
                     # Fetch object handle and drop point from replay
                     new_object_position = mn.Vector3(action_data.new_object_translation)
-                    new_object_position.y = new_object_position.y + 0.5
                     scene_object = self.get_object_from_scene(action_data.gripped_object_id)
                     new_object_id = self.add_object_by_handle(
                         scene_object.object_handle

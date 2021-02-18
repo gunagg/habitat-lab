@@ -28,7 +28,7 @@ from habitat.sims.habitat_simulator.actions import (
 class GrabReleaseActuationSpec(ActuationSpec):
     visual_sensor_name: str = "rgb"
     crosshair_pos: List[int] = [128, 128]
-    amount: float = 1.5
+    amount: float = 2.0
 
 
 @registry.register_action_space_configuration(name="RearrangementActions-v0")
@@ -112,8 +112,13 @@ class NoOpAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class GrabOrReleaseAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):
+
+    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
+        task.is_grab_release_called = False  # type: ignore
+
+    def step(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         r"""This method is called from ``Env`` on each ``step``."""
+        task.is_grab_release_called = True  # type: ignore
         if "replay_data" in kwargs.keys():
             return self._sim.step_from_replay(
                 HabitatSimActions.GRAB_RELEASE,

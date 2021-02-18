@@ -97,7 +97,8 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 "episodeLength": len(env.current_episode.reference_replay)
             }
             instructions.append(data)
-            for data in env.current_episode.reference_replay:
+            print(len(env.current_episode.reference_replay[1:]))
+            for data in env.current_episode.reference_replay[1:]:
                 if log_action:
                     log_action_data(data, i)
                 action = get_habitat_sim_action(data)
@@ -107,9 +108,9 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     observations = env.step(action=action, replay_data=data)
                 else:
                     agent_state = data.agent_state
-                    sensor_states = data.agent_state["sensor_data"]
+                    sensor_states = data.agent_state.sensor_data
                     object_states = data.object_states
-                    observations = env._sim.get_observations_at(agent_state["position"], agent_state["rotation"], sensor_states, object_states)
+                    observations = env._sim.get_observations_at(agent_state.position, agent_state.rotation, sensor_states, object_states)
 
                 info = env.get_metrics()
                 frame = observations_to_image({"rgb": observations["rgb"]}, info)

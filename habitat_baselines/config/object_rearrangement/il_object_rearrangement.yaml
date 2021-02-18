@@ -10,7 +10,7 @@ VIDEO_OPTION: ["disk"]
 TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # To evaluate on all episodes, set this to -1
-TEST_EPISODE_COUNT: 2
+TEST_EPISODE_COUNT: 50
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints/single_hit.ckpt"
 NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints"
@@ -23,14 +23,16 @@ RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "train"
+  SPLIT: "eval"
 
 IL:
   USE_IW: True
+  distrib_training: False
   distrib_backend: GLOO
+  model_name: exp_3
   BehaviorCloning:
     lr: 0.001
-    max_epochs: 1500
+    max_epochs: 20
     batch_size: 1
     timestep_batch_size: 800
     freeze_encoder: False
@@ -42,7 +44,7 @@ RL:
   SUCCESS_REWARD: 1.0
 
 MODEL:
-  inflection_weight_coef: 6.761959749866263
+  inflection_weight_coef: 6.6991838665799275
   ablate_depth: False
   ablate_rgb: False
   ablate_instruction: False
