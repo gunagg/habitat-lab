@@ -10,6 +10,7 @@ in habitat. Customized environments should be registered using
 ``@baseline_registry.register_env(name="myEnv")` for reusability
 """
 
+from collections import defaultdict
 from typing import Optional, Type
 
 import habitat
@@ -91,17 +92,27 @@ class RearrangementRLEnv(habitat.RLEnv):
         self._rl_config = config.RL
         self._core_env_config = config.TASK_CONFIG
         self._reward_measure_name = self._rl_config.REWARD_MEASURE
+        self._reward_measure_2_name = self._rl_config.REWARD_MEASURE_2
         self._success_measure_name = self._rl_config.SUCCESS_MEASURE
 
-        self._previous_measure = None
+        self._previous_measure = {
+            "agent_object_distance": 0.0,
+            "agent_receptacle_distance": 0.0,
+            "gripped_object_id": -1,
+        }
+
         self._previous_action = None
+        self._gripped_object_count = defaultdict(int)
         super().__init__(self._core_env_config, dataset)
 
     def reset(self):
         self._previous_action = None
         observations = super().reset()
-        self._previous_measure = self._env.get_metrics()[
+        self._previous_measure["agent_receptacle_distance"] = self._env.get_metrics()[
             self._reward_measure_name
+        ]
+        self._previous_measure["agent_object_distance"] = self._env.get_metrics()[
+            self._reward_measure_2_name
         ]
         return observations
 
@@ -116,20 +127,55 @@ class RearrangementRLEnv(habitat.RLEnv):
         )
 
     def get_reward(self, observations):
-        reward = self._rl_config.SLACK_REWARD
+        reward = 0.0
+        gripped_success_reward = 0.0
+        agent_receptacle_dist_reward = 0.0
+        agent_object_dist_reward = 0.0
+        success_reward = 0.0
 
         current_measure = self._env.get_metrics()[self._reward_measure_name]
+        current_object_dist_measure = self._env.get_metrics()[self._reward_measure_2_name]
 
-        reward += self._previous_measure - current_measure
-        self._previous_measure = current_measure
+        action_name = self._env.task.get_action_name(
+            self._previous_action["action"]
+        )
+
+        if action_name == "GRAB_RELEASE" and self._grab_success(observations):
+            obj_id = observations["gripped_object_id"]
+            self._gripped_object_count[obj_id] += 1
+
+            gripped_success_reward = (
+                self._rl_config.GRAB_SUCCESS_REWARD /
+                self._gripped_object_count[obj_id]
+            )
+
+        self._previous_measure["gripped_object_id"] = observations["gripped_object_id"]
+
+        if action_name != "GRAB_RELEASE" and self._previous_measure["gripped_object_id"] == -1:
+            agent_object_dist_reward = self._previous_measure["agent_object_distance"] - current_object_dist_measure
+            self._previous_measure["agent_object_distance"] = current_object_dist_measure
+
+        if action_name != "GRAB_RELEASE" and self._previous_measure["gripped_object_id"] != -1:
+            agent_receptacle_dist_reward = self._previous_measure["agent_receptacle_distance"] - current_measure
+            self._previous_measure["agent_receptacle_distance"] = current_measure
 
         if self._episode_success():
-            reward += self._rl_config.SUCCESS_REWARD
+            success_reward = self._rl_config.SUCCESS_REWARD
 
+        reward += gripped_success_reward + agent_object_dist_reward + agent_receptacle_dist_reward + success_reward
+        # reward += gripped_success_reward + success_reward
         return reward
 
     def _episode_success(self):
         return self._env.get_metrics()[self._success_measure_name]
+
+    def _grab_success(self, observations):
+        if (
+            observations['gripped_object_id'] != -1 and
+            observations['gripped_object_id'] != self._previous_measure["gripped_object_id"]
+        ):
+            return True
+        return False
 
     def get_done(self, observations):
         done = False

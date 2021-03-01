@@ -11,7 +11,8 @@ from habitat import Config
 from habitat_baselines.rearrangement.il.models.encoders.instruction import InstructionEncoder
 from habitat_baselines.rearrangement.il.models.encoders.resnet_encoders import (
     TorchVisionResNet50,
-    VlnResnetDepthEncoder
+    VlnResnetDepthEncoder,
+    ResnetRGBEncoder,
 )
 from habitat_baselines.rearrangement.il.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
@@ -57,6 +58,7 @@ class Seq2SeqNet(Net):
         assert model_config.RGB_ENCODER.cnn_type in [
             "SimpleRGBCNN",
             "TorchVisionResNet50",
+            "ResnetRGBEncoder",
         ], "RGB_ENCODER.cnn_type must be either 'SimpleRGBCNN' or 'TorchVisionResNet50'."
 
         if model_config.RGB_ENCODER.cnn_type == "SimpleRGBCNN":
@@ -71,6 +73,13 @@ class Seq2SeqNet(Net):
             )
             self.rgb_encoder = TorchVisionResNet50(
                 observation_space, model_config.RGB_ENCODER.output_size, device
+            )
+        elif model_config.RGB_ENCODER.cnn_type == "ResnetRGBEncoder":
+            self.rgb_encoder = ResnetRGBEncoder(
+                observation_space,
+                output_size=model_config.RGB_ENCODER.output_size,
+                backbone=model_config.RGB_ENCODER.backbone,
+                trainable=model_config.RGB_ENCODER.train_encoder,
             )
 
         if model_config.SEQ2SEQ.use_prev_action:

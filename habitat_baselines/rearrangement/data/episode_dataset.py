@@ -147,7 +147,7 @@ class RearrangementEpisodeDataset(Dataset):
 
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(1e11),
+                map_size=int(2e12),
                 writemap=True,
             )
 
@@ -187,7 +187,6 @@ class RearrangementEpisodeDataset(Dataset):
         """
         next_actions = []
         prev_actions = []
-        not_dones = []
         observations = {
             "rgb": [],
             "depth": [],
@@ -215,14 +214,11 @@ class RearrangementEpisodeDataset(Dataset):
             prev_state = reference_replay[state_index]
             prev_action = get_habitat_sim_action(prev_state.action)
 
-            not_done = 1
-
             observations["depth"].append(observation["depth"])
             observations["rgb"].append(observation["rgb"])
             observations["instruction"].append(instruction_tokens)
             next_actions.append(next_action)
             prev_actions.append(prev_action)
-            not_dones.append(not_done)
 
             frame = observations_to_image(
                 {"rgb": observation["rgb"]}, {}
@@ -243,7 +239,7 @@ class RearrangementEpisodeDataset(Dataset):
             txn.put((sample_key + "_weights").encode(), inflection_weights.tobytes())
         
         self.count += 1
-        images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
+        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
 
     def cache_exists(self) -> bool:
         if os.path.exists(self.dataset_path):
@@ -276,7 +272,7 @@ class RearrangementEpisodeDataset(Dataset):
         if self.lmdb_env is None:
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(1e11),
+                map_size=int(2e12),
                 writemap=True,
             )
             self.lmdb_txn = self.lmdb_env.begin()

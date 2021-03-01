@@ -10,7 +10,7 @@ from habitat import Config
 from habitat_sim.utils import viz_utils as vut
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_sim.utils.common import quat_to_coeffs
-from habitat.utils.visualizations.utils import make_video_cv2, observations_to_image, images_to_video
+from habitat.utils.visualizations.utils import make_video_cv2, observations_to_image, images_to_video, append_text_to_image
 
 from threading import Thread
 from time import sleep
@@ -98,10 +98,14 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             }
             instructions.append(data)
             print(len(env.current_episode.reference_replay[1:]))
+            actions = cfg.TASK.POSSIBLE_ACTIONS
             for data in env.current_episode.reference_replay[1:]:
                 if log_action:
                     log_action_data(data, i)
                 action = get_habitat_sim_action(data)
+                action_name = action_name = env.task.get_action_name(
+                    action
+                )
                 if step_env:
                     observations = env.step(action=action)
                 elif not restore_state:
@@ -114,6 +118,8 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
 
                 info = env.get_metrics()
                 frame = observations_to_image({"rgb": observations["rgb"]}, info)
+                frame = append_text_to_image(frame, "Action: {}".format(action_name))
+                frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
                 observation_list.append(frame)
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)

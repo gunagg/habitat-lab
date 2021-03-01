@@ -14,7 +14,7 @@ from gym import spaces
 from habitat.config import Config
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
-from habitat.core.simulator import Observations, Sensor, Simulator
+from habitat.core.simulator import Observations, Sensor, Simulator, SensorTypes
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import merge_sim_episode_config, DistanceToGoal
 from habitat.core.dataset import Dataset, Episode
@@ -24,6 +24,7 @@ from habitat.sims.habitat_simulator.actions import (
     HabitatSimV1ActionSpaceConfiguration,
 )
 from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
 
 @attr.s(auto_attribs=True)
@@ -144,10 +145,21 @@ class RearrangementEpisode(Episode):
 class InstructionSensor(Sensor):
     def __init__(self, **kwargs):
         self.uuid = "instruction"
-        self.observation_space = spaces.Discrete(0)
+        super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.uuid
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=0,
+            high=66,
+            shape=(9,),
+            dtype=np.int64,
+        )
+
+    def _get_sensor_type(self, *args:Any, **kwargs: Any):
+        return SensorTypes.TOKEN_IDS
 
     def _get_observation(
         self,
@@ -190,6 +202,37 @@ class DemonstrationSensor(Sensor):
         # print("{} -- {}".format(self.timestep, get_habitat_sim_action_str(action)))
         self.timestep += 1
         return action
+
+    def get_observation(self, **kwargs):
+        return self._get_observation(**kwargs)
+
+
+@registry.register_sensor(name="GrippedObjectSensor")
+class GrippedObjectSensor(Sensor):
+    def __init__(self, *args, sim: HabitatSim, config: Config, **kwargs):
+        self._sim = sim
+        self.uuid = "gripped_object_id"
+        super().__init__(config=config)
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Discrete(
+            len(self._sim.get_existing_object_ids())
+        )
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.uuid
+
+    def _get_sensor_type(self, *args:Any, **kwargs: Any):
+        return SensorTypes.MEASUREMENT
+
+    def _get_observation(
+        self,
+        observations: Dict[str, Observations],
+        episode: RearrangementEpisode,
+        *args: Any,
+        **kwargs
+    ):
+        return self._sim.gripped_object_id
 
     def get_observation(self, **kwargs):
         return self._get_observation(**kwargs)
@@ -501,7 +544,7 @@ class GrabSuccess(Measure):
     ):
         self._sim = sim
         self._config = config
-        self._count = 0
+        self.prev_gripped_object_id = -1
 
         super().__init__()
 
@@ -509,16 +552,14 @@ class GrabSuccess(Measure):
         return "grab_success"
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
-        self._count = 0
         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
     def update_metric(
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         gripped_object_id = self._sim.gripped_object_id
-        self._count += (gripped_object_id != -1 and task.is_grab_release_called)
-        self._metric = self._count
-        task.is_grab_release_called = False  # type: ignore
+        self._metric = (gripped_object_id != -1 and gripped_object_id != self.prev_gripped_object_id)
+        self.prev_gripped_object_id = gripped_object_id
 
 
 def merge_sim_episode_with_object_config(

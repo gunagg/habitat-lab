@@ -113,12 +113,8 @@ class NoOpAction(SimulatorTaskAction):
 @registry.register_task_action
 class GrabOrReleaseAction(SimulatorTaskAction):
 
-    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
-        task.is_grab_release_called = False  # type: ignore
-
     def step(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         r"""This method is called from ``Env`` on each ``step``."""
-        task.is_grab_release_called = True  # type: ignore
         if "replay_data" in kwargs.keys():
             return self._sim.step_from_replay(
                 HabitatSimActions.GRAB_RELEASE,

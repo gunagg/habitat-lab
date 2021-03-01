@@ -100,8 +100,6 @@ def is_valid_episode(sim, episode, near_dist, far_dist):
         object_id  = sim.add_object_by_handle(object_handle)
         bb_y = sim.get_object_bb_y_coord(object_id)
         sim.remove_object(object_id)
-        # if episode["episode_id"] == 281:
-        #     print("\nEpsiode {}, tilted object: {}, y: {}, pos: {}, agent diff: {}, bb y coord: {}\n".format(episode["episode_id"], object_name, position[1], episode["start_position"][1], y_dist_from_agent, bb_y))
         if ((not tilt_contact or abs(y_dist_from_agent) >= bb_y) and object_name in ["wood_block", "foam_brick", "b_colored_wood_block"]):
             print("\nEpsiode {}, tilted object: {}, contact: {}, y: {}, pos: {}, agent diff: {}, bb y coord: {}\n".format(episode["episode_id"], object_name, tilt_contact, position[1], episode["start_position"][1], y_dist_from_agent, bb_y))
         if contact:

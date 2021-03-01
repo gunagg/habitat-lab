@@ -151,7 +151,7 @@ def handle_step(step, episode, unique_id, timestamp):
                 task_episode_map[ep_id] = 0
             task_episode_map[ep_id] += 1
 
-            episode["episode_id"] = data["episodeID"]
+            episode["episode_id"] = unique_id
             episode["scene_id"] = data["sceneID"]
             episode["start_position"] = data["startState"]["position"]
             episode["start_rotation"] = data["startState"]["rotation"]
@@ -373,7 +373,7 @@ def compute_instruction_tokens(episodes):
     return episodes
 
 
-def replay_to_episode(replay_path, output_path, max_episodes=1,  max_episode_length=1500):
+def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_length=1500, sample=True):
     all_episodes = {
         "episodes": []
     }
@@ -387,6 +387,11 @@ def replay_to_episode(replay_path, output_path, max_episodes=1,  max_episode_len
         if len(episode["reference_replay"]) <= max_episode_length:
             episodes.append(episode)
             episode_lengths.append(counts)
+        if sample:
+            if len(episodes) >= max_episodes:
+                break
+        
+
 
     all_episodes["episodes"] = compute_instruction_tokens(copy.deepcopy(episodes))
     all_episodes["instruction_vocab"] = {
@@ -476,7 +481,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
 
 
