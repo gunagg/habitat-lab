@@ -426,10 +426,10 @@ class RearrangementSim(HabitatSim):
                 if not collided:
                     self._default_agent.act(action)
 
-        # self.draw_bb_around_nearest_object(replay_data["object_under_cross_hair"])
+        self.draw_bb_around_nearest_object(replay_data.object_under_cross_hair)
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=False)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=True)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 

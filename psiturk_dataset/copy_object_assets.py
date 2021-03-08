@@ -88,6 +88,43 @@ def copy_using_object_meta_file(src_path, src_conf_path, dest_path, path="object
         f.write(json.dumps(data))
 
 
+def get_object_name_map_from_directory(src_path):
+    glb_files = glob.glob(src_path + "/*.glb")
+    print(len(glb_files))
+    objects = []
+    for glb_file in glb_files:
+        object_name = glb_file.split("/")[-1].split(".")[0]
+        object_config = {}
+        objects.append({
+            "object": object_name,
+            "objectIcon": "/data/test_assets/objects/{}.png".format(object_name),
+            "objectHandle": "/data/objects/{}.object_config.json".format(object_name),
+            "physicsProperties": "test_assets/objects/{}.object_config.json".format(object_name),
+            "renderMesh": "test_assets/objects/{}.glb".format(object_name)
+        })
+    with open("object-meta.json", "w") as f:
+        f.write(json.dumps(objects))
+
+
+def filter_objects_in_directory(src_path, path="object-meta.json"):
+    f = open(path)
+    data = json.loads(f.read())
+    object_name_map = {}
+    for object_ in data:
+        object_name = object_["objectHandle"].split("/")[-1].split(".")[0]
+        object_name_map[object_name] = 1
+
+    glb_files = glob.glob(src_path + "/*")
+    print(len(glb_files))
+    objects = []
+    for glb_file in glb_files:
+        file_name = glb_file.split("/")[-1]
+        object_name = file_name.split(".")[0]
+        if not object_name in object_name_map.keys():    
+            print(file_name)
+            shutil.move(glb_file, "data/google_objects/" + file_name)
+
+
 def get_object_name_map(path="object-meta.json"):
     f = open(path, "r")
     data = json.loads(f.read())
@@ -120,5 +157,7 @@ if __name__ == "__main__":
     # copy_object_configs(args.src_object_conf_path, args.dest_path)
     # write_object_meta(args.src_glb_path)
     # copy_using_object_meta_file(args.src_glb_path, args.src_object_conf_path, args.dest_path)
-    get_object_name_map()
+    # get_object_name_map()
+    # get_object_name_map_from_directory("../habitat-sim/data/objects")
+    filter_objects_in_directory("../habitat-sim/data/test_assets/objects")
 

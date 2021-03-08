@@ -60,6 +60,7 @@ EPISODE_OVER = "episode_over"
 GET_METRICS = "get_metrics"
 GET_AGENT_POSE = "get_agent_pose"
 GET_OBJECT_STATE = "get_current_object_states"
+SCENES_SPLITS = "scene_splits"
 
 
 def _make_env_fn(
@@ -261,6 +262,12 @@ class VectorEnv:
                     result = env._env._sim.get_current_object_states()
                     connection_write_fn(result)
 
+                elif command == SCENES_SPLITS:
+                    # print(env._env._config.TASK.keys())
+                    # print(env._env._config.DATASET.keys())
+                    result = env._env._config.DATASET.CONTENT_SCENES
+                    connection_write_fn(result)
+
                 else:
                     raise NotImplementedError
 
@@ -333,6 +340,16 @@ class VectorEnv:
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((GET_AGENT_POSE, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def scene_splits(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((SCENES_SPLITS, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())

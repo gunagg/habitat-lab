@@ -94,3 +94,5 @@ demos/
 # training logs
 tb/
 video_dir/
+slurm_logs/
+node_modules/

@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 
 from habitat.sims import make_sim
-from habitat_sim.utils.common import quat_from_coeffs, quat_from_magnum, quat_to_coeffs
+from habitat_sim.utils.common import quat_from_coeffs, quat_from_magnum, quat_to_coeffs, quat_to_magnum
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -39,6 +39,11 @@ def get_object_handle(object_name):
 def add_contact_test_object(sim, object_name):
     object_handle = get_object_handle(object_name)
     sim.add_contact_test_object(object_handle)
+
+
+def add_object(sim, object_name):
+    object_handle = get_object_handle(object_name)
+    return sim.add_object_by_handle(object_handle)
 
 
 def contact_test_rotation(sim, object_name, position, rotation):
@@ -83,27 +88,40 @@ def is_valid_episode(sim, episode, near_dist, far_dist):
         position = object_["position"]
         positions.append(position)
         rotation = get_random_rotation()
-        if "bowl" in object_name or "plate" in object_name:
-            object_["rotation"] = rotation
-        objects.append(object_)
-        add_contact_test_object(sim, object_name)
-        contact = contact_test_rotation(sim, object_name, position, rotation)
+        # if "bowl" in object_name or "plate" in object_name:
+        #     object_["rotation"] = rotation
+        # objects.append(object_)
+        # add_contact_test_object(sim, object_name)
+        # contact = contact_test_rotation(sim, object_name, position, rotation)
 
-        tilt_contact = contact_test(sim, object_name, position)
-        # agent pos = -0.2089587301015854 empty_house
-        # agent pos = 0.08012409508228302 house
-        # agent pos = 0.12102930247783661 big_house
-        # agent pos = 0.12102930247783661 big_house_2
-        # agent pos = 0.12102930247783661 bigger_house
+        # tilt_contact = contact_test(sim, object_name, position)
         y_dist_from_agent = -0.2089587301015854 - position[1]
         object_handle = get_object_handle(object_name)
         object_id  = sim.add_object_by_handle(object_handle)
-        bb_y = sim.get_object_bb_y_coord(object_id)
+
+        sim.set_rotation(quat_to_magnum(quat_from_coeffs(object_["rotation"])), object_id)
+        sim.set_translation(mn.Vector3(position), object_id)
+
+        print("\n\n\n set rotation")
+        
+        
+        tilt_threshold = 0.95
+        orientation = sim.get_rotation(object_id)
+        object_up = orientation.transform_vector(mn.Vector3(0,1,0))
+        tilt = mn.math.dot(object_up, mn.Vector3(0,1,0))
+        is_tilted = (tilt <= tilt_threshold)
+        print(object_up)
+        print(orientation)
+
         sim.remove_object(object_id)
-        if ((not tilt_contact or abs(y_dist_from_agent) >= bb_y) and object_name in ["wood_block", "foam_brick", "b_colored_wood_block"]):
-            print("\nEpsiode {}, tilted object: {}, contact: {}, y: {}, pos: {}, agent diff: {}, bb y coord: {}\n".format(episode["episode_id"], object_name, tilt_contact, position[1], episode["start_position"][1], y_dist_from_agent, bb_y))
-        if contact:
+
+        #if ((not tilt_contact or abs(y_dist_from_agent) >= bb_y) and object_name in ["wood_block", "foam_brick", "b_colored_wood_block"]):
+        print("\nEpsiode {}, tilted object: {}, contact: {}, rot coord: {}\n".format(episode["episode_id"], object_name, is_tilted, tilt))
+        if is_tilted:
+            # print("\nEpsiode {}, tilted object: {}, contact: {}, y: {}, pos: {}, agent diff: {}, bb y coord: {}\n".format(episode["episode_id"], object_name, is_tilted, position[1], episode["start_position"][1], y_dist_from_agent, bb_y))
+            print("\nEpsiode {}, tilted object: {}, contact: {}, rot coord: {}\n".format(episode["episode_id"], object_name, is_tilted, tilt))
             return False, episode
+
     episode["objects"] = objects
 
     for i in range(len(positions)):
@@ -128,7 +146,7 @@ def get_all_tasks(path, scene_id):
         with open(file_path, "r") as file:
             data = json.loads(file.read())
             if data["episodes"][0]["scene_id"] == scene_id:
-                if "2_rot_fixed" in file_path:
+                if not "rot_fixed" in file_path:
                     tasks.append((data, file_path))
                     populate_episodes_points(data["episodes"], scene_id)
                     print(file_path)

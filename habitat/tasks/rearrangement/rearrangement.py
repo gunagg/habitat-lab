@@ -558,7 +558,10 @@ class GrabSuccess(Measure):
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         gripped_object_id = self._sim.gripped_object_id
-        self._metric = (gripped_object_id != -1 and gripped_object_id != self.prev_gripped_object_id)
+        if gripped_object_id != -1 and gripped_object_id != self.prev_gripped_object_id:
+            self._metric = 1
+        else:
+            self._metric = 0
         self.prev_gripped_object_id = gripped_object_id
 
 

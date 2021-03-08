@@ -15,6 +15,7 @@ import torch
 import tqdm
 from torch.optim.lr_scheduler import LambdaLR
 
+from gym import Space
 from habitat import Config, logger
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import observations_to_image
@@ -26,19 +27,21 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
-from habitat_baselines.common.rollout_storage import RolloutStorage
+from habitat_baselines.rearrangement.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.rl.ppo import PPO
+from habitat_baselines.rearrangement.reward_modeling.ppo_agile import PPOAgile
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
     linear_decay,
 )
 from habitat_baselines.utils.env_utils import construct_envs
+from habitat_baselines.rearrangement.reward_modeling.models.discriminator import DiscriminatorModel
+from habitat_baselines.rearrangement.data.goal_dataset import RearrangementGoalDataset
 
 
-@baseline_registry.register_trainer(name="rearrangement-ppo")
-class RearrangementPPOTrainer(BaseRLTrainer):
+@baseline_registry.register_trainer(name="rearrangement-ppo-agile")
+class RearrangementPPOAgileTrainer(BaseRLTrainer):
     r"""Trainer class for PPO algorithm
     Paper: https://arxiv.org/abs/1707.06347.
     """
@@ -67,6 +70,10 @@ class RearrangementPPOTrainer(BaseRLTrainer):
         """
         logger.add_filehandler(self.config.LOG_FILE)
 
+        rl_config.defrost()
+        rl_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
+        rl_config.freeze()
+
         policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
         observation_space = self.envs.observation_spaces[0]
         self.obs_transforms = get_active_obs_transforms(self.config)
@@ -80,7 +87,9 @@ class RearrangementPPOTrainer(BaseRLTrainer):
 
         if rl_config.INIT_BC_BASELINE:
             ckpt = self.load_checkpoint(rl_config.MODEL_CKPT_PATH, map_location="cpu")
+            self.actor_critic = torch.nn.DataParallel(self.actor_critic, dim=1)
             self.actor_critic.load_state_dict(ckpt, strict=False)
+            self.actor_critic = self.actor_critic.module
         
         if rl_config.PPO.freeze_encoder:
             for param in self.actor_critic.net.rgb_encoder.parameters():
@@ -88,8 +97,14 @@ class RearrangementPPOTrainer(BaseRLTrainer):
 
         self.actor_critic.to(self.device)
 
-        self.agent = PPO(
+        self.discriminator = self._setup_reward_model(
+            observation_space, self.envs.action_spaces[0], self.config.MODEL
+        )
+        self.discriminator.to(self.device)
+
+        self.agent = PPOAgile(
             actor_critic=self.actor_critic,
+            discriminator=self.discriminator,
             clip_param=ppo_cfg.clip_param,
             ppo_epoch=ppo_cfg.ppo_epoch,
             num_mini_batch=ppo_cfg.num_mini_batch,
@@ -99,7 +114,22 @@ class RearrangementPPOTrainer(BaseRLTrainer):
             eps=ppo_cfg.eps,
             max_grad_norm=ppo_cfg.max_grad_norm,
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
+            discr_batch_size=ppo_cfg.discr_batch_size,
+            discr_rho=ppo_cfg.discr_rho
         )
+    
+
+    def _setup_reward_model(self, observation_space: Space, action_space: Space, config: Config) -> None:
+        r"""Sets up discriminator network for reward model.
+
+        Args:
+            config: config node with relevant params
+
+        Returns:
+            model: discriminator model object
+        """
+        model = DiscriminatorModel(observation_space, action_space, config)
+        return model
 
     @profiling_wrapper.RangeContext("save_checkpoint")
     def save_checkpoint(
@@ -226,10 +256,18 @@ class RearrangementPPOTrainer(BaseRLTrainer):
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
-        rewards = torch.tensor(
+        rewards_ll = torch.tensor(
             rewards_l, dtype=torch.float, device=current_episode_reward.device
         )
-        rewards = rewards.unsqueeze(1)
+        rewards_ll = rewards_ll.unsqueeze(1)
+
+        # Use reward model to get rewards
+        learning_rewards = self.discriminator(batch)
+        rewards = torch.tensor(
+            learning_rewards, dtype=torch.float, device=current_episode_reward.device
+        )
+
+        # print(rewards_ll.shape, rewards.shape)
 
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones],
@@ -289,7 +327,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
             next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
         )
 
-        value_loss, action_loss, dist_entropy = self.agent.update(rollouts)
+        value_loss, action_loss, dist_entropy, discr_loss = self.agent.update(rollouts)
 
         rollouts.after_update()
 
@@ -298,7 +336,16 @@ class RearrangementPPOTrainer(BaseRLTrainer):
             value_loss,
             action_loss,
             dist_entropy,
+            discr_loss,
         )
+    
+    def _setup_goal_state_dataset(self, config: Config, mode: str):
+        goal_state_dataset = RearrangementGoalDataset(
+            config,
+            mode=mode,
+        )
+        return goal_state_dataset
+
 
     @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
@@ -332,13 +379,18 @@ class RearrangementPPOTrainer(BaseRLTrainer):
             )
         )
 
+        scene_splits = self.envs.scene_splits()
+        goal_state_dataset = self._setup_goal_state_dataset(self.config, "train_goals")
+
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
             self.obs_space,
             self.envs.action_spaces[0],
             ppo_cfg.hidden_size,
-            self.config.MODEL.STATE_ENCODER.num_recurrent_layers
+            self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
+            goal_state_dataset,
+            scene_splits,
         )
         rollouts.to(self.device)
 
@@ -410,6 +462,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
                     value_loss,
                     action_loss,
                     dist_entropy,
+                    discr_loss,
                 ) = self._update_agent(ppo_cfg, rollouts)
                 pth_time += delta_pth_time
 
@@ -440,10 +493,10 @@ class RearrangementPPOTrainer(BaseRLTrainer):
                 if len(metrics) > 0:
                     writer.add_scalars("metrics", metrics, count_steps)
 
-                losses = [value_loss, action_loss]
+                losses = [value_loss, action_loss, discr_loss]
                 writer.add_scalars(
                     "losses",
-                    {k: l for l, k in zip(losses, ["value", "policy"])},
+                    {k: l for l, k in zip(losses, ["value", "policy", "discriminator"])},
                     count_steps,
                 )
 
@@ -516,7 +569,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
 
         if len(self.config.VIDEO_OPTION) > 0:
             config.defrost()
-            # config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+            config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
             config.freeze()
 

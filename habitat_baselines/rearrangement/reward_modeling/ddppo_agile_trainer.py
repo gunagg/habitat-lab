@@ -113,9 +113,12 @@ class RearrangementDDPPOTrainer(PPOTrainer):
             )
         if self.config.RL.INIT_BC_BASELINE:
             ckpt = self.load_checkpoint(self.config.RL.MODEL_CKPT_PATH, map_location="cpu")
+            self.actor_critic = torch.nn.DataParallel(self.actor_critic, dim=1)
             self.actor_critic.load_state_dict(ckpt, strict=False)
+            self.actor_critic = self.actor_critic.module
 
         if not self.config.RL.DDPPO.train_encoder:
+            self._static_encoder = True
             for param in self.actor_critic.net.rgb_encoder.parameters():
                 param.requires_grad_(False)
             for param in self.actor_critic.net.depth_encoder.parameters():

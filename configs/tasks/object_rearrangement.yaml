@@ -70,5 +70,5 @@ TASK:
 DATASET:
   TYPE: RearrangementDataset-v0
   SPLIT: "train"
-  DATA_PATH: "data/datasets/object_rearrangement/v0/{split}/{split}.json.gz"
+  DATA_PATH: "data/datasets/object_rearrangement/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/habitat-test-scenes/"

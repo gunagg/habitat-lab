@@ -7,14 +7,14 @@ ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/overfitting/sample"
-VIDEO_DIR: "video_dir/overfitting/sample"
+TENSORBOARD_DIR: "tb/resnet18_fold_0"
+VIDEO_DIR: "video_dir/resnet18_fold_0"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/overfitting/overfitting_20.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/resnet18_fold_0/model_20.ckpt"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/overfitting"
+NUM_PROCESSES: 5
+CHECKPOINT_FOLDER: "data/new_checkpoints/resnet18_fold_0"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -24,17 +24,16 @@ RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "sample"
+  SPLIT: "eval"
 
 IL:
   USE_IW: True
   distrib_training: False
   distrib_backend: GLOO
-  model_name: model
   BehaviorCloning:
     lr: 0.001
-    max_epochs: 1
-    batch_size: 1
+    max_epochs: 20
+    batch_size: 8
     timestep_batch_size: 800
     freeze_encoder: False
 

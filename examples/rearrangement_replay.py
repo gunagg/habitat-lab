@@ -118,7 +118,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
 
                 info = env.get_metrics()
                 frame = observations_to_image({"rgb": observations["rgb"]}, info)
-                frame = append_text_to_image(frame, "Action: {}".format(action_name))
+                # frame = append_text_to_image(frame, "Action: {}".format(action_name))
                 frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
                 observation_list.append(frame)
                 i+=1

@@ -327,7 +327,6 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
-        model_name = config.IL.model_name
         AuxLosses.activate()
         with (
             TensorboardWriter(

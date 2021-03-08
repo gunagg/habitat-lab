@@ -13,6 +13,7 @@ import os
 import random
 import scipy
 import sys
+import habitat_sim
 
 import numpy as np
 import magnum as mn
@@ -97,10 +98,14 @@ def get_object_receptacle_pair(object_to_receptacle_list, index):
     return object_to_receptacle_list[index]
 
 
+def use_in_for_receptacle(receptacle_name):
+    return receptacle_name.lower() in ["bowl", "cube", "bin", "basket"]
+
+
 def get_task_config(config, object_name, receptacle_name, object_ids, receptacle_ids):
     task = {}
     in_or_on = "on"
-    if "bowl" in receptacle_name :
+    if use_in_for_receptacle(receptacle_name):
         in_or_on = "in"
     task["instruction"] = config["TASK"]["INSTRUCTION"].format(object_name, in_or_on, receptacle_name)
     task["type"] = config["TASK"]["TYPE"]
@@ -157,7 +162,7 @@ def build_object(object_handle, object_id, object_name, is_receptacle, position,
 def get_bad_points(
     sim, points, rotations, d_lower_lim, d_upper_lim,
     geodesic_to_euclid_min_ratio, xlim=None,
-    ylim=None, zlim=None, object_names=[]
+    ylim=None, zlim=None, object_names=[], is_tilted_or_colliding=[]
 ):
     bad_points = np.zeros(points.shape[0], dtype=bool)
     # Outside X, Y, or Z limits
@@ -176,10 +181,9 @@ def get_bad_points(
     for i, point in enumerate(points):
         point_list = point.tolist()
         existing_point_count = VISITED_POINT_DICT.get(str(point_list))
-        is_colliding = False
-        if i > 0:
-            is_colliding = test_contact_on_settled_point(sim, object_names[i-1], point)
-        if existing_point_count is not None and existing_point_count >= 1 or is_colliding:
+        # if True in is_tilted_or_colliding:
+        #     print(i, is_tilted_or_colliding)
+        if existing_point_count is not None and existing_point_count >= 1 or is_tilted_or_colliding[i]:
             bad_points[i] = 1
 
     # Too close to another object or receptacle
@@ -206,12 +210,13 @@ def get_bad_points(
 def rejection_sampling(
     sim, points, rotations, d_lower_lim, d_upper_lim,
     geodesic_to_euclid_min_ratio, xlim=None,
-    ylim=None, zlim=None, num_tries=10000, object_names=[]
+    ylim=None, zlim=None, num_tries=10000, object_names=[], scene_bb=None,
+    is_tilted_or_colliding=[]
 ):
     bad_points = get_bad_points(
         sim, points, rotations, d_lower_lim, d_upper_lim,
         geodesic_to_euclid_min_ratio, xlim, ylim,
-        zlim, object_names
+        zlim, object_names, is_tilted_or_colliding
     )
 
     while sum(bad_points) > 0 and num_tries > 0:
@@ -220,12 +225,12 @@ def rejection_sampling(
             if bad_point and i == 0:
                 points[i] = get_random_point(sim)
             elif bad_point:
-                points[i], rotations[i] = get_random_object_position(sim, object_names[i - 1])
+                points[i], rotations[i], is_tilted_or_colliding[i] = get_random_object_position(sim, object_names[i - 1])
 
         bad_points = get_bad_points(
             sim, points, rotations, d_lower_lim, d_upper_lim,
             geodesic_to_euclid_min_ratio, xlim, ylim,
-            zlim, object_names
+            zlim, object_names, is_tilted_or_colliding
         )
         num_tries -= 1
     
@@ -263,7 +268,7 @@ def remove_contact_test_object(sim, object_name):
     sim.remove_contact_test_object(object_handle)
 
 
-def step_physics_n_times(sim, n=50, dt = 1.0 / 10.0):
+def step_physics_n_times(sim, n=10, dt = 1.0 / 10.0):
     sim.step_world(n * dt)
 
 
@@ -277,27 +282,47 @@ def test_contact_on_settled_point(sim, object_name, position):
     return contact_test(sim, object_name, temp_pos)
 
 
-def get_random_object_position(sim, object_name):
+def get_random_object_position(sim, object_name, scene_bb=None, scene_collision_margin=0.04, tilt_threshold=0.95):
     object_handle = get_object_handle(object_name)
     position = get_random_point(sim)
 
     object_id  = sim.add_object_by_handle(object_handle)
-    position[1] += (sim.get_object_bb_y_coord(object_id) * 2)
+    obj_node = sim.get_object_scene_node(object_id)
+    xform_bb = habitat_sim.geo.get_transformed_bb(
+        obj_node.cumulative_bb, obj_node.transformation
+    )
+    # also account for collision margin of the scene
+    y_translation = mn.Vector3(
+        0, xform_bb.size_y() / 2.0 + scene_collision_margin, 0
+    )
+    position = mn.Vector3(position) + y_translation
     sim.set_translation(position, object_id)
-    step_physics_n_times(sim)
+    is_colliding = sim.contact_test(object_id)
 
-    step_count = 0
-    while step_count < 1:
+    # If colliding that means object near a wall or on the floor
+    if not is_colliding:
         step_physics_n_times(sim)
-        step_count += 1
 
     translation = sim.get_translation(object_id)
     rotation = sim.get_rotation(object_id)
 
+    orientation = sim.get_rotation(object_id)
+    object_up = orientation.transform_vector(mn.Vector3(0,1,0))
+    tilt = mn.math.dot(object_up, mn.Vector3(0,1,0))
+    is_tilted = (tilt <= tilt_threshold)
+
+    adjusted_translation = mn.Vector3(
+        0, scene_collision_margin, 0
+    ) + translation
+    sim.set_translation(adjusted_translation, object_id)
+    is_colliding = sim.contact_test(object_id)
+
+    is_tilted_or_colliding = (is_tilted or is_colliding)
+
     rotation = quat_to_coeffs(quat_from_magnum(rotation)).tolist()
     translation = np.array(translation).tolist()
     sim.remove_object(object_id)
-    return np.array(translation), rotation
+    return np.array(translation), rotation, is_tilted_or_colliding
 
 
 def populate_episodes_points(episodes, scene_id):
@@ -344,7 +369,8 @@ def generate_points(
     d_upper_lim=30.0,
     geodesic_to_euclid_min_ratio=1.1,
     prev_episodes="data/tasks",
-    scene_id="empty_house.glb"
+    scene_id="empty_house.glb",
+    use_google_objects=False,
 ):
     # Initialize simulator
     sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
@@ -356,6 +382,12 @@ def generate_points(
     episodes = []
     
     object_to_receptacle_list = get_object_receptacle_list(config["TASK"]["OBJECTS_RECEPTACLE_MAP"])
+
+    google_object_to_receptacle_list = get_object_receptacle_list(config["TASK"]["GOOGLE_OBJECT_RECEPTACLE_MAP"])
+    if use_google_objects:
+        # object_to_receptacle_list.extend(google_object_to_receptacle_list)
+        object_to_receptacle_list = list(set(google_object_to_receptacle_list))
+
     object_name_map = dict(config["TASK"]["OBJECT_NAME_MAP"])
     y_limit = config["TASK"]["Y_LIMIT"]
     x_limit = None
@@ -367,6 +399,9 @@ def generate_points(
     num_episodes = num_episodes * len(object_to_receptacle_list)
     print("Generating total {} episodes for {} object receptacle pair".format(num_episodes, len(object_to_receptacle_list)))
 
+    print("\n\n\n YCB object receptacle pairs: {}".format(len(object_to_receptacle_list)))
+    print("\n\n\n Google object receptacle pairs: {}".format(len(google_object_to_receptacle_list)))
+    num_episodes = 20
     while episode_count < num_episodes or num_episodes < 0:
         for object_list in object_to_receptacle_list:
             print("\nEpisode {}\n".format(episode_count))
@@ -376,25 +411,26 @@ def generate_points(
             object_name = object_name_map[object_]
             receptacle_name = object_name_map[receptacle]
 
-            add_contact_test_object(sim, object_)
-            add_contact_test_object(sim, receptacle)
-
             points = []
             rotations = []
+            is_tilted_or_colliding = []
             for idx in range(num_points):
+                is_invalid = False
                 if idx == 0:
                     point = get_random_point(sim)
                     rotation = get_random_rotation()
                 else:
-                    point, rotation = get_random_object_position(sim, object_list[idx - 1])
+                    point, rotation, is_invalid = get_random_object_position(sim, object_list[idx - 1])
                 points.append(point)
                 rotations.append(rotation)
+                is_tilted_or_colliding.append(is_invalid)
             
             points = np.array(points)
             points = rejection_sampling(
                 sim, points, rotations, d_lower_lim, d_upper_lim,
                 geodesic_to_euclid_min_ratio, xlim=x_limit, ylim=y_limit,
-                num_tries=number_retries_per_target, object_names=object_list
+                num_tries=number_retries_per_target, object_names=object_list,
+                is_tilted_or_colliding=is_tilted_or_colliding
             )
 
             # Mark valid points as visited to get unique points
@@ -423,8 +459,8 @@ def generate_points(
 
             remove_all_objects(sim)
             episode_count += 1
-            break
-        break
+            if episode_count >= 20:
+                break
 
     dataset = {
         "episodes": episodes
@@ -508,6 +544,10 @@ if __name__ == "__main__":
         default="data/tasks",
         help="Task configuration file for initializing a Habitat environment",
     )
+    parser.add_argument(
+        "--use_google_objects",
+        dest='use_google_objects', action='store_true',
+    )
 
     args = parser.parse_args()
     opts = []
@@ -533,7 +573,8 @@ if __name__ == "__main__":
             args.d_upper_lim,
             args.geodesic_to_euclid_min_ratio,
             args.prev_episodes,
-            scene_id
+            scene_id,
+            args.use_google_objects
         )
         write_episode(dataset, args.output)
     else:
