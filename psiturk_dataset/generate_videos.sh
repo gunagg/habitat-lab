@@ -8,7 +8,7 @@ echo "hab sim: ${PYTHONPATH}"
 
 prefix=$1
 
-wget https://habitat-on-web.s3.amazonaws.com/data/hit_data/instructions.json
+#wget https://habitat-on-web.s3.amazonaws.com/data/hit_data/instructions.json
 wget https://habitat-on-web.s3.amazonaws.com/data/hit_data/unapproved_hits.zip
 
 unzip -o unapproved_hits.zip 
@@ -25,4 +25,4 @@ rm data/hit_data/visualisation/unapproved_hits/*
 rm demos/*
 
 current_dt=$(date '+%Y-%m-%d')
-cp data/hit_data/visualisation/hits.json.gz data/live_hits/live_hits_${current_dt}.json.gzs
+cp data/hit_data/visualisation/hits.json.gz data/live_hits/live_hits_${current_dt}.json.gz

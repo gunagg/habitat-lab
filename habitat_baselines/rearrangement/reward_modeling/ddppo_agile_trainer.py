@@ -27,7 +27,7 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
-from habitat_baselines.common.rollout_storage import RolloutStorage
+from habitat_baselines.rearrangement.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     EXIT,
@@ -38,17 +38,17 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     requeue_job,
     save_interrupted_state,
 )
-from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
+from habitat_baselines.rearrangement.reward_modeling.ddppo_agile import DDPPOAgile
 from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
     PointNavResNetPolicy,
 )
-from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
+from habitat_baselines.rearrangement.reward_modeling.ppo_agile_trainer import RearrangementPPOAgileTrainer
 from habitat_baselines.utils.common import batch_obs, linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
 
 
-@baseline_registry.register_trainer(name="rearrangement-ddppo")
-class RearrangementDDPPOTrainer(PPOTrainer):
+@baseline_registry.register_trainer(name="rearrangement-ddppo-agile")
+class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
     # DD-PPO cuts rollouts short to mitigate the straggler effect
     # This, in theory, can cause some rollouts to be very short.
     # All rollouts contributed equally to the loss/model-update,
@@ -111,25 +111,28 @@ class RearrangementDDPPOTrainer(PPOTrainer):
                     if k.startswith(prefix)
                 }
             )
-        if self.config.RL.INIT_BC_BASELINE:
-            ckpt = self.load_checkpoint(self.config.RL.MODEL_CKPT_PATH, map_location="cpu")
-            self.actor_critic = torch.nn.DataParallel(self.actor_critic, dim=1)
+        if self.config.RL.DDPPO.init_bc_baseline:
+            ckpt = self.load_checkpoint(self.config.RL.DDPPO.bc_baseline_ckpt, map_location="cpu")
             self.actor_critic.load_state_dict(ckpt, strict=False)
-            self.actor_critic = self.actor_critic.module
 
         if not self.config.RL.DDPPO.train_encoder:
-            self._static_encoder = True
             for param in self.actor_critic.net.rgb_encoder.parameters():
                 param.requires_grad_(False)
             for param in self.actor_critic.net.depth_encoder.parameters():
                 param.requires_grad_(False)
 
+        self.discriminator = self._setup_reward_model(
+            observation_space, self.envs.action_spaces[0], self.config.MODEL
+        )
+        self.discriminator.to(self.device)
+
         if self.config.RL.DDPPO.reset_critic:
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
 
-        self.agent = DDPPO(
+        self.agent = DDPPOAgile(
             actor_critic=self.actor_critic,
+            discriminator=self.discriminator,
             clip_param=ppo_cfg.clip_param,
             ppo_epoch=ppo_cfg.ppo_epoch,
             num_mini_batch=ppo_cfg.num_mini_batch,
@@ -139,6 +142,8 @@ class RearrangementDDPPOTrainer(PPOTrainer):
             eps=ppo_cfg.eps,
             max_grad_norm=ppo_cfg.max_grad_norm,
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
+            discr_batch_size=ppo_cfg.discr_batch_size,
+            discr_rho=ppo_cfg.discr_rho
         )
 
     @profiling_wrapper.RangeContext("train")
@@ -234,6 +239,8 @@ class RearrangementDDPPOTrainer(PPOTrainer):
             with torch.no_grad():
                 batch["visual_features"] = self._encoder(batch)
 
+        goal_state_dataset = self._setup_goal_state_dataset(self.config, "train_goals")
+
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
@@ -241,6 +248,7 @@ class RearrangementDDPPOTrainer(PPOTrainer):
             self.envs.action_spaces[0],
             ppo_cfg.hidden_size,
             num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
+            goal_state_dataset=goal_state_dataset,
         )
         rollouts.to(self.device)
 
@@ -256,9 +264,13 @@ class RearrangementDDPPOTrainer(PPOTrainer):
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
         )
+        current_episode_pred_reward = torch.zeros(
+            self.envs.num_envs, 1, device=self.device
+        )
         running_episode_stats = dict(
             count=torch.zeros(self.envs.num_envs, 1, device=self.device),
             reward=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            pred_reward=torch.zeros(self.envs.num_envs, 1, device=self.device),
         )
         window_episode_stats: DefaultDict[str, deque] = defaultdict(
             lambda: deque(maxlen=ppo_cfg.reward_window_size)
@@ -343,13 +355,12 @@ class RearrangementDDPPOTrainer(PPOTrainer):
                 self.agent.eval()
                 profiling_wrapper.range_push("rollouts loop")
                 for step in range(ppo_cfg.num_steps):
-
                     (
                         delta_pth_time,
                         delta_env_time,
                         delta_steps,
                     ) = self._collect_rollout_step(
-                        rollouts, current_episode_reward, running_episode_stats
+                        rollouts, current_episode_reward, running_episode_stats, current_episode_pred_reward
                     )
                     pth_time += delta_pth_time
                     env_time += delta_env_time
@@ -377,6 +388,8 @@ class RearrangementDDPPOTrainer(PPOTrainer):
                     value_loss,
                     action_loss,
                     dist_entropy,
+                    discr_loss,
+                    discr_accuracy_epoch
                 ) = self._update_agent(ppo_cfg, rollouts)
                 pth_time += delta_pth_time
 
@@ -390,7 +403,7 @@ class RearrangementDDPPOTrainer(PPOTrainer):
                     window_episode_stats[k].append(stats[i].clone())
 
                 stats = torch.tensor(
-                    [value_loss, action_loss, count_steps_delta],
+                    [value_loss, action_loss, count_steps_delta, discr_loss, discr_accuracy_epoch],
                     device=self.device,
                 )
                 distrib.all_reduce(stats)
@@ -402,6 +415,10 @@ class RearrangementDDPPOTrainer(PPOTrainer):
                     losses = [
                         stats[0].item() / self.world_size,
                         stats[1].item() / self.world_size,
+                        stats[3].item() / self.world_size,
+                    ]
+                    reward_model_metrics = [
+                        stats[4].item() / self.world_size,
                     ]
                     deltas = {
                         k: (
@@ -419,6 +436,18 @@ class RearrangementDDPPOTrainer(PPOTrainer):
                         count_steps,
                     )
 
+                    writer.add_scalar(
+                        "pred_reward",
+                        deltas["pred_reward"] / deltas["count"],
+                        count_steps,
+                    )
+
+                    writer.add_scalar(
+                        "reward_model_accuracy",
+                        reward_model_metrics[0],
+                        count_steps,
+                    )
+
                     # Check to see if there are any metrics
                     # that haven't been logged yet
                     metrics = {
@@ -427,13 +456,16 @@ class RearrangementDDPPOTrainer(PPOTrainer):
                         if k not in {"reward", "count"}
                     }
                     if len(metrics) > 0:
+                        print("\n writing metrics")
                         writer.add_scalars("metrics", metrics, count_steps)
 
+                    print("Writitng losses")
                     writer.add_scalars(
                         "losses",
-                        {k: l for l, k in zip(losses, ["value", "policy"])},
+                        {k: l for l, k in zip(losses, ["value", "policy", "reward_model"])},
                         count_steps,
                     )
+                    print("Writitng losses")
 
                     # log stats
                     if update > 0 and update % self.config.LOG_INTERVAL == 0:

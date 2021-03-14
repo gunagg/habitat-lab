@@ -1,16 +1,19 @@
+# Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
+# for better hyperparameters for actual training
+
 BASE_TASK_CONFIG_PATH: "configs/tasks/object_rearrangement.yaml"
-TRAINER_NAME: "rearrangement-ddppo"
+TRAINER_NAME: "rearrangement-ppo"
 ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/ddppo_dense_reward_resnet18_scratch/"
-VIDEO_DIR: "video_dir/ddppo_dense_reward_resnet18_scratch/train"
+TENSORBOARD_DIR: "tb/ddppo_dense_reward_resnet18/eval"
+VIDEO_DIR: "video_dir/ddppo_dense_reward_resnet18/eval"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_dense_reward_resnet18/ckpt.19.pth"
-NUM_PROCESSES: 2
-CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_dense_reward_resnet18_scratch"
+NUM_PROCESSES: 5
+CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_dense_reward_resnet18"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -21,6 +24,7 @@ EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
   SPLIT: "eval"
+
 
 RL:
   REWARD_MEASURE: "agent_receptacle_distance"
@@ -34,48 +38,28 @@ RL:
 
   PPO:
     # ppo params
-    clip_param: 0.2
+    clip_param: 0.1
     ppo_epoch: 4
     num_mini_batch: 1
     value_loss_coef: 0.5
     entropy_coef: 0.01
     lr: 2.5e-4
     eps: 1e-5
-    max_grad_norm: 0.2
+    max_grad_norm: 0.5
     num_steps: 128
+    hidden_size: 512
     use_gae: True
     gamma: 0.99
     tau: 0.95
-    use_linear_clip_decay: False
-    use_linear_lr_decay: False
+    use_linear_clip_decay: True
+    use_linear_lr_decay: True
     reward_window_size: 50
-    use_normalized_advantage: False
-    hidden_size: 512
-
-  DDPPO:
-    sync_frac: 0.6
-    # The PyTorch distributed backend to use
-    distrib_backend: NCCL
-    # Visual encoder backbone
-    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
-    # Initialize with pretrained weights
-    pretrained: False
-    # Initialize just the visual encoder backbone with pretrained weights
-    pretrained_encoder: False
-    # Whether or not the visual encoder backbone will be trained.
-    train_encoder: False
-    # Whether or not to reset the critic linear layer
-    reset_critic: True
-
-    # Model parameters
-    backbone: resnet50
-    rnn_type: LSTM
-    num_recurrent_layers: 2
+    freeze_encoder: False
 
     # Initialize with behavior cloning baseline
     init_bc_baseline: False
     bc_baseline_ckpt: "data/new_checkpoints/resnet18_20_epochs/resnet18_20_epochs_20.ckpt"
-  
+
 MODEL:
   inflection_weight_coef: 6.6991838665799275
   ablate_depth: False
@@ -93,7 +77,7 @@ MODEL:
     cnn_type: "ResnetRGBEncoder"
     output_size: 256
     backbone: "resnet18"
-    train_encoder: True
+    train_encoder: False
   DEPTH_ENCODER:
     cnn_type: "VlnResnetDepthEncoder"
     output_size: 128

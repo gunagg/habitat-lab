@@ -17,11 +17,13 @@ import sys
 import numpy as np
 import magnum as mn
 import matplotlib.pyplot as plt
+import scipy
 
-
+from collections import defaultdict
 from habitat.sims import make_sim
 from habitat_sim.utils.common import quat_from_coeffs, quat_from_magnum, quat_to_coeffs, quat_to_magnum
 from mpl_toolkits.mplot3d import Axes3D
+from psiturk_dataset.check_train_val_leak import load_dataset
 
 
 ISLAND_RADIUS_LIMIT = 1.5
@@ -59,14 +61,95 @@ def contact_test(sim, object_name, position):
 def get_object_handle(object_name):
     return "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
 
+
+def get_points_distance(points, sim):
+    print("Min distance between points...")
+    agent_idxs = [0]
+    object_idxs = [1]
+    receptacle_idxs = [2]
+
+    for i in range(int(len(points)/3) - 1):
+        agent_idxs.append(agent_idxs[-1] + 3)
+        object_idxs.append(object_idxs[-1] + 3)
+        receptacle_idxs.append(receptacle_idxs[-1] + 3)
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(
+        points[agent_idxs][:, 0],
+        points[agent_idxs][:, 2],
+        points[agent_idxs][:, 1],
+        c='b'
+    )
+    ax.scatter(
+        points[object_idxs][:, 0],
+        points[object_idxs][:, 2],
+        points[object_idxs][:, 1],
+        c='r'
+    )
+    ax.scatter(
+        points[receptacle_idxs][:, 0],
+        points[receptacle_idxs][:, 2],
+        points[receptacle_idxs][:, 1],
+        c='g'
+    )
+    plt.show()
+    input()
+
+    num_episodes = 0
+    ep_ids = []
+    ep_map = defaultdict(int)
+    for i in range(len(agent_idxs)):
+        idx = agent_idxs[i]
+        for j in range(len(agent_idxs)):
+            if i <= j:
+                continue
+            val1 = points[agent_idxs[i]]
+            val2 = points[agent_idxs[j]]
+            # val3 = points[object_idxs[i]]
+            # val4 = points[object_idxs[j]]
+            # val5 = points[receptacle_idxs[i]]
+            # val6 = points[receptacle_idxs[j]]
+            # val1 = points[object_idxs[i]]
+            # val2 = points[receptacle_idxs[j]]
+            dist = sim.geodesic_distance(val1, val2)
+            # dist2 = sim.geodesic_distance(val3, val4)
+            # dist3 = sim.geodesic_distance(val5, val6)
+            if dist < 0.2: # and dist2 < 0.2: # or dist3 < 0.5:
+                num_episodes += 1
+                ep_map[i] += 1
+                ep_map[j] += 1
+                if ep_map[i] >= 1:
+                    ep_ids.append(i)
+                if ep_map[j] >= 1:
+                    ep_ids.append(j)
+        if i % 100 == 0:
+            print("Num eps close to 0.5: {}/{} - {}".format(len(set(ep_ids)), (i+1), num_episodes))
+    print("Num eps close to 0.5: {}/{} -- {}".format(len(set(ep_ids)), (i+1), num_episodes))
+
+    ddddd = scipy.spatial.distance.pdist(points[agent_idxs], metric=sim.geodesic_distance)
+    print("Min distance between points: {} - {} - {} -{}".format(np.min(ddddd), np.sum(ddddd < 0.5), ddddd.shape[0], len(agent_idxs)))
+    ddddd = scipy.spatial.distance.pdist(points[object_idxs], metric=sim.geodesic_distance)
+    print("Min distance between points: {} - {}".format(np.min(ddddd), np.sum(ddddd < 0.5)))
+    ddddd = scipy.spatial.distance.pdist(points[receptacle_idxs], metric=sim.geodesic_distance)
+    print("Min distance between points: {} - {}".format(np.min(ddddd), np.sum(ddddd < 0.5)))
+    ddddd = scipy.spatial.distance.pdist(points, metric=sim.geodesic_distance)
+    print("Min distance between points: {} - {}".format(np.min(ddddd), np.sum(ddddd < 0.5)))
+
+
 def populate_episodes_points(episodes, scene_id):
+    points = []
     for episode in episodes:
         if scene_id != episode["scene_id"]:
             continue
+
+        if episode["episode_id"] > 600:
+            break
         point = str(episode["start_position"])
+        points.append(episode["start_position"])
         if VISITED_POINT_DICT.get(point):
             VISITED_POINT_DICT[point] += 1
-            print("Redundant agent position in episode {}".format(episode["episode_id"]))
+            # print("Redundant agent position in episode {}".format(episode["episode_id"]))
         else:
             VISITED_POINT_DICT[point] = 1
 
@@ -74,9 +157,11 @@ def populate_episodes_points(episodes, scene_id):
             point = str(object_["position"])
             if VISITED_POINT_DICT.get(point):
                 VISITED_POINT_DICT[point] += 1
-                print("Redundant point in episode {}".format(episode["episode_id"]))
+                # print("Redundant point in episode {}".format(episode["episode_id"]))
             else:
                 VISITED_POINT_DICT[point] = 1
+            points.append(object_["position"])        
+    return points
 
 
 def is_valid_episode(sim, episode, near_dist, far_dist):
@@ -88,37 +173,22 @@ def is_valid_episode(sim, episode, near_dist, far_dist):
         position = object_["position"]
         positions.append(position)
         rotation = get_random_rotation()
-        # if "bowl" in object_name or "plate" in object_name:
-        #     object_["rotation"] = rotation
-        # objects.append(object_)
-        # add_contact_test_object(sim, object_name)
-        # contact = contact_test_rotation(sim, object_name, position, rotation)
 
-        # tilt_contact = contact_test(sim, object_name, position)
-        y_dist_from_agent = -0.2089587301015854 - position[1]
         object_handle = get_object_handle(object_name)
         object_id  = sim.add_object_by_handle(object_handle)
 
         sim.set_rotation(quat_to_magnum(quat_from_coeffs(object_["rotation"])), object_id)
         sim.set_translation(mn.Vector3(position), object_id)
 
-        print("\n\n\n set rotation")
-        
-        
         tilt_threshold = 0.95
         orientation = sim.get_rotation(object_id)
         object_up = orientation.transform_vector(mn.Vector3(0,1,0))
         tilt = mn.math.dot(object_up, mn.Vector3(0,1,0))
         is_tilted = (tilt <= tilt_threshold)
-        print(object_up)
-        print(orientation)
 
         sim.remove_object(object_id)
 
-        #if ((not tilt_contact or abs(y_dist_from_agent) >= bb_y) and object_name in ["wood_block", "foam_brick", "b_colored_wood_block"]):
-        print("\nEpsiode {}, tilted object: {}, contact: {}, rot coord: {}\n".format(episode["episode_id"], object_name, is_tilted, tilt))
         if is_tilted:
-            # print("\nEpsiode {}, tilted object: {}, contact: {}, y: {}, pos: {}, agent diff: {}, bb y coord: {}\n".format(episode["episode_id"], object_name, is_tilted, position[1], episode["start_position"][1], y_dist_from_agent, bb_y))
             print("\nEpsiode {}, tilted object: {}, contact: {}, rot coord: {}\n".format(episode["episode_id"], object_name, is_tilted, tilt))
             return False, episode
 
@@ -140,19 +210,42 @@ def get_random_rotation():
     return rotation
 
 
-def get_all_tasks(path, scene_id):
+def get_num_episodes_on_each_floor(points, floor_height_thresholds=[0.5, 1.0]):
+    floor_count_map = defaultdict(int)
+    y_points = [point[1] for point in points]
+    y_points.sort()
+
+    last_point = y_points[-1]
+    print("Min point: {}".format(y_points[0]))
+    print("Max point: {}".format(last_point))
+    for point in y_points:
+        dist = abs(point - last_point)
+        if dist >= floor_height_thresholds[0]:
+            floor_count_map[1] += 1
+        elif dist >= floor_height_thresholds[1]:
+            floor_count_map[2] += 1
+        else:
+            floor_count_map[0] += 1
+    return floor_count_map
+
+
+def get_all_tasks(path, scene_id, sim):
     tasks = []
+    all_points = []
     for file_path in glob.glob(path + "/*.json"):
         with open(file_path, "r") as file:
             data = json.loads(file.read())
             if data["episodes"][0]["scene_id"] == scene_id:
-                if not "rot_fixed" in file_path:
-                    tasks.append((data, file_path))
-                    populate_episodes_points(data["episodes"], scene_id)
-                    print(file_path)
+                tasks.append((data, file_path))
+                if "house_8_min_dist_0_5.json" in file_path:
+                    ep_points = populate_episodes_points(data["episodes"], scene_id)
+                    floor_map = get_num_episodes_on_each_floor(ep_points)
+                    all_points.extend(ep_points)
+                    print("\nNum episodes per floor {}".format(floor_map))
     unique_points_count = len(VISITED_POINT_DICT.keys())
     print("Total tasks: {}".format(len(tasks)))
     print("Total unique points: {} -- {}".format(unique_points_count, unique_points_count / 3))
+    get_points_distance(np.array(all_points), sim)
     return tasks
 
 
@@ -178,7 +271,8 @@ def validate_tasks(
     sim = get_sim(config)
 
     # Populate previously generated points
-    tasks = get_all_tasks(prev_episodes, scene_id)
+    tasks = get_all_tasks(prev_episodes, scene_id, sim)
+    sys.exit(1)
 
     results = []
     i = 0

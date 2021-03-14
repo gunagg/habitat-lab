@@ -52,6 +52,7 @@ class Seq2SeqNet(Net):
                 output_size=model_config.DEPTH_ENCODER.output_size,
                 checkpoint=model_config.DEPTH_ENCODER.ddppo_checkpoint,
                 backbone=model_config.DEPTH_ENCODER.backbone,
+                trainable=model_config.DEPTH_ENCODER.trainable,
             )
 
         # Init the RGB visual encoder

@@ -151,10 +151,16 @@ class RearrangementSim(HabitatSim):
         return exists
     
     def is_collision(self, handle, translation, is_navigation_test = False):
-        return self.pre_add_contact_test(handle, translation, is_navigation_test)
+        collision_filter = 1
+        collision_mask = -1
+        if is_navigation_test:
+            collision_mask = 1
+        return self.pre_add_contact_test(
+            handle, translation, is_navigation_test, collision_filter, collision_mask
+        )
 
     def is_agent_colliding(self, action, agentTransform):
-        stepSize = 0.25
+        stepSize = 0.15
         if action == "move_forward":
             position = agentTransform.backward * (-1 * stepSize)
             newPosition = agentTransform.translation + position
@@ -164,11 +170,15 @@ class RearrangementSim(HabitatSim):
             )
             filterDiff = filteredPoint - newPosition
             # adding buffer of 0.05 y to avoid collision with navmesh
-            finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.05, 0.0)
-            collision = self.is_collision(self.agent_object_handle, finalPosition, True)
+            offsets = [0, 0.05, -0.05, 0.1, -0.1, -0.2]
+            is_colliding = False
+            for offset in offsets:
+                finalPosition = newPosition + filterDiff + mn.Vector3(0.0, offset, 0.0)
+                collision = self.is_collision(self.agent_object_handle, finalPosition, True)
+                if collision:
+                    is_colliding = True
             return {
-                "collision": collision,
-                "position": finalPosition
+                "collision": is_colliding,
             }
         elif action == "move_backward":
             position = agentTransform.backward * stepSize
@@ -179,11 +189,15 @@ class RearrangementSim(HabitatSim):
             )
             filterDiff = filteredPoint - newPosition
             # adding buffer of 0.05 y to avoid collision with navmesh
-            finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.05, 0.0)
-            collision = self.is_collision(self.agent_object_handle, finalPosition, True)
+            offsets = [0, 0.05, -0.05, 0.1, -0.1, -0.2]
+            is_colliding = False
+            for offset in offsets:
+                finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.05, 0.0)
+                collision = self.is_collision(self.agent_object_handle, finalPosition, True)
+                if collision:
+                    is_colliding = True
             return {
-                "collision": collision,
-                "position": finalPosition
+                "collision": is_colliding,
             }
         return {
             "collision": False
@@ -234,11 +248,8 @@ class RearrangementSim(HabitatSim):
                 if floor_position is None:
                     return True
 
-                y_value = floor_position.y
-                y_value = max(self.gripped_object_transformation.translation.y, y_value)
-
                 new_object_position = mn.Vector3(
-                    floor_position.x, y_value, floor_position.z
+                    floor_position.x, floor_position.y, floor_position.z
                 )
                 scene_object = self.get_object_from_scene(self.gripped_object_id)
 
@@ -390,7 +401,8 @@ class RearrangementSim(HabitatSim):
 
         if action_spec.name == "grab_or_release_object_under_crosshair":
             action_data = replay_data.action_data
-            if action_data is not None or action_data.gripped_object_id != -1:
+            print(action_data)
+            if action_data is not None and action_data.gripped_object_id != -1:
                 if replay_data.is_release_action:
                     # Fetch object handle and drop point from replay
                     new_object_position = mn.Vector3(action_data.new_object_translation)
@@ -403,6 +415,7 @@ class RearrangementSim(HabitatSim):
                     self.update_object_in_scene(new_object_id, action_data.gripped_object_id)
                     self.gripped_object_id = replay_data.gripped_object_id
                 elif replay_data.is_grab_action:
+                    print("Grabbing: {}".format(action_data.gripped_object_id))
                     self.gripped_object_transformation = self.get_transformation(
                         action_data.gripped_object_id
                     )
@@ -426,10 +439,10 @@ class RearrangementSim(HabitatSim):
                 if not collided:
                     self._default_agent.act(action)
 
-        self.draw_bb_around_nearest_object(replay_data.object_under_cross_hair)
+        # self.draw_bb_around_nearest_object(replay_data.object_under_cross_hair)
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=True)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=False)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
 

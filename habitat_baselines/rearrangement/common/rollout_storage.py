@@ -24,7 +24,6 @@ class RolloutStorage:
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
         goal_state_dataset=None,
-        scene_ids=None
     ):
         self.observations = {}
 
@@ -54,6 +53,7 @@ class RolloutStorage:
 
         self.actions = torch.zeros(num_steps, num_envs, action_shape)
         self.prev_actions = torch.zeros(num_steps + 1, num_envs, action_shape)
+        self.running_scenes = [[]] * (num_steps + 1)
         if action_space.__class__.__name__ == "ActionSpace":
             self.actions = self.actions.long()
             self.prev_actions = self.prev_actions.long()
@@ -63,7 +63,6 @@ class RolloutStorage:
         if goal_state_dataset is not None:
             self.ground_truth_buffer = goal_state_dataset
             self.ground_truth_buffer_size = len(goal_state_dataset)
-            self.scene_ids = scene_ids
 
         self.num_steps = num_steps
         self.step = 0
@@ -90,6 +89,7 @@ class RolloutStorage:
         value_preds,
         rewards,
         masks,
+        scene_ids,
     ):
         for sensor in observations:
             self.observations[sensor][self.step + 1].copy_(
@@ -104,6 +104,8 @@ class RolloutStorage:
         self.value_preds[self.step].copy_(value_preds)
         self.rewards[self.step].copy_(rewards)
         self.masks[self.step + 1].copy_(masks)
+        self.running_scenes[self.step + 1] = scene_ids
+
 
         self.step = self.step + 1
 
@@ -118,6 +120,7 @@ class RolloutStorage:
         )
         self.masks[0].copy_(self.masks[self.step])
         self.prev_actions[0].copy_(self.prev_actions[self.step])
+        self.running_scenes[0] = self.running_scenes[self.step]
         self.step = 0
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
@@ -196,14 +199,10 @@ class RolloutStorage:
 
             # These are all tensors of size (T, N, -1)
             for sensor in observations_batch:
-                print(observations_batch[sensor][0].shape, discr_observations_batch[sensor][0].shape)
                 observations_batch[sensor] = torch.stack(
                     observations_batch[sensor], 1
                 )
                 discr_observations_batch[sensor] = torch.stack(discr_observations_batch[sensor], 1)
-                print("stack")
-                print(observations_batch[sensor].shape, discr_observations_batch[sensor].shape)
-                print("\n")
 
             actions_batch = torch.stack(actions_batch, 1)
             prev_actions_batch = torch.stack(prev_actions_batch, 1)
@@ -261,16 +260,29 @@ class RolloutStorage:
         half_batch_size = batch_size // 2
         discr_experience_batch_size = int(half_batch_size / discr_rho)
 
-        # indices = np.random.randint(self.ground_truth_buffer_size, size=half_batch_size)
-        indices = np.random.randint(280, size=half_batch_size)
-        scene_index = np.random.randint(len(self.scene_ids))
+        scene_step_count_map = defaultdict(int)
+        for scenes in self.running_scenes[1:]:
+            scene_step_count_map[scenes[env_index]] += 1
+
         ground_truth_sample_obs = defaultdict(list)
-        for idx in indices:
-            # idx, observations = self.ground_truth_buffer.get_item(idx, self.scene_ids[scene_index][env_index])
-            observations = self.ground_truth_buffer[idx]
-            for sensor in self.observations.keys():
-                ground_truth_sample_obs[sensor].append(observations[sensor])
-        
+        scenes = scene_step_count_map.keys()
+        total_ground_truth_samples = 0
+        for scene in scenes:
+            percent_steps_in_rollout = num_steps / scene_step_count_map[scene]
+            scene_batch_size = int(half_batch_size * percent_steps_in_rollout)
+
+            # If on last scene pick all remaining gt samples from last scene
+            if total_ground_truth_samples + scene_batch_size < half_batch_size and scene == scenes[-1]:
+                scene_batch_size += (half_batch_size - (total_ground_truth_samples + scene_batch_size))
+
+            scene_ground_truth_buffer_size = self.ground_truth_buffer.get_scene_episode_length(scene)
+            indices = np.random.randint(scene_ground_truth_buffer_size, size=scene_batch_size)
+            for idx in indices:
+                observations = self.ground_truth_buffer.get_item(idx, scene)
+                for sensor in self.observations.keys():
+                    ground_truth_sample_obs[sensor].append(observations[sensor])
+            total_ground_truth_samples += scene_batch_size
+
         for sensor in self.observations.keys():
             ground_truth_sample_obs[sensor] = torch.stack(ground_truth_sample_obs[sensor]).squeeze(1)
 

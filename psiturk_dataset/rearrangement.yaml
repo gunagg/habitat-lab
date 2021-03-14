@@ -14,10 +14,6 @@ TASK:
 
   TYPE: "arrangement"
 
-  Y_LIMIT: [
-    -6.0, 6.0
-  ]
-
   NUM_OBJECTS: 1
 
   NUM_RECEPTACLES: 1
@@ -163,7 +159,7 @@ TASK:
     "Thomas_Friends_Wooden_Railway_Talking_Thomas_z7yi7UFHJRj": "blue toy train"
     "Vtech_Stack_Sing_Rings_636_Months": "stack ring toy"
     "Toysmith_Windem_Up_Flippin_Animals_Dog": "toy dog"
-    "Squirrel": "Squirrel toy"
+    "Squirrel": "squirrel toy"
     "Threshold_Porcelain_Teapot_White": "teapot"
     "KS_Chocolate_Cube_Box_Assortment_By_Neuhaus_2010_Ounces": "chocolate box"
     "Closetmaid_Premium_Fabric_Cube_Red": "red fabric cube"
@@ -172,7 +168,7 @@ TASK:
     "Threshold_Porcelain_Pitcher_White": "white pitcher"
     "Chef_Style_Round_Cake_Pan_9_inch_pan": "baking pan"
     "Ocedar_Snap_On_Dust_Pan_And_Brush_1_ct": "dust pan"
-    "Shark": "Shark"
+    "Shark": "toy shark"
     "Victor_Reversible_Bookend": "bookend"
     "HeavyDuty_Flashlight": "flashlight"
     "Grreatv_Choice_Dog_Bowl_Gray_Bones_Plastic_20_fl_oz_total": "grey dog food bowl"

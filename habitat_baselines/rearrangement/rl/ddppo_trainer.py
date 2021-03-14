@@ -111,8 +111,9 @@ class RearrangementDDPPOTrainer(PPOTrainer):
                     if k.startswith(prefix)
                 }
             )
-        if self.config.RL.INIT_BC_BASELINE:
-            ckpt = self.load_checkpoint(self.config.RL.MODEL_CKPT_PATH, map_location="cpu")
+
+        if self.config.RL.DDPPO.init_bc_baseline:
+            ckpt = self.load_checkpoint(self.config.RL.DDPPO.bc_baseline_ckpt, map_location="cpu")
             self.actor_critic.load_state_dict(ckpt, strict=False)
 
         if not self.config.RL.DDPPO.train_encoder:

@@ -87,6 +87,7 @@ class PPOAgile(nn.Module):
         action_loss_epoch = 0.0
         dist_entropy_epoch = 0.0
         discr_loss_epoch = 0.0
+        discr_accuracy_epoch = 0.0
 
         for _e in range(self.ppo_epoch):
             profiling_wrapper.range_push("PPO.update epoch")
@@ -155,7 +156,6 @@ class PPOAgile(nn.Module):
                 discr_loss = 0
                 half_discr_batch =  (self.discr_batch_size) // 2
                 discr_experience_batch_size = int(half_discr_batch / self.discr_rho)
-                print(discr_observations_batch["rgb"].shape, rollouts.step, discr_experience_batch_size, recurrent_hidden_states_batch.shape)
                 if rollouts.step >= discr_experience_batch_size:
                     discr_logits = self.discriminator(discr_observations_batch)
                     half_discr_batch =  (n_envs * self.discr_batch_size) // 2
@@ -168,6 +168,7 @@ class PPOAgile(nn.Module):
                     
                     discr_logits_filtered = discr_logits_filtered.view(-1)
                     discr_loss = F.softplus(-discr_logits_filtered * discr_targets_batch).mean()
+                    discr_accuracy_epoch = ((discr_logits_filtered > 0) == (discr_targets_batch > 0)).float().mean()
 
                 self.optimizer.zero_grad()
                 self.discriminator_optimizer.zero_grad()
@@ -191,6 +192,7 @@ class PPOAgile(nn.Module):
                 action_loss_epoch += action_loss.item()
                 dist_entropy_epoch += dist_entropy.item()
                 discr_loss_epoch += discr_loss.item()
+                discr_accuracy_epoch += discr_accuracy_epoch
 
             profiling_wrapper.range_pop()  # PPO.update epoch
 
@@ -199,8 +201,10 @@ class PPOAgile(nn.Module):
         value_loss_epoch /= num_updates
         action_loss_epoch /= num_updates
         dist_entropy_epoch /= num_updates
+        discr_loss_epoch /= num_updates
+        discr_accuracy_epoch /= num_updates
 
-        return value_loss_epoch, action_loss_epoch, dist_entropy_epoch, discr_loss_epoch
+        return value_loss_epoch, action_loss_epoch, dist_entropy_epoch, discr_loss_epoch, discr_accuracy_epoch
 
     def before_backward(self, loss: Tensor) -> None:
         pass

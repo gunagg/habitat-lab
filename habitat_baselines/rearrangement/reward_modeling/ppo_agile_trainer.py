@@ -85,12 +85,10 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             self.config, observation_space, self.envs.action_spaces[0]
         )
 
-        if rl_config.INIT_BC_BASELINE:
-            ckpt = self.load_checkpoint(rl_config.MODEL_CKPT_PATH, map_location="cpu")
-            self.actor_critic = torch.nn.DataParallel(self.actor_critic, dim=1)
+        if rl_config.PPO.init_bc_baseline:
+            ckpt = self.load_checkpoint(rl_config.PPO.bc_baseline_ckpt, map_location="cpu")
             self.actor_critic.load_state_dict(ckpt, strict=False)
-            self.actor_critic = self.actor_critic.module
-        
+
         if rl_config.PPO.freeze_encoder:
             for param in self.actor_critic.net.rgb_encoder.parameters():
                 param.requires_grad_(False)
@@ -209,7 +207,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
 
     @profiling_wrapper.RangeContext("_collect_rollout_step")
     def _collect_rollout_step(
-        self, rollouts, current_episode_reward, running_episode_stats
+        self, rollouts, current_episode_reward, running_episode_stats, current_episode_pred_reward
     ):
         pth_time = 0.0
         env_time = 0.0
@@ -256,18 +254,13 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
-        rewards_ll = torch.tensor(
+        rewards = torch.tensor(
             rewards_l, dtype=torch.float, device=current_episode_reward.device
         )
-        rewards_ll = rewards_ll.unsqueeze(1)
+        rewards = rewards.unsqueeze(1)
 
         # Use reward model to get rewards
         learning_rewards = self.discriminator(batch)
-        rewards = torch.tensor(
-            learning_rewards, dtype=torch.float, device=current_episode_reward.device
-        )
-
-        # print(rewards_ll.shape, rewards.shape)
 
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones],
@@ -276,7 +269,9 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         )
 
         current_episode_reward += rewards
+        current_episode_pred_reward += learning_rewards
         running_episode_stats["reward"] += (1 - masks) * current_episode_reward  # type: ignore
+        running_episode_stats["pred_reward"] += (1 - masks) * current_episode_pred_reward
         running_episode_stats["count"] += 1 - masks  # type: ignore
         for k, v_k in self._extract_scalars_from_infos(infos).items():
             v = torch.tensor(
@@ -290,10 +285,14 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             running_episode_stats[k] += (1 - masks) * v  # type: ignore
 
         current_episode_reward *= masks
+        current_episode_pred_reward *= masks
 
         if self._static_encoder:
             with torch.no_grad():
                 batch["visual_features"] = self._encoder(batch)
+
+        current_episodes = self.envs.current_episodes()
+        current_scenes = [episode.scene_id for episode in current_episodes]
 
         rollouts.insert(
             batch,
@@ -303,6 +302,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             values,
             rewards,
             masks,
+            current_scenes
         )
 
         pth_time += time.time() - t_update_stats
@@ -327,7 +327,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
         )
 
-        value_loss, action_loss, dist_entropy, discr_loss = self.agent.update(rollouts)
+        value_loss, action_loss, dist_entropy, discr_loss, discr_accuracy_epoch = self.agent.update(rollouts)
 
         rollouts.after_update()
 
@@ -337,6 +337,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             action_loss,
             dist_entropy,
             discr_loss,
+            discr_accuracy_epoch
         )
     
     def _setup_goal_state_dataset(self, config: Config, mode: str):
@@ -390,7 +391,6 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             ppo_cfg.hidden_size,
             self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
             goal_state_dataset,
-            scene_splits,
         )
         rollouts.to(self.device)
 
@@ -408,9 +408,11 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         observations = None
 
         current_episode_reward = torch.zeros(self.envs.num_envs, 1)
+        current_episode_pred_reward = torch.zeros(self.envs.num_envs, 1)
         running_episode_stats = dict(
             count=torch.zeros(self.envs.num_envs, 1),
             reward=torch.zeros(self.envs.num_envs, 1),
+            pred_reward=torch.zeros(self.envs.num_envs, 1),
         )
         window_episode_stats: DefaultDict[str, deque] = defaultdict(
             lambda: deque(maxlen=ppo_cfg.reward_window_size)
@@ -444,13 +446,12 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
 
                 profiling_wrapper.range_push("rollouts loop")
                 for _step in range(ppo_cfg.num_steps):
-                    print(" Update: {}, Step: {}".format(update, _step))
                     (
                         delta_pth_time,
                         delta_env_time,
                         delta_steps,
                     ) = self._collect_rollout_step(
-                        rollouts, current_episode_reward, running_episode_stats
+                        rollouts, current_episode_reward, running_episode_stats, current_episode_pred_reward
                     )
                     pth_time += delta_pth_time
                     env_time += delta_env_time
@@ -463,6 +464,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                     action_loss,
                     dist_entropy,
                     discr_loss,
+                    discr_accuracy_epoch
                 ) = self._update_agent(ppo_cfg, rollouts)
                 pth_time += delta_pth_time
 
@@ -483,6 +485,13 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                     "reward", deltas["reward"] / deltas["count"], count_steps
                 )
 
+                writer.add_scalar(
+                    "pred_reward", deltas["pred_reward"] / deltas["count"], count_steps
+                )
+
+                writer.add_scalar(
+                    "reward_model_accuracy", discr_accuracy_epoch, count_steps
+                )
                 # Check to see if there are any metrics
                 # that haven't been logged yet
                 metrics = {
@@ -496,7 +505,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                 losses = [value_loss, action_loss, discr_loss]
                 writer.add_scalars(
                     "losses",
-                    {k: l for l, k in zip(losses, ["value", "policy", "discriminator"])},
+                    {k: l for l, k in zip(losses, ["value", "policy", "reward_model"])},
                     count_steps,
                 )
 

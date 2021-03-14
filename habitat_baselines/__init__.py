@@ -16,6 +16,7 @@ from habitat_baselines.rearrangement.il.behavior_cloning_trainer import Rearrang
 from habitat_baselines.rearrangement.rl.ppo_trainer import RearrangementPPOTrainer
 from habitat_baselines.rearrangement.rl.ddppo_trainer import RearrangementDDPPOTrainer
 from habitat_baselines.rearrangement.reward_modeling.ppo_agile_trainer import RearrangementPPOAgileTrainer
+from habitat_baselines.rearrangement.reward_modeling.ddppo_agile_trainer import RearrangementDDPPOAgileTrainer
 
 __all__ = [
     "BaseTrainer",
@@ -28,5 +29,6 @@ __all__ = [
     "RearrangementBCTrainer",
     "RearrangementPPOTrainer",
     "RearrangementDDPPOTrainer",
-    "RearrangementPPOAgileTrainer"
+    "RearrangementPPOAgileTrainer",
+    "RearrangementDDPPOAgileTrainer",
 ]

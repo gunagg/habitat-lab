@@ -78,8 +78,8 @@ class RearrangementPPOTrainer(BaseRLTrainer):
             self.config, observation_space, self.envs.action_spaces[0]
         )
 
-        if rl_config.INIT_BC_BASELINE:
-            ckpt = self.load_checkpoint(rl_config.MODEL_CKPT_PATH, map_location="cpu")
+        if rl_config.PPO.init_bc_baseline:
+            ckpt = self.load_checkpoint(rl_config.PPO.bc_baseline_ckpt, map_location="cpu")
             self.actor_critic.load_state_dict(ckpt, strict=False)
         
         if rl_config.PPO.freeze_encoder:
@@ -392,7 +392,6 @@ class RearrangementPPOTrainer(BaseRLTrainer):
 
                 profiling_wrapper.range_push("rollouts loop")
                 for _step in range(ppo_cfg.num_steps):
-                    print(" Update: {}, Step: {}".format(update, _step))
                     (
                         delta_pth_time,
                         delta_env_time,

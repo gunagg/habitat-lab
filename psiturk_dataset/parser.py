@@ -373,7 +373,7 @@ def compute_instruction_tokens(episodes):
     return episodes
 
 
-def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_length=1500, sample=True):
+def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_length=1500, sample=False):
     all_episodes = {
         "episodes": []
     }
