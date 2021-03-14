@@ -37,8 +37,8 @@ from habitat_baselines.common.obs_transformers import (
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rearrangement.common.aux_losses import AuxLosses
-from habitat_baselines.rearrangement.data.dataset import RearrangementDataset
-from habitat_baselines.rearrangement.data.episode_dataset import RearrangementEpisodeDataset, collate_fn
+from habitat_baselines.rearrangement.dataset.dataset import RearrangementDataset
+from habitat_baselines.rearrangement.dataset.episode_dataset import RearrangementEpisodeDataset, collate_fn
 from habitat_baselines.rearrangement.il.models.model import RearrangementLstmCnnAttentionModel
 from habitat_baselines.rearrangement.il.models.seq_2_seq_model import Seq2SeqNet, Seq2SeqModel
 from habitat_baselines.utils.env_utils import construct_envs

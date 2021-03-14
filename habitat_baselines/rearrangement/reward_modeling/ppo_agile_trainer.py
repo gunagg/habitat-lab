@@ -37,7 +37,7 @@ from habitat_baselines.utils.common import (
 )
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.rearrangement.reward_modeling.models.discriminator import DiscriminatorModel
-from habitat_baselines.rearrangement.data.goal_dataset import RearrangementGoalDataset
+from habitat_baselines.rearrangement.dataset.goal_dataset import RearrangementGoalDataset
 
 
 @baseline_registry.register_trainer(name="rearrangement-ppo-agile")
