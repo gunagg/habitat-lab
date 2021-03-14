@@ -170,7 +170,7 @@ def handle_step(step, episode, unique_id, timestamp):
 
             instruction_text = data["task"]["instruction"]
             episode["instruction"] = {
-                "instruction_text": instruction_text,
+                "instruction_text": instruction_text.lower(),
             }
             append_instruction(instruction_text)
             object_receptacle_map = {}
@@ -390,7 +390,6 @@ def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_le
         if sample:
             if len(episodes) >= max_episodes:
                 break
-        
 
 
     all_episodes["episodes"] = compute_instruction_tokens(copy.deepcopy(episodes))
@@ -473,7 +472,7 @@ def main():
         "--max-episodes", type=int, default=1
     )
     parser.add_argument(
-        "--max-episode-length", type=int, default=1500
+        "--max-episode-length", type=int, default=15000
     )
     args = parser.parse_args()
     replay_to_episode(args.replay_path, args.output_path, args.max_episodes, args.max_episode_length)

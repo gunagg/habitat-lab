@@ -290,7 +290,11 @@ def get_random_object_position(sim, object_name, scene_bb=None, scene_collision_
     position = get_random_point(sim)
 
     if position[0] == math.inf:
-        pass
+        translation = np.array([0, 0, 0])
+        rotation = np.array([0, 0, 0, 1])
+        is_tilted_or_colliding = True
+        print("Got inf point: {}".format(position))
+        return translation, rotation, is_tilted_or_colliding
 
     object_id  = sim.add_object_by_handle(object_handle)
     obj_node = sim.get_object_scene_node(object_id)
@@ -398,7 +402,7 @@ def generate_points(
         # object_to_receptacle_list = google_object_to_receptacle_list
 
     object_name_map = dict(config["TASK"]["OBJECT_NAME_MAP"])
-    y_limit = config["TASK"]["Y_LIMIT"]
+    y_limit = config["TASK"].get("Y_LIMIT")
     x_limit = None
     if config["TASK"].get("X_LIMIT"):
         x_limit = config["TASK"]["X_LIMIT"]
