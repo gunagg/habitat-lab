@@ -25,6 +25,7 @@ from habitat.tasks.rearrangement.rearrangement import (
     AgentStateSpec,
     ObjectStateSpec
 )
+from habitat.tasks.utils import get_habitat_sim_action
 
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 

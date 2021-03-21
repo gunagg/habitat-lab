@@ -21,6 +21,7 @@ total_episodes = 0
 excluded_ep = 0
 task_episode_map = {}
 
+
 def read_csv(path, delimiter=","):
     file = open(path, "r")
     reader = csv.reader(file, delimiter=delimiter)
@@ -89,6 +90,26 @@ def get_action(data):
 
 def is_physics_step(action):
     return (action == "stepPhysics")
+
+
+def remap_action(action):
+    if action == "turnRight":
+        return "TURN_RIGHT"
+    elif action == "turnLeft":
+        return "TURN_LEFT"
+    elif action == "moveForward":
+        return "MOVE_FORWARD"
+    elif action == "moveBackward":
+        return "MOVE_BACKWARD"
+    elif action == "lookUp":
+        return "LOOK_UP"
+    elif action == "lookDown":
+        return "LOOK_DOWN"
+    elif action == "grabReleaseObject":
+        return "GRAB_RELEASE"
+    elif action == "stepPhysics":
+        return "NO_OP"
+    return "STOP"
 
 
 def parse_replay_data_for_action(action, data):
@@ -248,10 +269,10 @@ def convert_to_episode(csv_reader):
 
 def append_episode_start_and_end_steps(reference_replay, episode):
     stop_step = copy.deepcopy(reference_replay[-1])
-    stop_step["action"] = "stop"
+    stop_step["action"] = "STOP"
 
     start_step = copy.deepcopy(reference_replay[0])
-    start_step["action"] = "start"
+    start_step["action"] = "STOP"
 
     for object_ in episode["objects"]:
         for step_object_state in start_step["object_states"]:
@@ -339,9 +360,13 @@ def prune_episode_end(reference_replay):
     for i in range(len(reference_replay)):
         data = reference_replay[i]
         if "action" in data.keys() and is_physics_step(get_action(data)) and not is_redundant_state_action_pair(data, prev_state):
-            pruned_reference_replay.append(data)
+            copy_data = copy.deepcopy(data)
+            copy_data["action"] = remap_action(data["action"])
+            pruned_reference_replay.append(copy_data)
         elif "action" in data.keys() and not is_physics_step(get_action(data)):
-            pruned_reference_replay.append(data)
+            copy_data = copy.deepcopy(data)
+            copy_data["action"] = remap_action(data["action"])
+            pruned_reference_replay.append(copy_data)
         else:
             redundant_state_count += 1
 

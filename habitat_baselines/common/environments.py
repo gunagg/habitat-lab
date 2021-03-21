@@ -114,6 +114,8 @@ class RearrangementRLEnv(habitat.RLEnv):
         self._previous_measure["agent_object_distance"] = self._env.get_metrics()[
             self._reward_measure_2_name
         ]
+        self._previous_measure["gripped_object_id"] = -1
+        self._gripped_object_count = defaultdict(int)
         return observations
 
     def step(self, *args, **kwargs):

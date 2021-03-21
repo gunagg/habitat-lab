@@ -32,7 +32,7 @@ from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo import Net, Policy
 from habitat_baselines.utils.common import Flatten
-from habitat_baselines.rearrangement.il.models.seq_2_seq_model import Seq2SeqNet
+from habitat_baselines.rearrangement.models.seq_2_seq_model import Seq2SeqNet
 
 
 @baseline_registry.register_policy

@@ -71,6 +71,7 @@ def log_action_data(data, i):
 
 def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=False, num_episodes=None, output_prefix=None):
     instructions = []
+    possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
         obs_list = []
 
@@ -97,15 +98,15 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 "episodeLength": len(env.current_episode.reference_replay)
             }
             instructions.append(data)
-            print(len(env.current_episode.reference_replay[1:]))
-            actions = cfg.TASK.POSSIBLE_ACTIONS
-            for data in env.current_episode.reference_replay[1:]:
+            step_index = 1 # env.current_episode.start_index
+            for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
                     log_action_data(data, i)
-                action = get_habitat_sim_action(data)
-                action_name = action_name = env.task.get_action_name(
+                action = possible_actions.index(data.action)
+                action_name = env.task.get_action_name(
                     action
                 )
+                print("action: "  + str(action) + " " + action_name)
                 if step_env:
                     observations = env.step(action=action)
                 elif not restore_state:

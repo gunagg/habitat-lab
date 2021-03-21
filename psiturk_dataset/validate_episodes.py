@@ -62,7 +62,7 @@ def get_object_handle(object_name):
     return "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
 
 
-def get_points_distance(points, sim):
+def get_points_distance(points, sim, show_plot=False):
     print("Min distance between points...")
     agent_idxs = [0]
     object_idxs = [1]
@@ -72,30 +72,34 @@ def get_points_distance(points, sim):
         agent_idxs.append(agent_idxs[-1] + 3)
         object_idxs.append(object_idxs[-1] + 3)
         receptacle_idxs.append(receptacle_idxs[-1] + 3)
-    
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(
-        points[agent_idxs][:, 0],
-        points[agent_idxs][:, 2],
-        points[agent_idxs][:, 1],
-        c='b'
-    )
-    ax.scatter(
-        points[object_idxs][:, 0],
-        points[object_idxs][:, 2],
-        points[object_idxs][:, 1],
-        c='r'
-    )
-    ax.scatter(
-        points[receptacle_idxs][:, 0],
-        points[receptacle_idxs][:, 2],
-        points[receptacle_idxs][:, 1],
-        c='g'
-    )
-    plt.show()
-    input()
 
+    if show_plot:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(
+            points[agent_idxs][:, 0],
+            points[agent_idxs][:, 2],
+            points[agent_idxs][:, 1],
+            c='b'
+        )
+        ax.scatter(
+            points[object_idxs][:, 0],
+            points[object_idxs][:, 2],
+            points[object_idxs][:, 1],
+            c='r'
+        )
+        ax.scatter(
+            points[receptacle_idxs][:, 0],
+            points[receptacle_idxs][:, 2],
+            points[receptacle_idxs][:, 1],
+            c='g'
+        )
+        plt.show()
+
+    print("Std agent: {}".format(np.std(points[agent_idxs])))
+    print("Std o1: {}".format(np.std(points[object_idxs])))
+    print("Std o2: {}".format(np.std(points[receptacle_idxs])))
+    print("Std all: {}".format(np.std(points)))
     num_episodes = 0
     ep_ids = []
     ep_map = defaultdict(int)
@@ -119,9 +123,9 @@ def get_points_distance(points, sim):
                 num_episodes += 1
                 ep_map[i] += 1
                 ep_map[j] += 1
-                if ep_map[i] >= 1:
+                if ep_map[i] >= 5:
                     ep_ids.append(i)
-                if ep_map[j] >= 1:
+                if ep_map[j] >= 5:
                     ep_ids.append(j)
         if i % 100 == 0:
             print("Num eps close to 0.5: {}/{} - {}".format(len(set(ep_ids)), (i+1), num_episodes))
@@ -143,8 +147,6 @@ def populate_episodes_points(episodes, scene_id):
         if scene_id != episode["scene_id"]:
             continue
 
-        if episode["episode_id"] > 600:
-            break
         point = str(episode["start_position"])
         points.append(episode["start_position"])
         if VISITED_POINT_DICT.get(point):
@@ -160,7 +162,7 @@ def populate_episodes_points(episodes, scene_id):
                 # print("Redundant point in episode {}".format(episode["episode_id"]))
             else:
                 VISITED_POINT_DICT[point] = 1
-            points.append(object_["position"])        
+            points.append(object_["position"])   
     return points
 
 
@@ -237,7 +239,7 @@ def get_all_tasks(path, scene_id, sim):
             data = json.loads(file.read())
             if data["episodes"][0]["scene_id"] == scene_id:
                 tasks.append((data, file_path))
-                if "house_8_min_dist_0_5.json" in file_path:
+                if "340_x3.json" in file_path or "2_rot_fixed" in file_path:
                     ep_points = populate_episodes_points(data["episodes"], scene_id)
                     floor_map = get_num_episodes_on_each_floor(ep_points)
                     all_points.extend(ep_points)
@@ -245,8 +247,7 @@ def get_all_tasks(path, scene_id, sim):
     unique_points_count = len(VISITED_POINT_DICT.keys())
     print("Total tasks: {}".format(len(tasks)))
     print("Total unique points: {} -- {}".format(unique_points_count, unique_points_count / 3))
-    get_points_distance(np.array(all_points), sim)
-    return tasks
+    return tasks, all_points
 
 
 def get_sim(config):
@@ -266,12 +267,14 @@ def validate_tasks(
     d_lower_lim=5.0,
     d_upper_lim=30.0,
     prev_episodes="data/tasks",
-    scene_id="empty_house.glb"
+    scene_id="empty_house.glb",
+    show_plot=False,
 ):
     sim = get_sim(config)
 
     # Populate previously generated points
-    tasks = get_all_tasks(prev_episodes, scene_id, sim)
+    tasks, all_points = get_all_tasks(prev_episodes, scene_id, sim)
+    get_points_distance(np.array(all_points), sim, show_plot)
     sys.exit(1)
 
     results = []
@@ -328,6 +331,10 @@ if __name__ == "__main__":
         default="data/tasks",
         help="Task configuration file for initializing a Habitat environment",
     )
+    parser.add_argument(
+        "--show-plot",
+        dest='show_plot', action='store_true'
+    )
 
     args = parser.parse_args()
     opts = []
@@ -348,7 +355,8 @@ if __name__ == "__main__":
             args.d_lower_lim,
             args.d_upper_lim,
             args.prev_episodes,
-            scene_id
+            scene_id,
+            args.show_plot
         )
     else:
         print(f"Unknown dataset type: {dataset_type}")

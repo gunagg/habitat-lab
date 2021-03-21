@@ -11,6 +11,7 @@ import habitat_sim
 import numpy as np
 from gym import spaces
 
+from habitat.core.logging import logger
 from habitat.config import Config
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
@@ -139,6 +140,9 @@ class RearrangementEpisode(Episode):
     objects: List[RearrangementObjectSpec] = attr.ib(
         default=None, validator=not_none_validator
     )
+    # start_index: int = attr.ib(
+    #     default=None, validator=not_none_validator
+    # )
 
 
 @registry.register_sensor(name="InstructionSensor")
@@ -154,7 +158,7 @@ class InstructionSensor(Sensor):
         return spaces.Box(
             low=0,
             high=66,
-            shape=(9,),
+            shape=(10,),
             dtype=np.int64,
         )
 
@@ -202,6 +206,39 @@ class DemonstrationSensor(Sensor):
         # print("{} -- {}".format(self.timestep, get_habitat_sim_action_str(action)))
         self.timestep += 1
         return action
+
+    def get_observation(self, **kwargs):
+        return self._get_observation(**kwargs)
+
+
+@registry.register_sensor(name="InflectionWeightSensor")
+class InflectionWeightSensor(Sensor):
+    def __init__(self, **kwargs):
+        self.uuid = "inflection_weight"
+        self.observation_space = spaces.Discrete(0)
+        self.timestep = 0
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.uuid
+
+    def _get_observation(
+        self,
+        observations: Dict[str, Observations],
+        episode: RearrangementEpisode,
+        task: EmbodiedTask,
+        **kwargs
+    ):
+        if not task.is_episode_active:  # reset
+            self.timestep = 0
+        
+        inflection_weight = 0.0
+        if self.timestep == 0:
+            inflection_weight = 1.0
+        elif episode.reference_replay[self.timestep - 1].action != episode.reference_replay[self.timestep]:
+            inflection_weight = 1.0
+        # print("{} -- {}".format(self.timestep, get_habitat_sim_action_str(action)))
+        self.timestep += 1
+        return inflection_weight
 
     def get_observation(self, **kwargs):
         return self._get_observation(**kwargs)
@@ -279,7 +316,7 @@ class ObjectToReceptacleDistance(Measure):
                 receptacle_id = scene_object.object_id
 
         if receptacle_id == -1:
-            self._metric = 100
+            self._metric = 0.0
         elif obj_id != -1:
             object_position = np.array(
                 self._sim.get_translation(obj_id)
@@ -344,7 +381,7 @@ class AgentToObjectDistance(Measure):
                 sim_obj_id = scene_object.object_id
 
         if sim_obj_id != -1:
-            previous_position = np.array(
+            object_position = np.array(
                 self._sim.get_translation(sim_obj_id)
             ).tolist()
 
@@ -352,10 +389,12 @@ class AgentToObjectDistance(Measure):
             agent_position = agent_state.position
 
             self._metric = self._geo_dist(
-                previous_position, agent_position
+                agent_position, object_position 
             )
         else:
-            self._metric = 0
+            self._metric = 0.0
+        if np.isnan(self._metric):
+            logger.info("Agent object distance is nan: {} -- {} -- {} - {}".format(sim_obj_id, object_position, agent_position, episode.episode_id))
 
 
 @registry.register_measure
@@ -395,17 +434,18 @@ class AgentToReceptacleDistance(Measure):
             scene_object = self._sim.get_object_from_scene(object_id)
             if scene_object.is_receptacle == True:
                 sim_obj_id = scene_object.object_id
+        
+        if sim_obj_id != -1:
+            recceptacle_position = np.array(
+                self._sim.get_translation(sim_obj_id)
+            ).tolist()
 
-        recceptacle_position = np.array(
-            self._sim.get_translation(sim_obj_id)
-        ).tolist()
+            agent_state = self._sim.get_agent_state()
+            agent_position = agent_state.position
 
-        agent_state = self._sim.get_agent_state()
-        agent_position = agent_state.position
-
-        self._metric = self._geo_dist(
-            recceptacle_position, agent_position
-        )
+            self._metric = self._geo_dist(
+                agent_position, recceptacle_position 
+            )
 
 
 @registry.register_measure

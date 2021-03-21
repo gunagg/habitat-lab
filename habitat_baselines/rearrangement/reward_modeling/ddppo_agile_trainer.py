@@ -142,6 +142,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
             eps=ppo_cfg.eps,
             max_grad_norm=ppo_cfg.max_grad_norm,
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
+            discr_lr=ppo_cfg.discr_lr,
             discr_batch_size=ppo_cfg.discr_batch_size,
             discr_rho=ppo_cfg.discr_rho
         )
@@ -415,9 +416,9 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                     losses = [
                         stats[0].item() / self.world_size,
                         stats[1].item() / self.world_size,
-                        stats[3].item() / self.world_size,
                     ]
                     reward_model_metrics = [
+                        stats[3].item() / self.world_size,
                         stats[4].item() / self.world_size,
                     ]
                     deltas = {
@@ -443,8 +444,14 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                     )
 
                     writer.add_scalar(
-                        "reward_model_accuracy",
+                        "reward_model_loss",
                         reward_model_metrics[0],
+                        count_steps,
+                    )
+
+                    writer.add_scalar(
+                        "reward_model_accuracy",
+                        reward_model_metrics[1],
                         count_steps,
                     )
 
@@ -462,7 +469,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                     print("Writitng losses")
                     writer.add_scalars(
                         "losses",
-                        {k: l for l, k in zip(losses, ["value", "policy", "reward_model"])},
+                        {k: l for l, k in zip(losses, ["value", "policy"])},
                         count_steps,
                     )
                     print("Writitng losses")

@@ -39,8 +39,7 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rearrangement.common.aux_losses import AuxLosses
 from habitat_baselines.rearrangement.dataset.dataset import RearrangementDataset
 from habitat_baselines.rearrangement.dataset.episode_dataset import RearrangementEpisodeDataset, collate_fn
-from habitat_baselines.rearrangement.il.models.model import RearrangementLstmCnnAttentionModel
-from habitat_baselines.rearrangement.il.models.seq_2_seq_model import Seq2SeqNet, Seq2SeqModel
+from habitat_baselines.rearrangement.models.seq_2_seq_model import Seq2SeqNet, Seq2SeqModel
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.utils.common import (
     batch_obs,
@@ -557,7 +556,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                 actions = torch.argmax(logits, dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))
 
-            # print(get_habitat_sim_action_str(actions[0].item()))
             for i in range(self.envs.num_envs):
                 gt_action = get_habitat_sim_action(reference_replays[i][action_indices[i]].action)
                 pred_action = actions[i].item()

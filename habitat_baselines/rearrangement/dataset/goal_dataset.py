@@ -104,7 +104,7 @@ class RearrangementGoalDataset(Dataset):
 
         self.env.close()
 
-        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 4)
+        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"])
         self.lmdb_env.close()
         self.lmdb_env = None
 
@@ -161,7 +161,7 @@ class RearrangementGoalDataset(Dataset):
             txn.put((sample_key + "_obs").encode(), msgpack_numpy.packb(observations, use_bin_type=True))
         
         self.count += 1
-        images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
+        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
 
     def cache_exists(self) -> bool:
         if os.path.exists(self.dataset_path):
@@ -198,7 +198,8 @@ class RearrangementGoalDataset(Dataset):
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
                 map_size=int(1e11),
-                writemap=True,
+                readonly=True,
+                lock=False,
             )
             self.lmdb_txn = self.lmdb_env.begin()
             self.lmdb_cursor = self.lmdb_txn.cursor()
@@ -226,14 +227,15 @@ class RearrangementGoalDataset(Dataset):
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
                 map_size=int(1e11),
-                writemap=True,
+                readonly=True,
+                lock=False,
             )
             self.lmdb_txn = self.lmdb_env.begin()
             self.lmdb_cursor = self.lmdb_txn.cursor()
         
         height, width = int(self.resolution[0]), int(self.resolution[1])
 
-        obs_idx = "{0}_{1:0=6d}_obs".format(scene_id, 0)
+        obs_idx = "{0}_{1:0=6d}_obs".format(scene_id, idx)
         observations_binary = self.lmdb_cursor.get(obs_idx.encode())
         observations = msgpack_numpy.unpackb(observations_binary, raw=False)
         for k, v in observations.items():

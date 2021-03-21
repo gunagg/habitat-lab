@@ -13,7 +13,7 @@ VIDEO_DIR: "video_dir/resnet18_fold_0"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints/resnet18_fold_0/model_20.ckpt"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 5
+NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints/resnet18_fold_0"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
@@ -67,6 +67,7 @@ MODEL:
     cnn_type: "VlnResnetDepthEncoder"
     output_size: 128
     backbone: "resnet50"
+    trainable: False
     ddppo_checkpoint: "data/ddppo-models/gibson-2plus-resnet50.pth"
   STATE_ENCODER:
     hidden_size: 512

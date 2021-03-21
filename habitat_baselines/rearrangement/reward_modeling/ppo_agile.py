@@ -20,6 +20,31 @@ from habitat_baselines.rearrangement.reward_modeling.models.discriminator import
 
 EPS_PPO = 1e-5
 
+class WeightClipper:
+
+    def __init__(self, max_column_norm):
+        self._max_column_norm = max_column_norm
+
+    def __call__(self, module):
+        if hasattr(module, 'weight'):
+            max_column_norm = torch.tensor(self._max_column_norm, device=module.weight.device)
+        if isinstance(module, torch.nn.Linear):
+            # (out, in)
+            module.weight.data /= torch.max(
+                max_column_norm,
+                torch.norm(module.weight.data, 2, 1)[:, None])
+        elif isinstance(module, torch.nn.Conv2d):
+            # (in, out, kw, kh)
+            n_out = module.weight.shape[1]
+            module.weight.data /= torch.max(
+                max_column_norm,
+                torch.norm(module.weight.data.permute(1, 0, 2, 3).contiguous().view(n_out, -1), 2, 1)
+                [None, :, None, None])
+        elif isinstance(module, torch.nn.Embedding):
+            # (#embeddings, dim)
+            module.weight.data /= torch.max(
+                max_column_norm,
+                torch.norm(module.weight.data, 2, 1)[:, None])
 
 class PPOAgile(nn.Module):
     def __init__(
@@ -36,8 +61,10 @@ class PPOAgile(nn.Module):
         max_grad_norm: Optional[float] = None,
         use_clipped_value_loss: bool = True,
         use_normalized_advantage: bool = True,
+        discr_lr: Optional[float] = None,
         discr_rho: float = 1.0,
         discr_batch_size: int = 128,
+        discr_thr: float = 0.0,
     ) -> None:
 
         super().__init__()
@@ -62,12 +89,13 @@ class PPOAgile(nn.Module):
         )
         self.discriminator_optimizer = optim.Adam(
             list(filter(lambda p: p.requires_grad, discriminator.parameters())),
-            lr=lr,
+            lr=discr_lr,
             eps=eps,
         )
         self.device = next(actor_critic.parameters()).device
         self.use_normalized_advantage = use_normalized_advantage
         self.discr_rho = discr_rho
+        self.discr_thr = discr_thr
         self.discr_batch_size = discr_batch_size
 
     def forward(self, *x):
@@ -88,6 +116,7 @@ class PPOAgile(nn.Module):
         dist_entropy_epoch = 0.0
         discr_loss_epoch = 0.0
         discr_accuracy_epoch = 0.0
+        num_discr_updates = 0.0
 
         for _e in range(self.ppo_epoch):
             profiling_wrapper.range_push("PPO.update epoch")
@@ -166,9 +195,10 @@ class PPOAgile(nn.Module):
                         list(range(half_discr_batch))
                         + list(half_discr_batch + experience_order[:half_discr_batch])]
                     
-                    discr_logits_filtered = discr_logits_filtered.view(-1)
+                    discr_logits_filtered = discr_logits_filtered.contiguous().view(-1)
                     discr_loss = F.softplus(-discr_logits_filtered * discr_targets_batch).mean()
-                    discr_accuracy_epoch = ((discr_logits_filtered > 0) == (discr_targets_batch > 0)).float().mean()
+                    discr_accuracy = ((discr_logits_filtered > self.discr_thr) == (discr_targets_batch > 0)).float().mean()
+                    num_discr_updates += 1
 
                 self.optimizer.zero_grad()
                 self.discriminator_optimizer.zero_grad()
@@ -192,7 +222,7 @@ class PPOAgile(nn.Module):
                 action_loss_epoch += action_loss.item()
                 dist_entropy_epoch += dist_entropy.item()
                 discr_loss_epoch += discr_loss.item()
-                discr_accuracy_epoch += discr_accuracy_epoch
+                discr_accuracy_epoch += discr_accuracy
 
             profiling_wrapper.range_pop()  # PPO.update epoch
 
@@ -202,7 +232,7 @@ class PPOAgile(nn.Module):
         action_loss_epoch /= num_updates
         dist_entropy_epoch /= num_updates
         discr_loss_epoch /= num_updates
-        discr_accuracy_epoch /= num_updates
+        discr_accuracy_epoch /= num_discr_updates
 
         return value_loss_epoch, action_loss_epoch, dist_entropy_epoch, discr_loss_epoch, discr_accuracy_epoch
 
@@ -216,9 +246,10 @@ class PPOAgile(nn.Module):
         nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(), self.max_grad_norm
         )
-        nn.utils.clip_grad_norm_(
-            self.discriminator.parameters(), self.max_grad_norm
-        )
+        # nn.utils.clip_grad_norm_(
+        #     self.discriminator.parameters(), self.max_grad_norm
+        # )
+        self.discriminator.apply(WeightClipper(0))
 
     def after_step(self) -> None:
         pass

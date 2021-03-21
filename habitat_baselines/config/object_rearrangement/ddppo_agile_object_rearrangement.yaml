@@ -54,8 +54,12 @@ RL:
     hidden_size: 512
 
     # Reward model parameters
+    discr_lr: 3e-4
     discr_batch_size: 128
-    discr_rho: 0.75
+    discr_rho: 1.0
+    rescale_coef: 0.1
+    discr_thr: 0.5
+
 
   DDPPO:
     sync_frac: 0.6

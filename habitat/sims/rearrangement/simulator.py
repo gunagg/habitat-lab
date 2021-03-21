@@ -67,6 +67,7 @@ class RearrangementSim(HabitatSim):
             sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id)
 
         self._prev_sim_obs = sim_obs
+        self._prev_sim_obs["gripped_object_id"] = -1
         self.did_reset = True
         self.gripped_object_id = -1
         self.nearest_object_id = -1
@@ -81,6 +82,7 @@ class RearrangementSim(HabitatSim):
             object_ = self.get_object_from_scene(obj_id)
             if object_ is not None:
                 self.remove_contact_test_object(object_.object_handle)
+        self.remove_contact_test_object(self.agent_object_handle)
         self.clear_recycled_object_ids()
         self.clear_scene_objects()
 

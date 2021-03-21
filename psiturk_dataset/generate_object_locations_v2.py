@@ -151,12 +151,12 @@ def get_bad_points(
         bad_points[points[:, 0] > xlim[1]] = 1
 
     if ylim:
-        bad_points[points[:, 1] < ylim[0]] = 1
-        bad_points[points[:, 1] > ylim[1]] = 1
+        bad_points[points[:, 2] < ylim[0]] = 1
+        bad_points[points[:, 2] > ylim[1]] = 1
 
     if zlim:
-        bad_points[points[:, 2] < zlim[0]] = 1
-        bad_points[points[:, 2] > zlim[1]] = 1
+        bad_points[points[:, 1] < zlim[0]] = 1
+        bad_points[points[:, 1] > zlim[1]] = 1
 
     for i, point in enumerate(points):
         point_list = point.tolist()

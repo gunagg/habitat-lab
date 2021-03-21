@@ -138,17 +138,3 @@ class MoveBackwardAction(SimulatorTaskAction):
             )
         return self._sim.step(HabitatSimActions.MOVE_BACKWARD)
 
-
-@registry.register_task_action
-class StartAction(SimulatorTaskAction):
-    name: str = "START"
-
-    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
-        task.is_start_called = False  # type: ignore
-
-    def step(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
-        r"""Update ``_metric``, this method is called from ``Env`` on each
-        ``step``.
-        """
-        task.is_start_called = True  # type: ignore
-        return self._sim.get_observations_at()  # type: ignore
