@@ -22,9 +22,9 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch import distributed as distrib
 from numpy import ndarray
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 
-from habitat import Config, logger
+from habitat import Config, logger, make_dataset
 from habitat.core.env import Env, RLEnv
 from habitat.core.vector_env import VectorEnv
 from habitat.utils import profiling_wrapper
@@ -229,6 +229,29 @@ class RearrangementBCTrainer(BaseILTrainer):
         return model
 
 
+    def _setup_dataset(self):
+        config = self.config
+
+        content_scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
+        if "*" in content_scenes:
+            dataset = make_dataset(
+                config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
+            )
+            content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
+        datasets = []
+        for scene in content_scenes:
+            dataset = RearrangementEpisodeDataset(
+                config,
+                content_scenes=[scene],
+                use_iw=config.IL.USE_IW,
+                inflection_weight_coef=config.MODEL.inflection_weight_coef
+            )
+            datasets.append(dataset)
+
+        concat_dataset = ConcatDataset(datasets)
+        return concat_dataset
+
+
     @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
         r"""Main method for training PPO.
@@ -238,40 +261,14 @@ class RearrangementBCTrainer(BaseILTrainer):
         """
 
         config = self.config
-        if config.IL.distrib_training:
-            self.local_rank, tcp_store = init_distrib_slurm(
-                self.config.IL.distrib_backend
-            )
-
-            self.world_rank = distrib.get_rank()
-            self.world_size = distrib.get_world_size()
-
-            self.config.defrost()
-            self.config.TORCH_GPU_ID = self.local_rank
-            self.config.SIMULATOR_GPU_ID = self.local_rank
-            # Multiply by the number of simulators to make sure they also get unique seeds
-            self.config.TASK_CONFIG.SEED += (
-                self.world_rank * self.config.NUM_PROCESSES
-            )
-            self.config.freeze()
-
-            if torch.cuda.is_available():
-                self.device = torch.device("cuda", self.local_rank)
-                torch.cuda.set_device(self.device)
-            else:
-                self.device = torch.device("cpu")
 
         random.seed(self.config.TASK_CONFIG.SEED)
         np.random.seed(self.config.TASK_CONFIG.SEED)
         torch.manual_seed(self.config.TASK_CONFIG.SEED)
 
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
-        
-        rearrangement_dataset = RearrangementEpisodeDataset(
-            config,
-            use_iw=config.IL.USE_IW,
-            inflection_weight_coef=config.MODEL.inflection_weight_coef
-        )
+
+        rearrangement_dataset = self._setup_dataset()
         batch_size = config.IL.BehaviorCloning.batch_size
 
         train_loader = DataLoader(
@@ -296,15 +293,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
         self.model = torch.nn.DataParallel(self.model, dim=1)
         self.model.to(self.device)
-
-        if config.IL.distrib_training:
-            # Distributed data parallel setup
-            if torch.cuda.is_available():
-                self.model = torch.nn.parallel.DistributedDataParallel(
-                    self.model, device_ids=[self.device], output_device=self.device
-                )
-            else:
-                self.model = torch.nn.parallel.DistributedDataParallel(self.model)
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),

@@ -97,21 +97,27 @@ def collate_fn(batch):
 class RearrangementEpisodeDataset(Dataset):
     """Pytorch dataset for object rearrangement task for each episode"""
 
-    def __init__(self, config, mode="train", use_iw=False, inflection_weight_coef=1.0):
+    def __init__(self, config, content_scenes=["*"], mode="train", use_iw=False, inflection_weight_coef=1.0):
         """
         Args:
             env (habitat.Env): Habitat environment
             config: Config
             mode: 'train'/'val'
         """
-        self.config = config.TASK_CONFIG
-        self.dataset_path = config.DATASET_PATH.format(split=mode)
-        
-        self.env = habitat.Env(config=self.config)
-        self.episodes = self.env._dataset.episodes
-        self.instruction_vocab = self.env._dataset.instruction_vocab
+        scene_split_name = "train"
+        if content_scenes[0] != "*":
+            scene_split_name = "_".join(content_scenes)
 
-        self.resolution = self.env._sim.get_resolution()
+        self.config = config.TASK_CONFIG
+        self.dataset_path = config.DATASET_PATH.format(split=mode, scene_split=scene_split_name)
+
+        self.config.defrost()
+        self.config.DATASET.CONTENT_SCENES = content_scenes
+        self.config.freeze()
+
+        self.resolution = [self.config.SIMULATOR.RGB_SENSOR.WIDTH, self.config.SIMULATOR.RGB_SENSOR.HEIGHT]
+        self.possible_actions = config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+
         self.total_actions = 0
         self.inflections = 0
 
@@ -125,7 +131,9 @@ class RearrangementEpisodeDataset(Dataset):
             for each scene > load scene in memory > save frames for each
             episode corresponding to that scene
             """
-
+            self.env = habitat.Env(config=self.config)
+            self.episodes = self.env._dataset.episodes
+            self.instruction_vocab = self.env._dataset.instruction_vocab
 
             logger.info(
                 "Dataset cache not found. Saving rgb, seg, depth scene images"
@@ -164,7 +172,7 @@ class RearrangementEpisodeDataset(Dataset):
                     self.save_frames(state_index_queue, episode)
             print("Inflection weight coef: {}, N: {}, nI: {}".format(self.total_actions / self.inflections, self.total_actions, self.inflections))
             logger.info("Rearrangement database ready!")
-
+            self.env.close()
         else:
             logger.info("Dataset cache found.")
             self.lmdb_env = lmdb.open(
@@ -172,8 +180,6 @@ class RearrangementEpisodeDataset(Dataset):
                 readonly=True,
                 lock=False,
             )
-
-        self.env.close()
 
         self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 4)
         self.lmdb_env.close()
@@ -209,10 +215,10 @@ class RearrangementEpisodeDataset(Dataset):
             )
 
             next_state = reference_replay[state_index + 1]
-            next_action = get_habitat_sim_action(next_state.action)
+            next_action = self.possible_actions.index(next_state.action)
 
             prev_state = reference_replay[state_index]
-            prev_action = get_habitat_sim_action(prev_state.action)
+            prev_action = self.possible_actions.index(prev_state.action)
 
             observations["depth"].append(observation["depth"])
             observations["rgb"].append(observation["rgb"])
