@@ -106,7 +106,6 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 action_name = env.task.get_action_name(
                     action
                 )
-                print("action: "  + str(action) + " " + action_name)
                 if step_env:
                     observations = env.step(action=action)
                 elif not restore_state:

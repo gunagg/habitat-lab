@@ -96,7 +96,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         self.actor_critic.to(self.device)
 
         self.discriminator = self._setup_reward_model(
-            observation_space, self.envs.action_spaces[0], self.config.MODEL
+            observation_space, self.envs.action_spaces[0], self.config.DISCRIMINATOR
         )
         self.discriminator.to(self.device)
         self.discr_thr = ppo_cfg.discr_thr
@@ -116,7 +116,8 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
             discr_lr=ppo_cfg.discr_lr,
             discr_batch_size=ppo_cfg.discr_batch_size,
-            discr_rho=ppo_cfg.discr_rho
+            discr_rho=ppo_cfg.discr_rho,
+            discr_thr=ppo_cfg.discr_thr,
         )
     
 
@@ -264,10 +265,9 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
 
         # Use reward model to get rewards
         learning_rewards = self.discriminator(batch)
-        # logger.info("Rewards: {}".format(torch.sigmoid(learning_rewards)))
 
         learning_rewards = torch.tensor(
-            0.1 * (torch.sigmoid(learning_rewards) > 0.5), dtype=torch.float, device=current_episode_pred_reward.device
+            self.rescale_coef * (learning_rewards > self.discr_thr), dtype=torch.float, device=current_episode_pred_reward.device
         )
 
         masks = torch.tensor(
@@ -509,7 +509,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                 metrics = {
                     k: v / deltas["count"]
                     for k, v in deltas.items()
-                    if k not in {"reward", "count"}
+                    if k not in {"reward", "count", "pred_reward"}
                 }
                 if len(metrics) > 0:
                     writer.add_scalars("metrics", metrics, count_steps)

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Type
 
 import attr
 import habitat_sim
+import math
 import numpy as np
 from gym import spaces
 
@@ -340,6 +341,8 @@ class ObjectToReceptacleDistance(Measure):
             self._metric = self._geo_dist(
                 agent_position, receptacle_position
             )
+        if np.isnan(self._metric) or math.isnan(self._metric):
+            logger.info("Agent object distance is nan: {} -- {} - {} -- {}".format(receptacle_id, obj_id, episode.episode_id, self._sim.gripped_object_id))
 
 
 @registry.register_measure
@@ -389,12 +392,12 @@ class AgentToObjectDistance(Measure):
             agent_position = agent_state.position
 
             self._metric = self._geo_dist(
-                agent_position, object_position 
+                agent_position, object_position
             )
         else:
             self._metric = 0.0
-        if np.isnan(self._metric):
-            logger.info("Agent object distance is nan: {} -- {} -- {} - {}".format(sim_obj_id, object_position, agent_position, episode.episode_id))
+        if np.isnan(self._metric) or math.isnan(self._metric):
+            logger.info("Agent object distance is nan: {} -- {} -- {}".format(sim_obj_id, episode.episode_id, self._sim.gripped_object_id))
 
 
 @registry.register_measure
@@ -436,7 +439,7 @@ class AgentToReceptacleDistance(Measure):
                 sim_obj_id = scene_object.object_id
         
         if sim_obj_id != -1:
-            recceptacle_position = np.array(
+            receptacle_position = np.array(
                 self._sim.get_translation(sim_obj_id)
             ).tolist()
 
@@ -444,7 +447,7 @@ class AgentToReceptacleDistance(Measure):
             agent_position = agent_state.position
 
             self._metric = self._geo_dist(
-                agent_position, recceptacle_position 
+                agent_position, receptacle_position 
             )
 
 

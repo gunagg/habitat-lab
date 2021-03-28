@@ -44,13 +44,10 @@ class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
             HabitatSimActions.extend_action_space("NO_OP")
         if not HabitatSimActions.has_action("STOP"):
             HabitatSimActions.extend_action_space("STOP")
-        if not HabitatSimActions.has_action("START"):
-            HabitatSimActions.extend_action_space("START")
 
     def get(self):
         config = self.config
         new_config = {
-            HabitatSimActions.START: habitat_sim.ActionSpec("start"),
             HabitatSimActions.STOP: habitat_sim.ActionSpec("stop"),
             HabitatSimActions.MOVE_FORWARD: habitat_sim.ActionSpec(
                 "move_forward",

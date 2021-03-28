@@ -20,6 +20,7 @@ num_actions_lte_tenk = 0
 total_episodes = 0
 excluded_ep = 0
 task_episode_map = {}
+filter_episodes = ["A1NSHNH3MNFRGW:39L1G8WVWSU59FQI8II4UT2G6QI13L", "A2CWA5VQZ6IWMQ:39U1BHVTDNU6IZ2RA12E0ZLBY9LT3Y", "A1NSHNH3MNFRGW:3EFVCAY5L5CY5TCSAOJ6PA6DGTD8JR", "A1ZE52NWZPN85P:3QY5DC2MXTNGYOX9U1TQ64WAKDYFUL", "AV0PUPRI47UDT:3CN4LGXD5ZRNHHKPKLUWIL5WRBM4Y6", "A1NSHNH3MNFRGW:3EO896NRAYYH3D4GDMU1G620U6UTJX", "A1ZE52NWZPN85P:3OONKJ5DKEMV821WTDVLO8D0NTABOE", "A2CWA5VQZ6IWMQ:3CN4LGXD5ZRNHHKPKLUWIL5WRBNY41", "A2CWA5VQZ6IWMQ:3VD82FOHKSREI7T27DRGZSJI5UOCOW", "A1ZE52NWZPN85P:3EO896NRAYYH3D4GDMU1G620UL7TJ4", "A2CWA5VQZ6IWMQ:35H6S234SC33UGEJS7IE4MRHS3M65N", "AKYXQY5IP7S0Z:3JW0YLFXRVJV1E89FQIRSG3706JWW3", "A1NSHNH3MNFRGW:3GNCZX450KQ8AS852Z84IXYKFQBPAO", "A3O5RKGH6VB19C:38F71OA9GVZXLGS0LZ24FUFGBIRMFI", "A3KC26Z78FBOJT:3QBD8R3Z23MBN3GNEYLYGU7UIH34OC", "A3O5RKGH6VB19C:39K0FND3AJI2PPBSAJGC1T4PE79AMY", "A2Q6L9LKSNU7EB:3VSOLARPKDCNYKTDCVXX9ZKZ8TB93T", "A272X64FOZFYLB:33M4IA01QI45IIWDQ147709XL9WRXA", "A2Q6L9LKSNU7EB:3LOZAJ85YFGOEYFSBBP66S1PA1O2XJ", "AKYXQY5IP7S0Z:3CFVK00FWNOHW5H4KUYLLBNEJXKL61", "A2Q6L9LKSNU7EB:3KMS4QQVK4T2VSSX0NPO0HNCMECFKO", "A3PFU4042GIQLE:34Z02EIMIUGA173UREKVY1N4026T0N", "AEWGY34WUIA32:3WYGZ5XF3YIBZXXJ67PN7G6RB28KSA", "A2Q6L9LKSNU7EB:3180JW2OT6FFIBTQCQC3DQWMI02J5O", "A1ZE52NWZPN85P:3ZPPDN2SLXZQ8I9A1FETSQOWVR5E97", "ADXHWQLUQBK77:3TK8OJTYM3OS2GB3DUZ0EKCXZLLVP9", "A272X64FOZFYLB:3J2UYBXQQNF4Z9SIV1C2NRVQBPE60T", "A1ZE52NWZPN85P:3IX2EGZR7DM4NYRO9XP6GR1I61HJRQ", "AEWGY34WUIA32:39O5D9O87VVPWI0GOF7OBPL79IXC3Z", "A1ZE52NWZPN85P:3X0H8UUIT3R2UXR0VL8QVR0MUY2SW9", "A2CWA5VQZ6IWMQ:31QTRG6Q2VG96A68I5MKLJGRI7NYPW"]
 
 
 def read_csv(path, delimiter=","):
@@ -167,10 +168,7 @@ def handle_step(step, episode, unique_id, timestamp):
     if step.get("event"):
         if step["event"] == "setEpisode":
             data = copy.deepcopy(step["data"]["episode"])
-            ep_id = "{}:{}".format(data["sceneID"], data["episodeID"])
-            if ep_id not in task_episode_map.keys():
-                task_episode_map[ep_id] = 0
-            task_episode_map[ep_id] += 1
+            task_episode_map[data["sceneID"]].append(int(data["episodeID"]))
 
             episode["episode_id"] = unique_id
             episode["scene_id"] = data["sceneID"]
@@ -190,6 +188,8 @@ def handle_step(step, episode, unique_id, timestamp):
                 episode["objects"].append(object_data)
 
             instruction_text = data["task"]["instruction"]
+            if "place the shark" in instruction_text:
+                instruction_text = instruction_text.replace("place the shark", "place the toy shark")
             episode["instruction"] = {
                 "instruction_text": instruction_text.lower(),
             }
@@ -409,6 +409,9 @@ def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_le
     for file_path in tqdm(file_paths):
         reader = read_csv(file_path)
         episode, counts = convert_to_episode(reader)
+        # Filter out episodes that have unstable initialization
+        if episode["episode_id"] in filter_episodes:
+            continue
         if len(episode["reference_replay"]) <= max_episode_length:
             episodes.append(episode)
             episode_lengths.append(counts)
@@ -485,6 +488,15 @@ def show_average(all_episodes, episode_lengths):
     print("Pruned episodes greater than 1.9k actions: {}".format(num_eps_gt_than_2k))
 
 
+def list_missing_episodes():
+    episode_ids = set([i for i in range(1371)])
+    for key, val in task_episode_map.items():
+        val_set = set([int(v) for v in val])
+        missing_episodes = episode_ids.difference(val_set)
+        print("Missing episodes for scene: {} are: {}".format(key, len(list(missing_episodes))))
+    write_json(task_episode_map, "data/hit_data/complete_task_map.json")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -501,6 +513,7 @@ def main():
     )
     args = parser.parse_args()
     replay_to_episode(args.replay_path, args.output_path, args.max_episodes, args.max_episode_length)
+    list_missing_episodes()
 
 
 if __name__ == '__main__':

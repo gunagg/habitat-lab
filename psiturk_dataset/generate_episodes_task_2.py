@@ -14,20 +14,26 @@ import random
 import scipy
 import sys
 import habitat_sim
+import itertools
+import math
 
 import numpy as np
 import magnum as mn
 import matplotlib.pyplot as plt
-import math
 
+from collections import defaultdict
 from habitat.sims import make_sim
 from habitat_sim.utils.common import quat_from_coeffs, quat_from_magnum, quat_to_coeffs
+from habitat_sim.geo import OBB
 from mpl_toolkits.mplot3d import Axes3D
 
 
 ISLAND_RADIUS_LIMIT = 1.5
 VISITED_POINT_DICT = {}
-missing_episodes_ids = {}
+object_to_rooms_map = defaultdict(list)
+region_bb_map = {}
+points_in_room = []
+region_point_map = {}
 
 
 def get_object_handle(object_name):
@@ -51,6 +57,8 @@ def is_compatible_episode(
     s, t, sim, near_dist, far_dist, geodesic_to_euclid_ratio
 ):
     euclid_dist = np.power(np.power(np.array(s) - np.array(t), 2).sum(0), 0.5)
+    d_separation = sim.geodesic_distance(s, [t])
+    # print(np.abs(s[1] - t[1]) > 0.5, not near_dist <= d_separation <= far_dist, geodesic_to_euclid_ratio, d_separation/euclid_dist < geodesic_to_euclid_ratio, sim.island_radius(s) < ISLAND_RADIUS_LIMIT)
     if np.abs(s[1] - t[1]) > 0.5:  # check height difference to assure s and
         #  t are from same floor
         return False, 0
@@ -70,39 +78,88 @@ def is_compatible_episode(
     return True, d_separation
 
 
-def get_object_receptacle_list(object_to_receptacle_map):
-    object_to_receptacle_list = []
-    for object_, receptacles in object_to_receptacle_map.items():
-        for receptacle in receptacles:
-            object_to_receptacle_list.append((object_, receptacle))
-    return object_to_receptacle_list
+def get_n_objects_groups(objects, k):
+    groups = []
+    for i in range(0, len(objects), k):
+        group = objects[i : i + k].copy()
+        group.sort()
+        if len(group) == 4:
+            groups.append(group)
+    return groups
+
+
+def get_object_tuple_for_room(room_to_objects_map, room, k):
+    objects = room_to_objects_map[room]
+    random.shuffle(objects)
+    object_tuples = list(itertools.permutations(objects, k))
+    random.shuffle(object_tuples)
+    return object_tuples
+
+
+def get_object_groups(object_tuples_list, room_a_idx, room_b_idx, max_sample=2000):
+    object_groups = []
+    visited_groups = defaultdict(int)
+
+    print("Total pairs: {} - {}".format(len(object_tuples_list[room_a_idx]), len(object_tuples_list[room_b_idx])))
+
+    for object_tuple_a in object_tuples_list[room_a_idx]:
+        for object_tuple_b in object_tuples_list[room_b_idx]:
+            object_group = []
+            object_group.extend(object_tuple_a)
+            object_group.extend(object_tuple_b)
+            object_groups.append(object_group)
+    print("Len : {}".format(len(object_groups)))
+    sampled = random.sample(object_groups, max_sample)
+    return sampled
+
+
+def populate_objects_to_rooms_map(room_to_objects_map):
+    for room, objects in room_to_objects_map.items():
+        for object_ in objects:
+            object_to_rooms_map[object_].append(room)
+
+
+def get_room_object_groups(room_to_objects_map, room_object_count_map, max_sample=50):
+    room_object_tuples_map = defaultdict(list)
+    object_groups_list = []
+    for room, count in room_object_count_map.items():
+        object_tuples = get_object_tuple_for_room(room_to_objects_map, room)
+        room_object_tuples_map[room] = object_tuples
+        object_groups_list.append(object_tuples)
+
+    object_groups = get_object_groups(object_groups_list, 0, 1)
+    return object_groups
+
+
+def get_object_receptacle_pair(object_to_receptacle_list, index):
+    index = index % len(object_to_receptacle_list)
+    return object_to_receptacle_list[index]
 
 
 def use_in_for_receptacle(receptacle_name):
-    return receptacle_name.lower() in ["bowl", "cube", "bin", "basket"]
+    for part in ["bowl", "cube", "bin", "basket"]:
+        if part in receptacle_name.lower():
+            return True
+    return False
 
 
-def get_task_config(config, object_name, receptacle_name, object_ids, receptacle_ids):
+def get_task_config(config, room_name, objects):
     task = {}
-    in_or_on = "on"
-    if use_in_for_receptacle(receptacle_name):
-        in_or_on = "in"
-    task["instruction"] = config["TASK"]["INSTRUCTION"].format(object_name, in_or_on, receptacle_name)
+    task["instruction"] = config["TASK"]["INSTRUCTION"].format(room_name)
     task["type"] = config["TASK"]["TYPE"]
     task["goals"] = {}
 
-    object_to_receptacle_map = {}
-    for object_id, receptacle_id in zip(object_ids, receptacle_ids):
-        if object_to_receptacle_map.get(object_id):
-            object_to_receptacle_map[object_id].append(receptacle_id)
-        else:
-            object_to_receptacle_map[object_id] = [receptacle_id]
+    object_to_room_map = defaultdict(list)
+    for object_ in objects:
+        object_id = object_["objectId"]
+        object_name = object_["objectHandle"].split("/")[-1].split(".")[0]
+        object_to_room_map[object_id] = object_to_rooms_map.get(object_name)
 
-    task["goals"]["objectToReceptacleMap"] = object_to_receptacle_map
+    task["goals"]["objectToRoomMap"] = object_to_room_map
     return task
 
 
-def build_episode(config, episode_id, objects, agent_position, agent_rotation, object_name, receptacle_name):
+def build_episode(config, episode_id, objects, agent_position, agent_rotation, room_name):
     scene_id = config.SIMULATOR.SCENE.split("/")[-1]
     task_config = config.TASK
     episode = {}
@@ -119,7 +176,7 @@ def build_episode(config, episode_id, objects, agent_position, agent_rotation, o
         else:
             receptacle_ids.append(object_["objectId"])
     
-    episode["task"] = get_task_config(config, object_name, receptacle_name, object_ids, receptacle_ids)
+    episode["task"] = get_task_config(config, room_name, objects)
     episode["objects"] = objects
     return episode
 
@@ -142,7 +199,7 @@ def build_object(object_handle, object_id, object_name, is_receptacle, position,
 def get_bad_points(
     sim, points, rotations, d_lower_lim, d_upper_lim,
     geodesic_to_euclid_min_ratio, xlim=None,
-    ylim=None, zlim=None, object_names=[], is_tilted_or_colliding=[]
+    ylim=None, zlim=None, is_tilted_or_colliding=[],
 ):
     bad_points = np.zeros(points.shape[0], dtype=bool)
     # Outside X, Y, or Z limits
@@ -178,37 +235,22 @@ def get_bad_points(
                 far_dist=d_upper_lim,
                 geodesic_to_euclid_ratio=geodesic_to_euclid_min_ratio,
             )
-
             if not is_compatible:
-                bad_points[i] = 1
-
-    return bad_points
-
-
-def is_distance_greater_than_limit(sim, points, bad_points, all_points, min_thr=0.2):
-    if np.sum(bad_points) > 0 or len(all_points) == 0:
-        return bad_points
-    
-    all_points_np = np.array(all_points)
-    for i, point in enumerate(points):
-        dist_p = scipy.spatial.distance.cdist(np.array([point]), all_points_np, metric=sim.geodesic_distance)
-        if np.min(dist_p) < min_thr:
-            bad_points[i] = 1
+                bad_points[j] = 1
     return bad_points
 
 
 def rejection_sampling(
     sim, points, rotations, d_lower_lim, d_upper_lim,
     geodesic_to_euclid_min_ratio, xlim=None,
-    ylim=None, zlim=None, num_tries=10000, object_names=[], scene_bb=None,
-    is_tilted_or_colliding=[], all_points=[], d_min_limit=0.2, ep_id=""
+    ylim=None, zlim=None, num_tries=10000, object_names=[],
+    is_tilted_or_colliding=[]
 ):
     bad_points = get_bad_points(
         sim, points, rotations, d_lower_lim, d_upper_lim,
         geodesic_to_euclid_min_ratio, xlim, ylim,
-        zlim, object_names, is_tilted_or_colliding
+        zlim, is_tilted_or_colliding
     )
-    bad_points = is_distance_greater_than_limit(sim, points, bad_points, all_points, d_min_limit)
 
     while sum(bad_points) > 0 and num_tries > 0:
 
@@ -216,29 +258,37 @@ def rejection_sampling(
             if bad_point and i == 0:
                 points[i] = get_random_point(sim)
             elif bad_point:
-                points[i], rotations[i], is_tilted_or_colliding[i] = get_random_object_position(sim, object_names[i - 1])
+                points[i], rotations[i], is_tilted_or_colliding[i] = get_random_object_position(
+                    sim, object_names[i - 1]
+                )
 
         bad_points = get_bad_points(
             sim, points, rotations, d_lower_lim, d_upper_lim,
             geodesic_to_euclid_min_ratio, xlim, ylim,
-            zlim, object_names, is_tilted_or_colliding
+            zlim, is_tilted_or_colliding
         )
-        bad_points = is_distance_greater_than_limit(sim, points, bad_points, all_points, d_min_limit)
         num_tries -= 1
     
-    print(sum(bad_points), num_tries)
+    print(sum(bad_points), sum(is_tilted_or_colliding), num_tries)
 
     if sum(bad_points) > 0:
-        print("\n Error generating unique points, try using bigger retries: {}".format(ep_id))
-        # sys.exit(1)
+        print("\n Error generating unique points, try using bigger retries")
+        sys.exit(1)
 
     return points
 
 
-def get_random_point(sim):
-    point = sim.sample_navigable_point()
-    if point[0] == math.inf or point[0] == np.inf:
-        point = [0, 0, 0]
+def get_random_point(sim, bb=None):
+    point = np.array([0, 0, 0])
+    if bb:
+        bb_point = np.random.uniform(bb.min, bb.max)
+        snapped_point = sim.pathfinder.snap_point(bb_point)
+        while np.isnan(snapped_point[0]):
+            bb_point = np.random.uniform(bb.min, bb.max)
+            snapped_point = sim.pathfinder.snap_point(bb_point)
+        point = np.array(snapped_point).tolist()
+    else:
+        point = sim.sample_navigable_point()
     return point
 
 
@@ -248,13 +298,28 @@ def get_random_rotation():
     return rotation
 
 
-def step_physics_n_times(sim, n=10, dt = 1.0 / 10.0):
-    sim.step_world(n * dt)
+def is_less_than_island_radius_limit(sim, point):
+    return sim.island_radius(point) < ISLAND_RADIUS_LIMIT
 
 
-def get_random_object_position(sim, object_name, scene_bb=None, scene_collision_margin=0.04, tilt_threshold=0.95):
+def add_contact_test_object(sim, object_name):
     object_handle = get_object_handle(object_name)
-    position = get_random_point(sim)
+    sim.add_contact_test_object(object_handle)
+
+
+def remove_contact_test_object(sim, object_name):
+    object_handle = get_object_handle(object_name)
+    sim.remove_contact_test_object(object_handle)
+
+
+def step_physics_n_times(sim, n=50, dt = 1.0 / 10.0):
+    for i in range(n):
+        sim.step_world(dt)
+
+
+def get_random_object_position(sim, object_name, room_bb=None, scene_collision_margin=0.04, tilt_threshold=0.95):
+    object_handle = get_object_handle(object_name)
+    position = get_random_point(sim, room_bb)
 
     if position[0] == math.inf:
         translation = np.array([0, 0, 0])
@@ -298,18 +363,19 @@ def get_random_object_position(sim, object_name, scene_bb=None, scene_collision_
         is_colliding = sim.contact_test(object_id)
 
     is_tilted_or_colliding = (is_tilted or is_colliding)
+    is_navigable = sim.pathfinder.is_navigable(translation)
+
+    is_invalid_point = is_tilted_or_colliding or not is_navigable
 
     rotation = quat_to_coeffs(quat_from_magnum(rotation)).tolist()
     translation = np.array(translation).tolist()
     sim.remove_object(object_id)
-    return np.array(translation), rotation, is_tilted_or_colliding
+    return np.array(translation), rotation, is_invalid_point
 
 
-def populate_episodes_points(episodes, scene_id):
+def populate_episodes_points(episodes, scene_id, task_type):
     for episode in episodes["episodes"]:
-        if scene_id != episode["scene_id"]:
-            continue
-        if episode["episode_id"] >= 600:
+        if scene_id != episode["scene_id"] or episode["task"]["type"] != task_type:
             continue
         point = str(episode["start_position"])
         if VISITED_POINT_DICT.get(point):
@@ -327,11 +393,11 @@ def populate_episodes_points(episodes, scene_id):
                 VISITED_POINT_DICT[point] = 1
 
 
-def populate_prev_generated_points(path, scene_id):
+def populate_prev_generated_points(path, scene_id, task_type):
     for file_path in glob.glob(path + "/*.json"):
         with open(file_path, "r") as file:
             data = json.loads(file.read())
-            populate_episodes_points(data, scene_id)
+            populate_episodes_points(data, scene_id, task_type)
     print("Total previously generated points {}".format(len(VISITED_POINT_DICT.keys())))
 
 
@@ -341,62 +407,102 @@ def remove_all_objects(sim):
     sim.clear_recycled_object_ids()
 
 
+def sample_n_points_in_room(
+    sim, room_bb, d_lower_lim, d_upper_lim, geodesic_to_euclid_min_ratio, number_retries_per_target, n=700
+):
+    points = []
+    rotations = []
+    room_obb = OBB(room_bb)
+    largest_object = "Room_Essentials_Fabric_Cube_Lavender"
+
+    # agent points
+    for i in range(number_retries_per_target):
+        point, _, tilt = get_random_object_position(sim, largest_object, room_bb)
+        in_obb = room_obb.contains(point, 1e-6)
+        if in_obb and not tilt:
+            points.append(point)
+        if len(points) == n:
+            break
+        
+    print("Found {} points in {} trials".format(len(points), i))
+    if len(points) > 0:
+        dist = scipy.spatial.distance.pdist(points)
+        print("Min dist between points: {} -- {}".format(np.min(dist), np.sum(dist >= 0.2)))
+    return points
+
+
+def generate_tasks(
+    num_targets,
+    num_objects_per_task,
+):
+    rooms_object_count_map = config["TASK"]["ROOMS_OBJECT_COUNT_MAP"]
+    room_to_objects_map = config["TASK"]["ROOM_OBJECTS_MAP"]
+    populate_objects_to_rooms_map(room_to_objects_map)
+
+    object_groups = get_room_object_groups(room_to_objects_map, rooms_object_count_map)
+
+    obj_task_map = defaultdict(int)
+    for object_group in object_groups:
+        obj_task_map[object_group[0]] += 1
+        obj_task_map[object_group[1]] += 1
+        obj_task_map[object_group[2]] += 1
+        obj_task_map[object_group[3]] += 1
+
+    print("Total objects: {}, objs with 1 task: {}".format(len(obj_task_map.keys()), cnt))
+    write_json(object_groups, "tasks")
+
+
 def generate_points(
     config,
     objs_per_rec,
     num_episodes,
     num_targets,
     number_retries_per_target=1000,
-    d_lower_lim=5.0,
+    d_lower_lim=0.2,
     d_upper_lim=30.0,
     geodesic_to_euclid_min_ratio=1.1,
     prev_episodes="data/tasks",
     scene_id="empty_house.glb",
-    use_google_objects=False,
-    d_min_lim=0.2,
 ):
     # Initialize simulator
     sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
 
     # Populate previously generated points
-    populate_prev_generated_points(prev_episodes, scene_id)
+    populate_prev_generated_points(prev_episodes, scene_id, config["TASK"]["TYPE"])
 
     episode_count = 0
     episodes = []
+    num_objects_per_task = config["TASK"]["NUM_OBJECTS"]
     
-    object_to_receptacle_list = get_object_receptacle_list(config["TASK"]["OBJECTS_RECEPTACLE_MAP"])
-
-    google_object_to_receptacle_list = get_object_receptacle_list(config["TASK"]["GOOGLE_OBJECT_RECEPTACLE_MAP"])
-    if use_google_objects:
-        object_to_receptacle_list.extend(google_object_to_receptacle_list)
-        # object_to_receptacle_list = google_object_to_receptacle_list
-
     object_name_map = dict(config["TASK"]["OBJECT_NAME_MAP"])
     y_limit = config["TASK"].get("Y_LIMIT")
-    x_limit = None
-    if config["TASK"].get("X_LIMIT"):
-        x_limit = config["TASK"]["X_LIMIT"]
-    num_points = config["TASK"]["NUM_OBJECTS"] + config["TASK"]["NUM_RECEPTACLES"] + 1
+    x_limit = config["TASK"].get("X_LIMIT")
 
-    all_points = []
-    num_episodes = num_episodes * len(object_to_receptacle_list)
-    print("Generating total {} episodes for {} object receptacle pair".format(num_episodes, len(object_to_receptacle_list)))
+    num_points = num_objects_per_task + 1
 
-    print("\n\n\n YCB object receptacle pairs: {}".format(len(object_to_receptacle_list)))
-    print("\n\n\n Google object receptacle pairs: {}".format(len(google_object_to_receptacle_list)))
+    task_file = config["TASK"]["TASK_MAP_FILE"]
+    object_groups = json.loads(open(task_file, "r").read())
 
-    while episode_count < num_episodes or num_episodes < 0:
-        for object_list in object_to_receptacle_list:
+    num_tasks = 0
+    for object_group in object_groups:
+        num_tasks += len(object_group)
+
+    num_episodes = num_tasks * num_episodes
+    num_episodes = 10
+    print("Generating total {} episodes".format(num_episodes))
+    while episode_count < num_episodes:
+        print("Generating {} episodes".format(len(object_groups)))
+        for i, object_list in enumerate(object_groups):
             print("\nEpisode {}\n".format(episode_count))
-            object_, receptacle = object_list
             objects = []
-
-            object_name = object_name_map[object_]
-            receptacle_name = object_name_map[receptacle]
+            object_names = []
+            for object_ in object_list:
+                object_names.append(object_name_map[object_])
 
             points = []
             rotations = []
             is_tilted_or_colliding = []
+            num_points = len(object_list) + 1
             for idx in range(num_points):
                 is_invalid = False
                 if idx == 0:
@@ -409,46 +515,48 @@ def generate_points(
                 is_tilted_or_colliding.append(is_invalid)
             
             points = np.array(points)
+            print(points.shape)
             points = rejection_sampling(
                 sim, points, rotations, d_lower_lim, d_upper_lim,
                 geodesic_to_euclid_min_ratio, xlim=x_limit, ylim=y_limit,
                 num_tries=number_retries_per_target, object_names=object_list,
-                is_tilted_or_colliding=is_tilted_or_colliding,
-                all_points=all_points, d_min_limit=d_min_lim, ep_id=episode_count
+                is_tilted_or_colliding=is_tilted_or_colliding
             )
 
             # Mark valid points as visited to get unique points
             print("Total unique points: {}".format(len(VISITED_POINT_DICT.keys())))
             for i, point in enumerate(points):
                 VISITED_POINT_DICT[str(point.tolist())] = 1
+                # Create episode object configs
                 if i != 0:
-                    all_points.append(point.tolist())
-                
+                    objects.append(build_object(object_list[i-1], len(objects), object_names[i-1], False, points[i].tolist(), rotations[i]))
+
             agent_position = points[0].tolist()
             agent_rotation = rotations[0]
 
-            source_position = points[1].tolist()
-            source_rotation = rotations[1]
-
-            target_position = points[2].tolist()
-            target_rotation = rotations[2]
-
-            # Create episode object configs
-            objects.append(build_object(object_, len(objects), object_name, False, source_position, source_rotation))
-            objects.append(build_object(receptacle, len(objects), receptacle_name, True, target_position, target_rotation))
-            
             # Build episode from object and agent initilization.
-            episode = build_episode(config, episode_count, objects, agent_position,
-                agent_rotation, object_name, receptacle_name)
+            episode = build_episode(
+                config, episode_count, objects, agent_position,
+                agent_rotation, "house"
+            )
             episodes.append(episode)
 
             remove_all_objects(sim)
             episode_count += 1
+            if episode_count >= num_episodes:
+                break
+
 
     dataset = {
         "episodes": episodes
     }
     return dataset
+
+
+def write_json(data, file_name):
+    path = "data/points/{}.json".format(file_name)
+    with open(path, "w") as f:
+        f.write(json.dumps(data))
 
 
 def write_episode(dataset, filename):
@@ -464,7 +572,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--task-config",
-        default="psiturk_dataset/rearrangement.yaml",
+        default="psiturk_dataset/rearrangement_task_2.yaml",
         help="Task configuration file for initializing a Habitat environment",
     )
     parser.add_argument(
@@ -483,7 +591,7 @@ if __name__ == "__main__":
         "--num_targets",
         type=int,
         default=10,
-        help="Number of target points to sample",
+        help="Number of target per room to sample",
     )
     parser.add_argument(
         "--number_retries_per_target",
@@ -501,7 +609,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--d_lower_lim",
         type=float,
-        default=5.0,
+        default=0.5,
         help="Closest distance between objects allowed.",
     )
     parser.add_argument(
@@ -511,21 +619,15 @@ if __name__ == "__main__":
         help="Farthest distance between objects allowed.",
     )
     parser.add_argument(
-        "--d_min_lim",
-        type=float,
-        default=0.2,
-        help="Closest distance between all points allowed.",
-    )
-    parser.add_argument(
         "--geodesic_to_euclid_min_ratio",
         type=float,
-        default=1.1,
+        default=0.5,
         help="Geodesic shortest path to Euclid distance ratio upper limit till aggressive sampling is applied.",
     )
     parser.add_argument(
         "--ratio",
         type=int,
-        default=1,
+        default=4,
         help="Number of objects per goal.",
     )
     parser.add_argument(
@@ -534,8 +636,7 @@ if __name__ == "__main__":
         help="Task configuration file for initializing a Habitat environment",
     )
     parser.add_argument(
-        "--use_google_objects",
-        dest='use_google_objects', action='store_true',
+        "--gen-task", dest='gen_tasks', action='store_true'
     )
 
     args = parser.parse_args()
@@ -552,20 +653,24 @@ if __name__ == "__main__":
         scene_id = args.scenes.split("/")[-1]
 
     if dataset_type == "Interactive":
-        dataset = generate_points(
-            config,
-            args.ratio,
-            args.num_episodes,
-            args.num_targets,
-            args.number_retries_per_target,
-            args.d_lower_lim,
-            args.d_upper_lim,
-            args.geodesic_to_euclid_min_ratio,
-            args.prev_episodes,
-            scene_id,
-            args.use_google_objects,
-            args.d_min_lim
-        )
-        write_episode(dataset, args.output)
+        if args.gen_tasks:
+            generate_tasks(
+                args.num_targets,
+                args.ratio,
+            )
+        else:                
+            dataset = generate_points(
+                config,
+                args.ratio,
+                args.num_episodes,
+                args.num_targets,
+                args.number_retries_per_target,
+                args.d_lower_lim,
+                args.d_upper_lim,
+                args.geodesic_to_euclid_min_ratio,
+                args.prev_episodes,
+                scene_id,
+            )
+            write_episode(dataset, args.output)
     else:
         print(f"Unknown dataset type: {dataset_type}")

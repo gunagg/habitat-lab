@@ -125,6 +125,8 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
             observation_space, self.envs.action_spaces[0], self.config.MODEL
         )
         self.discriminator.to(self.device)
+        self.discr_thr = ppo_cfg.discr_thr
+        self.rescale_coef = ppo_cfg.rescale_coef
 
         if self.config.RL.DDPPO.reset_critic:
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
@@ -144,7 +146,8 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
             discr_lr=ppo_cfg.discr_lr,
             discr_batch_size=ppo_cfg.discr_batch_size,
-            discr_rho=ppo_cfg.discr_rho
+            discr_rho=ppo_cfg.discr_rho,
+            discr_thr=ppo_cfg.discr_thr,
         )
 
     @profiling_wrapper.RangeContext("train")
@@ -460,7 +463,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                     metrics = {
                         k: v / deltas["count"]
                         for k, v in deltas.items()
-                        if k not in {"reward", "count"}
+                        if k not in {"reward", "count", "pred_reward"}
                     }
                     if len(metrics) > 0:
                         print("\n writing metrics")

@@ -287,11 +287,12 @@ def rejection_sampling_no_objects(
         geodesic_to_euclid_min_ratio, xlim, ylim,
         zlim, room_bb=room_bb
     )
-
+    largest_object = "Room_Essentials_Fabric_Cube_Lavender"
     while sum(bad_points) > 0 and num_tries > 0:
 
         for i, bad_point in enumerate(bad_points):
-            points[i] = get_random_point(sim, room_bb)
+            # points[i] = get_random_point(sim, room_bb)
+            points[i], _, tilt = get_random_object_position(sim, largest_object, room_bb)
 
         bad_points = get_bad_points(
             sim, points, rotations, d_lower_lim, d_upper_lim,
@@ -403,13 +404,7 @@ def get_random_object_position(sim, object_name, room_bb=None, scene_collision_m
         is_colliding = sim.contact_test(object_id)
 
     query = np.array(translation)
-    # is_tilted_or_colliding = (is_tilted or is_colliding) or not (room_bb.contains(query, 1e-6))
-    is_tilted_or_colliding = not (room_bb.contains(query, 1e-6))
-
-    if room_bb.contains(query, 1e-6):
-        points_in_room.append(query.tolist())
-        if len(points_in_room) % 10 == 0:
-            pass
+    is_tilted_or_colliding = (is_tilted or is_colliding)
 
     rotation = quat_to_coeffs(quat_from_magnum(rotation)).tolist()
     translation = np.array(translation).tolist()
@@ -457,25 +452,26 @@ def sample_n_points_in_room(
     points = []
     rotations = []
     room_obb = OBB(room_bb)
+    largest_object = "Room_Essentials_Fabric_Cube_Lavender"
     for i in range(n):
-        point = get_random_point(sim, room_bb)
+        point, _, tilt = get_random_object_position(sim, largest_object, room_bb)
         # if room_bb.contains(point, 1e-6):
         #     points.append(point)
         in_obb = room_obb.contains(point, 1e-6)
-        if in_obb:
-            points.append(point)
+        if in_obb and not tilt:
+            points.append(point.tolist())
     
     print("Found {} points in 1 trial".format(len(points)))
     # agent points
-    for i in range(number_retries_per_target):
-        point = get_random_point(sim, room_bb)
-        # if room_bb.contains(point, 1e-6):
-        #     points.append(point)
-        in_obb = room_obb.contains(point, 1e-6)
-        if in_obb:
-            points.append(point)
-        if len(points) == n:
-            break
+    # for i in range(number_retries_per_target):
+    #     point, _, tilt = get_random_object_position(sim, largest_object, room_bb)
+    #     # if room_bb.contains(point, 1e-6):
+    #     #     points.append(point)
+    #     in_obb = room_obb.contains(point, 1e-6)
+    #     if in_obb and not tilt:
+    #         points.append(point)
+    #     if len(points) == n:
+    #         break
         
     print("Found {} points in {} trials".format(len(points), i))
     if len(points) > 0:
@@ -552,7 +548,6 @@ def generate_points(
     room_to_objects_map = config["TASK"]["ROOM_OBJECTS_MAP"]
     populate_objects_to_rooms_map(room_to_objects_map)
     levels = populate_region_bb(sim, room_to_objects_map, d_lower_lim, d_upper_lim, geodesic_to_euclid_min_ratio, number_retries_per_target)
-    sys.exit(1)
     object_name_map = dict(config["TASK"]["OBJECT_NAME_MAP"])
     y_limit = config["TASK"].get("Y_LIMIT")
     x_limit = config["TASK"].get("X_LIMIT")
@@ -622,6 +617,10 @@ def generate_points(
 
                 remove_all_objects(sim)
                 episode_count += 1
+                if episode_count == 10:
+                    break
+            break
+        break
 
 
     dataset = {

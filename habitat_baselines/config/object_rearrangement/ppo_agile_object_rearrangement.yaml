@@ -12,7 +12,7 @@ VIDEO_DIR: "video_dir"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: 50
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints/overfitting_500.ckpt"
-NUM_PROCESSES: 2
+NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints/ppo_agile_v1"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10

@@ -13,6 +13,7 @@ import os
 import random
 import scipy
 import sys
+import math
 
 import numpy as np
 import magnum as mn
@@ -20,6 +21,7 @@ import matplotlib.pyplot as plt
 import scipy
 
 from collections import defaultdict
+from habitat_sim.nav import NavMeshSettings
 from habitat.sims import make_sim
 from habitat_sim.utils.common import quat_from_coeffs, quat_from_magnum, quat_to_coeffs, quat_to_magnum
 from mpl_toolkits.mplot3d import Axes3D
@@ -60,6 +62,34 @@ def contact_test(sim, object_name, position):
 
 def get_object_handle(object_name):
     return "data/scene_datasets/habitat-test-scenes/../../test_assets/objects/{}.object_config.json".format(object_name)
+
+
+def are_points_navigable(sim, episode):
+    pathfinder = sim.pathfinder
+    agent_position = episode["start_position"]
+
+    positions = [agent_position]
+
+    is_navigable = pathfinder.is_navigable(agent_position)
+    is_navigable_list = [is_navigable]
+    for object_ in episode["objects"]:
+        object_name = object_["objectHandle"].split("/")[-1].split(".")[0]
+        position = object_["position"]
+        is_navigable = pathfinder.is_navigable(position)
+        is_navigable_list.append(is_navigable)
+        positions.append(position)
+    
+    for i in range(len(positions)):
+        for j in range(len(positions)):
+            if i <= j:
+                continue
+            dist = get_geodesic_distance(sim, positions[i], positions[j])
+            if dist == np.inf or dist == math.inf:
+                return False
+    
+    if np.sum(is_navigable_list) != 3:
+        return False
+    return True
 
 
 def get_points_distance(points, sim, show_plot=False):
@@ -238,8 +268,8 @@ def get_all_tasks(path, scene_id, sim):
         with open(file_path, "r") as file:
             data = json.loads(file.read())
             if data["episodes"][0]["scene_id"] == scene_id:
-                tasks.append((data, file_path))
-                if "340_x3.json" in file_path or "2_rot_fixed" in file_path:
+                if ".json" in file_path:
+                    tasks.append((data, file_path))
                     ep_points = populate_episodes_points(data["episodes"], scene_id)
                     floor_map = get_num_episodes_on_each_floor(ep_points)
                     all_points.extend(ep_points)
@@ -269,34 +299,39 @@ def validate_tasks(
     prev_episodes="data/tasks",
     scene_id="empty_house.glb",
     show_plot=False,
+    get_distance=False,
+    check_tilt=False,
 ):
     sim = get_sim(config)
+    # navMeshSettings = NavMeshSettings()
+    # navMeshSettings.agent_max_climb = 0.5
+    # sim.recompute_navmesh(sim.pathfinder, navMeshSettings, True)
 
     # Populate previously generated points
     tasks, all_points = get_all_tasks(prev_episodes, scene_id, sim)
-    get_points_distance(np.array(all_points), sim, show_plot)
     sys.exit(1)
+    if get_distance:
+        get_points_distance(np.array(all_points), sim, show_plot)
 
     results = []
     i = 0
     for task, file_path in tasks:
         episodes = task["episodes"]
         count = 0
-        file_name = file_path.split("/")[-1].split(".")[0] + "_rot_fixed.json"
-        rot_fixed_episodes = []
+        print(file_path)
+        ep_ids = []
         for episode in episodes:
-            is_valid, ep_fixed = is_valid_episode(sim, episode, d_lower_lim, d_upper_lim)
-            count += int(is_valid)
-            rot_fixed_episodes.append(ep_fixed)
+            if check_tilt:
+                is_valid, ep_fixed = is_valid_episode(sim, episode, d_lower_lim, d_upper_lim)
+            is_navigable = are_points_navigable(sim, episode)
+            count += int(is_navigable)
+            if not is_navigable:
+                ep_ids.append(episode["episode_id"])
 
-        new_task = {
-            "episodes": episodes
-        }
-
-        # write_episode(new_task, file_name)
         i += 1
 
         print("\nScene: {}, Num valid episodes: {}, Total episodes: {}\n".format(scene_id, count, len(episodes)))
+        print("Invalid episodes: {}".format(ep_ids))
 
 
 if __name__ == "__main__":

@@ -185,9 +185,8 @@ def get_bad_points(
     for i, point in enumerate(points):
         point_list = point.tolist()
         existing_point_count = VISITED_POINT_DICT.get(str(point_list))
-        # if True in is_tilted_or_colliding:
-        #     print(i, is_tilted_or_colliding)
-        if existing_point_count is not None and existing_point_count >= 1 or is_tilted_or_colliding[i]:
+        is_navigable = sim.is_navigable(point)
+        if existing_point_count is not None and existing_point_count >= 1 or is_tilted_or_colliding[i] or not is_navigable:
             bad_points[i] = 1
 
     # Too close to another object or receptacle
@@ -310,11 +309,7 @@ def get_random_object_position(sim, object_name, scene_bb=None, scene_collision_
     sim.set_translation(position, object_id)
     is_colliding = sim.contact_test(object_id)
 
-    # If colliding that means object near a wall or on the floor
-    is_physics_stepped = False
-    if not is_colliding:
-        step_physics_n_times(sim)
-        is_physics_stepped = True
+    step_physics_n_times(sim)
 
     translation = sim.get_translation(object_id)
     rotation = sim.get_rotation(object_id)
@@ -324,12 +319,11 @@ def get_random_object_position(sim, object_name, scene_bb=None, scene_collision_
     tilt = mn.math.dot(object_up, mn.Vector3(0,1,0))
     is_tilted = (tilt <= tilt_threshold)
 
-    if is_physics_stepped:
-        adjusted_translation = mn.Vector3(
-            0, scene_collision_margin, 0
-        ) + translation
-        sim.set_translation(adjusted_translation, object_id)
-        is_colliding = sim.contact_test(object_id)
+    adjusted_translation = mn.Vector3(
+        0, scene_collision_margin, 0
+    ) + translation
+    sim.set_translation(adjusted_translation, object_id)
+    is_colliding = sim.contact_test(object_id)
 
     is_tilted_or_colliding = (is_tilted or is_colliding)
 
