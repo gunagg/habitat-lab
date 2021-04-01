@@ -12,13 +12,13 @@ prefix=$1
 wget https://habitat-on-web.s3.amazonaws.com/data/hit_data/unapproved_hits.zip
 
 unzip -o unapproved_hits.zip 
-python psiturk_dataset/parser.py --replay-path data/hit_data/visualisation/unapproved_hits --output-path data/hit_data/visualisation/hits.json
+python psiturk_dataset/parsing/parser.py --replay-path data/hit_data/visualisation/unapproved_hits --output-path data/hit_data/visualisation/hits.json
 python examples/rearrangement_replay.py --replay-episode data/hit_data/visualisation/hits.json.gz --output-prefix $prefix --restore-state
 
 rm unapproved_hits.zip
 
-python psiturk_dataset/upload_files_to_s3.py --file demos/ --s3-path data/hit_data/video/$prefix
-python psiturk_dataset/upload_files_to_s3.py --file instructions.json --s3-path data/hit_data/instructions.json
+python psiturk_dataset/utils/upload_files_to_s3.py --file demos/ --s3-path data/hit_data/video/$prefix
+python psiturk_dataset/utils/upload_files_to_s3.py --file instructions.json --s3-path data/hit_data/instructions.json
 
 rm instructions.json
 rm data/hit_data/visualisation/unapproved_hits/*

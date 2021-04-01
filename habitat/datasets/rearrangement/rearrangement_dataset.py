@@ -64,6 +64,7 @@ class RearrangementDatasetV1(Dataset):
     ) -> None:
 
         deserialized = json.loads(json_str)
+        max_semantic_object_id = 1 << 16
         self.instruction_vocab = VocabFromText(
            sentences=deserialized["instruction_vocab"]["sentences"]
         )
@@ -92,5 +93,6 @@ class RearrangementDatasetV1(Dataset):
             for i, goal in enumerate(episode.goals):
                 episode.goals[i] = RearrangementSpec(**goal)
             for i, obj in enumerate(episode.objects):
+                episode.objects[i]["semantic_object_id"] = (episode.objects[i]["object_id"] + (1<<16))
                 episode.objects[i] = RearrangementObjectSpec(**obj)
             self.episodes.append(episode)

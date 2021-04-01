@@ -2,21 +2,12 @@ import argparse
 import gzip
 import json
 
+from psiturk_dataset.utils.utils import load_dataset, load_json_dataset, write_json
+
 
 VISITED_POINT_DICT = {}
 assignment_dict = {}
 episode_ids = ['A1L3937MY09J3I:3Z7EFSHGNBH1CG7U84ECI5ABGYYCX5','A1ZE52NWZPN85P:3C6FJU71TSWMYFE4ZRLEVP3QQU9YUY','A2CWA5VQZ6IWMQ:3YGXWBAF72KAEEJKOTC7LUDDNIP4C8','APGX2WZ59OWDN:358010RM5GWXBPDUZL9H8XY015IVXR']
-
-def load_dataset(path):
-    with gzip.open(path, "rb") as file:
-        data = json.loads(file.read(), encoding="utf-8")
-    return data
-
-
-def load_json_dataset(path):
-    file = open(path, "r")
-    data = json.loads(file.read())
-    return data
 
 
 def validate_data(input_path_1, input_path_2):
@@ -147,6 +138,21 @@ def validate_episode_init_leak(input_path_1, input_path_2):
         print(dup)
 
 
+def find_duplicate_episode(input_path):
+    train_data = load_dataset(input_path)
+    train_episodes = train_data["episodes"]
+
+    redundant_points_train_episodes, single_point_train_duplicate_episodes = populate_points(train_episodes)
+    print("\n\nEpisode leak in train episodes: {}".format(len(redundant_points_train_episodes)))
+    print("\n\Init points leak in train episodes: {}".format(len(single_point_train_duplicate_episodes)))
+    print("\n\nEpisodes: {}".format(redundant_points_train_episodes))
+    print("\n\nEpisodes: {}".format(single_point_train_duplicate_episodes))
+    
+    for dup in redundant_points_train_episodes:
+        print(dup["episode_id"])
+    write_json(redundant_points_train_episodes, "data/hit_data/duplicate_episodes.py")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -158,11 +164,16 @@ def main():
     parser.add_argument(
         "--check-leak", dest='check_leak', action='store_true'
     )
+    parser.add_argument(
+        "--list-duplicate", dest='list_duplicate', action='store_true'
+    )
     args = parser.parse_args()
 
 
     if args.check_leak:
         validate_episode_init_leak(args.input_path_1, args.input_path_2)
+    elif args.list_duplicate:
+        find_duplicate_episode(args.input_path_1)
     else:
         validate_data(args.input_path_1, args.input_path_2)
 

@@ -12,6 +12,7 @@ import sys
 from gym import spaces
 
 import habitat_sim
+from collections import defaultdict
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -55,6 +56,7 @@ class RearrangementSim(HabitatSim):
         self.navmesh_settings.agent_radius = agent_config.RADIUS
         self.navmesh_settings.agent_height = agent_config.HEIGHT
         self.default_agent_id = agent_id
+        self.ISLAND_RADIUS_LIMIT = 2.0
 
     def reconfigure(self, config: Config) -> None:
         self.remove_existing_objects()
@@ -87,10 +89,12 @@ class RearrangementSim(HabitatSim):
         self.clear_scene_objects()
 
     def _initialize_objects(self, sim_config):
-        # contact test object for agent
+        # Add contact test object for agent
         self.add_contact_test_object(self.agent_object_handle)
         objects = sim_config.objects
         obj_attr_mgr = self.get_object_template_manager()
+
+        self.obj_id_to_semantic_obj_id_map = defaultdict(int)
 
         if objects is not None:
             # Sort objects by object id
@@ -122,6 +126,8 @@ class RearrangementSim(HabitatSim):
                 self.add_object_in_scene(object_id, object_)
 
                 self.set_object_motion_type(MotionType.DYNAMIC, object_id)
+                self.obj_id_to_semantic_obj_id_map[object_id] = object_.semantic_object_id
+                self.set_object_semantic_id(object_.semantic_object_id, object_id)
 
 
     def get_resolution(self):
@@ -267,13 +273,19 @@ class RearrangementSim(HabitatSim):
                     contact = self.is_collision(scene_object.object_handle, new_object_position)
                     count += 1
 
-                new_object_id = self.add_object_by_handle(
-                    scene_object.object_handle
-                )
-                self.set_translation(new_object_position, new_object_id)
+                snapped_point = self.pathfinder.snap_point(new_object_position)
+                snapped_point = np.array(new_object_position)
+                is_point_on_separate_island = self.island_radius(snapped_point) < self.ISLAND_RADIUS_LIMIT
 
-                self.update_object_in_scene(self.gripped_object_id, new_object_id)
-                self.gripped_object_id = -1
+                if not (contact or is_point_on_separate_island):
+                    new_object_id = self.add_object_by_handle(
+                        scene_object.object_handle
+                    )
+                    self.set_translation(new_object_position, new_object_id)
+                    self.set_object_semantic_id(scene_object.semantic_object_id, new_object_id)
+
+                    self.update_object_in_scene(self.gripped_object_id, new_object_id)
+                    self.gripped_object_id = -1
             elif nearest_object_id != -1:
                 self.gripped_object_transformation = self.get_transformation(
                     nearest_object_id
@@ -302,6 +314,16 @@ class RearrangementSim(HabitatSim):
 
         observations = self._sensor_suite.get_observations(self._prev_sim_obs)
         return observations
+
+    def is_object_out_of_bounds(self):
+        object_ids = self.get_existing_object_ids()
+        for object_id in object_ids:
+            position = self.get_translation(object_id)
+            snapped_position = self.pathfinder.snap_point(position)
+
+            if np.isnan(snapped_position.x) or math.isnan(snapped_position.x):
+                return True
+        return False
 
     def restore_object_states(self, object_states: Dict = {}):
         object_ids = []
@@ -381,7 +403,9 @@ class RearrangementSim(HabitatSim):
     def add_objects_by_handle(self, objects):
         for object_ in objects:
             object_handle = object_.object_handle
-            self.add_object_by_handle(object_handle)
+            object_id = self.add_object_by_handle(object_handle)
+            self.set_object_semantic_id(object_.semantic_object_id, object_id)
+
     
     def update_drop_point(self, replay_data=None, show=False):
         if self.gripped_object_id == -1 or show == False:
@@ -403,7 +427,6 @@ class RearrangementSim(HabitatSim):
 
         if action_spec.name == "grab_or_release_object_under_crosshair":
             action_data = replay_data.action_data
-            print(action_data)
             if action_data is not None and action_data.gripped_object_id != -1:
                 if replay_data.is_release_action:
                     # Fetch object handle and drop point from replay
@@ -413,11 +436,11 @@ class RearrangementSim(HabitatSim):
                         scene_object.object_handle
                     )
                     self.set_translation(new_object_position, new_object_id)
+                    self.set_object_semantic_id(scene_object.semantic_object_id, new_object_id)
 
                     self.update_object_in_scene(new_object_id, action_data.gripped_object_id)
                     self.gripped_object_id = replay_data.gripped_object_id
                 elif replay_data.is_grab_action:
-                    print("Grabbing: {}".format(action_data.gripped_object_id))
                     self.gripped_object_transformation = self.get_transformation(
                         action_data.gripped_object_id
                     )

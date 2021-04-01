@@ -254,7 +254,6 @@ class EmbodiedTask:
             entities_config=self._config.ACTIONS,
         )
         self._action_keys = list(self.actions.keys())
-        # self._is_episode_active = False
 
     def _init_entities(
         self, entity_names, register_func, entities_config=None
@@ -278,7 +277,6 @@ class EmbodiedTask:
         return entities
 
     def reset(self, episode: Episode):
-        # self._is_episode_active = False
         observations = self._sim.reset()
         observations.update(
             self.sensor_suite.get_observations(
@@ -288,7 +286,6 @@ class EmbodiedTask:
 
         for action_instance in self.actions.values():
             action_instance.reset(episode=episode, task=self)
-        # self._is_episode_active = True
 
         return observations
 

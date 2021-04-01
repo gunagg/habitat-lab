@@ -9,6 +9,7 @@ import os
 import textwrap
 from typing import Dict, List, Optional, Tuple
 
+import colorsys
 import imageio
 import numpy as np
 import tqdm
@@ -19,6 +20,11 @@ from habitat.utils.visualizations import maps
 from habitat_sim.utils import viz_utils as vut
 
 cv2 = try_cv2_import()
+
+def make_rgb_palette(n=40):
+    HSV_tuples = [(x*1.0/n, 0.8, 0.8) for x in range(n)]
+    RGB_map = np.array(list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)))
+    return RGB_map
 
 
 def paste_overlapping_image(
@@ -182,6 +188,13 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         depth_map = depth_map.astype(np.uint8)
         depth_map = np.stack([depth_map for _ in range(3)], axis=2)
         egocentric_view_l.append(depth_map)
+
+    if "semantic" in observation:
+        semantic_map = observation["semantic"].squeeze()
+        colors = make_rgb_palette(2)
+        semantic_colors = colors[semantic_map % 2] * 255
+        semantic_colors = semantic_colors.astype(np.uint8)
+        egocentric_view_l.append(semantic_colors)
 
     # add image goal if observation has image_goal info
     if "imagegoal" in observation:

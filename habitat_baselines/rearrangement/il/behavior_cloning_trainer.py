@@ -449,12 +449,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         batch_size = config.IL.BehaviorCloning.batch_size
 
-        rearrangement_dataset = RearrangementEpisodeDataset(
-            config,
-            use_iw=config.IL.USE_IW,
-            inflection_weight_coef=config.MODEL.inflection_weight_coef
-        )
-
         logger.info(
             "[ val_loader has {} samples ]".format(
                 self.envs.count_episodes()

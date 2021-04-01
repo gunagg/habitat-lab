@@ -119,15 +119,22 @@ def populate_objects_to_rooms_map(room_to_objects_map):
             object_to_rooms_map[object_].append(room)
 
 
-def get_room_object_groups(room_to_objects_map, room_object_count_map, max_sample=50):
-    room_object_tuples_map = defaultdict(list)
-    object_groups_list = []
-    for room, count in room_object_count_map.items():
-        object_tuples = get_object_tuple_for_room(room_to_objects_map, room)
-        room_object_tuples_map[room] = object_tuples
-        object_groups_list.append(object_tuples)
+def get_room_object_groups(room_to_objects_map, room_object_count_map, max_sample=2000):
+    object_groups = []
+    max_objects = 4
+    for k in range(1, 4):
+        object_groups_list = []
+        for i, (room, count) in enumerate(room_object_count_map.items()):
+            num_objs = max_objects - k
+            if i == 0:
+                num_objs = k
 
-    object_groups = get_object_groups(object_groups_list, 0, 1)
+            object_tuples = get_object_tuple_for_room(room_to_objects_map, room, k=num_objs)
+            object_groups_list.append(object_tuples)
+
+        object_group = get_object_groups(object_groups_list, 0, 1)
+        object_groups.extend(object_group)
+    object_groups = random.sample(object_groups, max_sample)
     return object_groups
 
 
@@ -153,7 +160,8 @@ def get_task_config(config, room_name, objects):
     for object_ in objects:
         object_id = object_["objectId"]
         object_name = object_["objectHandle"].split("/")[-1].split(".")[0]
-        object_to_room_map[object_id] = object_to_rooms_map.get(object_name)
+        print(object_name)
+        object_to_room_map[object_id] = object_to_rooms_map.get(object_name)[0]
 
     task["goals"]["objectToRoomMap"] = object_to_room_map
     return task
@@ -341,11 +349,7 @@ def get_random_object_position(sim, object_name, room_bb=None, scene_collision_m
     sim.set_translation(position, object_id)
     is_colliding = sim.contact_test(object_id)
 
-    # If colliding that means object near a wall or on the floor
-    is_physics_stepped = False
-    if not is_colliding:
-        step_physics_n_times(sim)
-        is_physics_stepped = True
+    step_physics_n_times(sim)
 
     translation = sim.get_translation(object_id)
     rotation = sim.get_rotation(object_id)
@@ -355,12 +359,11 @@ def get_random_object_position(sim, object_name, room_bb=None, scene_collision_m
     tilt = mn.math.dot(object_up, mn.Vector3(0,1,0))
     is_tilted = (tilt <= tilt_threshold)
 
-    if is_physics_stepped:
-        adjusted_translation = mn.Vector3(
-            0, scene_collision_margin, 0
-        ) + translation
-        sim.set_translation(adjusted_translation, object_id)
-        is_colliding = sim.contact_test(object_id)
+    adjusted_translation = mn.Vector3(
+        0, scene_collision_margin, 0
+    ) + translation
+    sim.set_translation(adjusted_translation, object_id)
+    is_colliding = sim.contact_test(object_id)
 
     is_tilted_or_colliding = (is_tilted or is_colliding)
     is_navigable = sim.pathfinder.is_navigable(translation)
@@ -442,14 +445,30 @@ def generate_tasks(
     object_groups = get_room_object_groups(room_to_objects_map, rooms_object_count_map)
 
     obj_task_map = defaultdict(int)
+    object_group_map = defaultdict(int)
+    task_count_map = defaultdict(int)
     for object_group in object_groups:
+        mp = defaultdict(int)
+        for obj in object_group:
+            room = object_to_rooms_map[obj]
+            mp[room[0]] += 1
+        key = "_".join([str(i) for i in list(mp.values())])
+        task_count_map[key] += 1
+        
         obj_task_map[object_group[0]] += 1
         obj_task_map[object_group[1]] += 1
         obj_task_map[object_group[2]] += 1
         obj_task_map[object_group[3]] += 1
 
-    print("Total objects: {}, objs with 1 task: {}".format(len(obj_task_map.keys()), cnt))
-    write_json(object_groups, "tasks")
+        object_group_map["_".join(object_group)] += 1
+    print("Total objects: {}, objs with 1 task".format(len(obj_task_map.keys())))
+    print("\nTask count map: {}".format(task_count_map))
+    cnt = 0
+    for key, val in object_group_map.items():
+        if val > 1:
+            cnt+=1
+    print("Multipl task count: {}".format(cnt))
+    write_json(object_groups, "object_group_task_2")
 
 
 def generate_points(
@@ -466,6 +485,10 @@ def generate_points(
 ):
     # Initialize simulator
     sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
+
+    # Populate object to room map
+    room_to_objects_map = config["TASK"]["ROOM_OBJECTS_MAP"]
+    populate_objects_to_rooms_map(room_to_objects_map)
 
     # Populate previously generated points
     populate_prev_generated_points(prev_episodes, scene_id, config["TASK"]["TYPE"])
@@ -554,7 +577,7 @@ def generate_points(
 
 
 def write_json(data, file_name):
-    path = "data/points/{}.json".format(file_name)
+    path = "psiturk_dataset/task/{}.json".format(file_name)
     with open(path, "w") as f:
         f.write(json.dumps(data))
 

@@ -103,6 +103,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 if log_action:
                     log_action_data(data, i)
                 action = possible_actions.index(data.action)
+                # action = get_habitat_sim_action(data)
                 action_name = env.task.get_action_name(
                     action
                 )

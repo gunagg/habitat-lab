@@ -207,7 +207,7 @@ TASK:
     "living room": 2
     "kitchen": 2
 
-  TASK_MAP_FILE: "data/points/tasks.json"
+  TASK_MAP_FILE: "psiturk_dataset/task/object_group_task_2.json"
 
 DATASET:
   TYPE: "Interactive"

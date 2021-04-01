@@ -6,4 +6,4 @@ cd /srv/share3/rramrakhya6/habitat-lab
 echo "Starting video generation"
 echo "hab sim: ${PYTHONPATH}"
 
-python psiturk_dataset/parser.py --replay-path data/hit_data/visualisation/unapproved_hits/ --output-path data/hit_approvals/hits_max_length_1500.json --max-episode-length 1500
+python psiturk_dataset/parsing/parser.py --replay-path data/hit_data/visualisation/unapproved_hits/ --output-path data/hit_approvals/hits_max_length_1500.json --max-episode-length 1500

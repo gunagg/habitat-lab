@@ -5,33 +5,36 @@ import json
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from sklearn.model_selection import train_test_split, StratifiedShuffleSplit, StratifiedKFold
+
+from psiturk_dataset.utils.utils import (
+    load_dataset,
+    load_json_dataset,
+    load_vocab,
+    write_json,
+    write_gzip,
+    get_episode_idx_by_instructions,
+    get_episode_idx_by_scene_ids,
+    get_episodes_by_episode_ids,
+    get_episodes_by_episode_index
+)
+from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit, StratifiedKFold
 
 
-def write_json(data, path):
-    with open(path, 'w') as file:
-        file.write(json.dumps(data))
+def check_overlap(train_episode_idx, eval_episode_idx):
+    print("Train split: {}, max: {}".format(len(train_episode_idx), max(train_episode_idx)))
+    print("Train split overlap exclude: {}".format(set(train_episode_idx).intersection(exclude_idx)))
+    print("Eval split: {}".format(len(eval_episode_idx)))
+
+    print("Train episode indices: {}, Unique indices {}".format(len(train_episode_idx), len(set(train_episode_idx))))
+    print("Eval episode indices: {}, Unique indices {}".format(len(eval_episode_idx), len(set(eval_episode_idx))))
+
+    print("Train episode indices: {}".format(train_episode_idx[:20]))
+    print("Eval episode indices: {}".format(eval_episode_idx[:20]))
+
+    print("Overlap indices: {}".format(len(set(train_episode_idx).intersection(set(eval_episode_idx)))))
 
 
-def write_gzip(input_path, output_path):
-    with open(input_path, "rb") as input_file:
-        with gzip.open(output_path + ".gz", "wb") as output_file:
-            output_file.writelines(input_file)
-
-
-def load_dataset(path):
-    with gzip.open(path, "rb") as file:
-        data = json.loads(file.read(), encoding="utf-8")
-    return data
-
-
-def load_json_dataset(path):
-    file = open(path, "r")
-    data = json.loads(file.read())
-    return data
-
-
-def train_test_split_episodes(data):
+def train_val_split_episodes(data):
     X = []
     y = []
     instruction_map = {}
@@ -74,21 +77,32 @@ def train_test_split_episodes(data):
     for train_episode_idx, eval_episode_idx in sk_fold.split(y_idxs, labels_filtered):
         train_episode_idx = [y_idxs[i] for i in train_episode_idx.tolist()]
         eval_episode_idx = [y_idxs[i] for i in eval_episode_idx.tolist()]
-
-        # train_episode_idx, eval_episode_idx = train_test_split(y_idxs, test_size=0.25, stratify=labels_filtered)
-        print("Train split: {}, max: {}".format(len(train_episode_idx), max(train_episode_idx)))
-        print("Train split overlap exclude: {}".format(set(train_episode_idx).intersection(exclude_idx)))
-        print("Eval split: {}".format(len(eval_episode_idx)))
-
+        # Add samples with only 1 demo after splitting
         train_episode_idx.extend(exclude_idx)
 
-        print("Train episode indices: {}, Unique indices {}".format(len(train_episode_idx), len(set(train_episode_idx))))
-        print("Eval episode indices: {}, Unique indices {}".format(len(eval_episode_idx), len(set(eval_episode_idx))))
+        check_overlap(train_episode_idx, eval_episode_idx)
+        
+        train_idxs.append(train_episode_idx)
+        eval_idxs.append(eval_episode_idx)
 
-        print("Train episode indices: {}".format(train_episode_idx[:20]))
-        print("Eval episode indices: {}".format(eval_episode_idx[:20]))
+    return train_idxs, eval_idxs
 
-        print("Overlap indices: {}".format(len(set(train_episode_idx).intersection(set(eval_episode_idx)))))
+
+def train_val_split_instruction_holdout(data):
+    vocab = load_vocab()
+    instructions = vocab["sentences"]
+
+    rs_split = ShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    train_idxs = []
+    eval_idxs = []
+    for train_instructions, eval_instructions in rs_split.split(instructions):
+        train_instructions = [instructions[idx] for idx in train_instructions]
+        eval_instructions = [instructions[idx] for idx in eval_instructions]
+
+        train_episode_idx = get_episode_idx_by_instructions(data["episodes"], train_instructions)
+        eval_episode_idx = get_episode_idx_by_instructions(data["episodes"], eval_instructions)
+
+        check_overlap(train_episode_idx, eval_episode_idx)
 
         train_idxs.append(train_episode_idx)
         eval_idxs.append(eval_episode_idx)
@@ -96,21 +110,51 @@ def train_test_split_episodes(data):
     return train_idxs, eval_idxs
 
 
-def save_splits(data, indexes, path):
+def train_val_split_instruction_holdout(data):
+    vocab = load_vocab()
+    instructions = vocab["sentences"]
+
+    rs_split = ShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    train_idxs = []
+    eval_idxs = []
+    for train_instructions, eval_instructions in rs_split.split(instructions):
+        train_episode_idx = get_episode_idx_by_instructions(data, train_instructions)
+        eval_episode_idx = get_episode_idx_by_instructions(data, eval_instructions)
+
+        check_overlap(train_episode_idx, eval_episode_idx)
+
+        train_idxs.append(train_episode_idx)
+        eval_idxs.append(eval_episode_idx)
+
+    return train_idxs, eval_idxs
+
+
+def train_val_split_scene_holdout(data):
+    vocab = load_vocab()
+    scenes = ["house.glb", "empty_house.glb", "bigger_house.glb", "big_house.glb", "big_house_2.glb"]
+
+    rs_split = ShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    train_idxs = []
+    eval_idxs = []
+    for train_scenes, eval_scenes in rs_split.split(scenes):
+        train_episode_idx = get_episode_idx_by_scene_ids(data, train_scenes)
+        eval_episode_idx = get_episode_idx_by_scene_ids(data, eval_scenes)
+
+        check_overlap(train_episode_idx, eval_episode_idx)
+
+        train_idxs.append(train_episode_idx)
+        eval_idxs.append(eval_episode_idx)
+
+    return train_idxs, eval_idxs
+
+
+def save_splits(data, indices, path):
     split_data = {
         "episodes": [],
+        "instruction_vocab": data["instruction_vocab"]
     }
-    instructions = []
-    for i in range(len(data["episodes"])):
-        episode = data["episodes"][i]
-        if i in indexes:
-            instructions.append(episode["instruction"]["instruction_text"])
-            split_data["episodes"].append(episode)
-    
-    split_data["instruction_vocab"] = {
-        "sentences": list(set(instructions))
-    }
-    
+    split_data["episodes"] = get_episodes_by_episode_index(data["episodes"], indices)
+
     write_json(split_data, path)
     write_gzip(path, path)
 
@@ -118,26 +162,18 @@ def save_splits(data, indexes, path):
 def get_episode_data(data, episode_ids):
     split_data = {
         "episodes": [],
+        "instruction_vocab": data["instruction_vocab"]
     }
     instructions = []
-    for i in range(len(data["episodes"])):
-        episode = data["episodes"][i]
-        episode_id = episode["episode_id"]
-        if episode_id in episode_ids:
-            instructions.append(episode["instruction"]["instruction_text"])
-            split_data["episodes"].append(episode)
-    
-    split_data["instruction_vocab"] = {
-        "sentences": list(set(instructions))
-    }
+    split_data["episodes"] = get_episodes_by_episode_ids(data["episodes"], episode_ids)
     return split_data
 
 
-def get_episode_ids(data, indexes):
+def get_episode_ids(data, indices):
     episode_ids = []
     for i in range(len(data["episodes"])):
         episode = data["episodes"][i]
-        if i in indexes:
+        if i in indices:
             episode_ids.append(episode["episode_id"])
     
     return episode_ids
@@ -152,9 +188,16 @@ def get_episode_ids(data):
     return episode_ids
 
 
-def split_data(path, output_path):
+def split_data(path, output_path, instruction_holdout=False, scene_holdout=False):
     data = load_dataset(path)
-    train_idxs, eval_idxs = train_test_split_episodes(data)
+    train_idxs = []
+    eval_idxs = []
+    if instruction_holdout:
+        train_idxs, eval_idxs = train_val_split_instruction_holdout(data)
+    elif scene_holdout:
+        train_idxs, eval_idxs = train_val_split_scene_holdout(data)
+    else:
+        train_idxs, eval_idxs = train_val_split_episodes(data)
 
     for i, (train_idx, eval_idx) in enumerate(zip(train_idxs, eval_idxs)):
         print("Split {}: Train: {}, Eval: {}".format(i, len(train_idx), len(eval_idx)))
@@ -167,7 +210,7 @@ def split_data(path, output_path):
 
 def validate_split_data(path, train_data_path, eval_data_path):
     data = load_dataset(path)
-    train_idx, eval_idx = train_test_split_episodes(data)
+    train_idx, eval_idx = train_val_split_episodes(data)
     train_episode_ids = get_episode_ids(data, train_idx)
     eval_episodes_ids = get_episode_ids(data, eval_idx)
     validate_existing_split_overlap(train_data_path, eval_data_path, train_episode_ids, eval_episodes_ids)
@@ -297,16 +340,22 @@ def main():
     parser.add_argument(
         "--create-split", dest='create_split', action='store_true'
     )
+    parser.add_argument(
+        "--instruction-holdout", dest='instruction_holdout', action='store_true'
+    )
+    parser.add_argument(
+        "--scene-holdout", dest='scene_holdout', action='store_true'
+    )
     args = parser.parse_args()
 
     if args.create_split:
         create_split_from_existing_data(args.input_path, args.train_data_path, args.eval_data_path, args.output_path)
     elif args.validate_before_split:
         validate_split_data(args.input_path, args.train_data_path, args.eval_data_path)
-    elif not args.validate:
-        split_data(args.input_path, args.output_path)
-    else:
+    elif args.validate:
         validate_data(args.input_path, args.train_data_path, args.eval_data_path)
+    else:
+        split_data(args.input_path, args.output_path, args.instruction_holdout, args.scene_holdout)
 
 
 if __name__ == "__main__":

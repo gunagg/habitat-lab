@@ -24,8 +24,7 @@ EVAL:
   SPLIT: "eval"
 
 RL:
-  REWARD_MEASURE: "agent_receptacle_distance"
-  REWARD_MEASURE_2: "agent_object_distance"
+  REWARD_MEASURE: "rearrangement_reward"
   SUCCESS_MEASURE: "success"
   SUCCESS_REWARD: 2.5
   GRAB_SUCCESS_REWARD: 1.5

@@ -221,7 +221,8 @@ class Env:
 
         observations = self.task.reset(episode=self.current_episode)
         self._task.measurements.reset_measures(
-            episode=self.current_episode, task=self.task
+            episode=self.current_episode,
+            task=self.task, observations=observations
         )
 
         return observations
@@ -269,7 +270,8 @@ class Env:
         )
 
         self._task.measurements.update_measures(
-            episode=self.current_episode, action=action, task=self.task
+            episode=self.current_episode, action=action,
+            task=self.task, observations=observations
         )
 
         self._update_step_stats()

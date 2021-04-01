@@ -8,6 +8,7 @@ import json
 import re
 import sys
 
+from collections import defaultdict
 from tqdm import tqdm
 from habitat.datasets.utils import VocabFromText
 
@@ -19,8 +20,19 @@ max_num_actions = 0
 num_actions_lte_tenk = 0
 total_episodes = 0
 excluded_ep = 0
-task_episode_map = {}
+task_episode_map = defaultdict(list)
 filter_episodes = ["A1NSHNH3MNFRGW:39L1G8WVWSU59FQI8II4UT2G6QI13L", "A2CWA5VQZ6IWMQ:39U1BHVTDNU6IZ2RA12E0ZLBY9LT3Y", "A1NSHNH3MNFRGW:3EFVCAY5L5CY5TCSAOJ6PA6DGTD8JR", "A1ZE52NWZPN85P:3QY5DC2MXTNGYOX9U1TQ64WAKDYFUL", "AV0PUPRI47UDT:3CN4LGXD5ZRNHHKPKLUWIL5WRBM4Y6", "A1NSHNH3MNFRGW:3EO896NRAYYH3D4GDMU1G620U6UTJX", "A1ZE52NWZPN85P:3OONKJ5DKEMV821WTDVLO8D0NTABOE", "A2CWA5VQZ6IWMQ:3CN4LGXD5ZRNHHKPKLUWIL5WRBNY41", "A2CWA5VQZ6IWMQ:3VD82FOHKSREI7T27DRGZSJI5UOCOW", "A1ZE52NWZPN85P:3EO896NRAYYH3D4GDMU1G620UL7TJ4", "A2CWA5VQZ6IWMQ:35H6S234SC33UGEJS7IE4MRHS3M65N", "AKYXQY5IP7S0Z:3JW0YLFXRVJV1E89FQIRSG3706JWW3", "A1NSHNH3MNFRGW:3GNCZX450KQ8AS852Z84IXYKFQBPAO", "A3O5RKGH6VB19C:38F71OA9GVZXLGS0LZ24FUFGBIRMFI", "A3KC26Z78FBOJT:3QBD8R3Z23MBN3GNEYLYGU7UIH34OC", "A3O5RKGH6VB19C:39K0FND3AJI2PPBSAJGC1T4PE79AMY", "A2Q6L9LKSNU7EB:3VSOLARPKDCNYKTDCVXX9ZKZ8TB93T", "A272X64FOZFYLB:33M4IA01QI45IIWDQ147709XL9WRXA", "A2Q6L9LKSNU7EB:3LOZAJ85YFGOEYFSBBP66S1PA1O2XJ", "AKYXQY5IP7S0Z:3CFVK00FWNOHW5H4KUYLLBNEJXKL61", "A2Q6L9LKSNU7EB:3KMS4QQVK4T2VSSX0NPO0HNCMECFKO", "A3PFU4042GIQLE:34Z02EIMIUGA173UREKVY1N4026T0N", "AEWGY34WUIA32:3WYGZ5XF3YIBZXXJ67PN7G6RB28KSA", "A2Q6L9LKSNU7EB:3180JW2OT6FFIBTQCQC3DQWMI02J5O", "A1ZE52NWZPN85P:3ZPPDN2SLXZQ8I9A1FETSQOWVR5E97", "ADXHWQLUQBK77:3TK8OJTYM3OS2GB3DUZ0EKCXZLLVP9", "A272X64FOZFYLB:3J2UYBXQQNF4Z9SIV1C2NRVQBPE60T", "A1ZE52NWZPN85P:3IX2EGZR7DM4NYRO9XP6GR1I61HJRQ", "AEWGY34WUIA32:39O5D9O87VVPWI0GOF7OBPL79IXC3Z", "A1ZE52NWZPN85P:3X0H8UUIT3R2UXR0VL8QVR0MUY2SW9", "A2CWA5VQZ6IWMQ:31QTRG6Q2VG96A68I5MKLJGRI7NYPW"]
+scene_map = {
+    "empty_house.glb": "",
+    "house.glb": "",
+    "big_house.glb": "",
+    "big_house_2.glb": "",
+    "bigger_house.glb": "",
+    "house_4.glb": "",
+    "house_5.glb": "",
+    "house_6.glb": "",
+    "house_8.glb": "",
+}
 
 
 def read_csv(path, delimiter=","):
@@ -194,9 +206,7 @@ def handle_step(step, episode, unique_id, timestamp):
                 "instruction_text": instruction_text.lower(),
             }
             append_instruction(instruction_text)
-            object_receptacle_map = {}
             if "goals" in data["task"].keys():
-                object_receptacle_map = data["task"]["goals"]["objectToReceptacleMap"]
                 goals = []
                 for object_ in episode["objects"]:
                     goals.append({
@@ -378,10 +388,15 @@ def prune_episode_end(reference_replay):
     reference_replay = pruned_reference_replay[:]
     return reference_replay
 
+def load_vocab(vocab_path="data/datasets/object_rearrangement/vocab.json"):
+    vocab_file = open(vocab_path, "r")
+    vocab = json.loads(vocab_file.read())
+    return vocab
 
 def compute_instruction_tokens(episodes):
+    vocab = load_vocab()
     instruction_vocab = VocabFromText(
-        sentences=list(set(instruction_list))
+        sentences=vocab["sentences"]
     )
     max_token_size = 0
     for episode in episodes:
@@ -419,10 +434,10 @@ def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_le
             if len(episodes) >= max_episodes:
                 break
 
-
+    vocab = load_vocab()
     all_episodes["episodes"] = compute_instruction_tokens(copy.deepcopy(episodes))
     all_episodes["instruction_vocab"] = {
-        "sentences": list(set(instruction_list))
+        "sentences": vocab["sentences"]
     }
 
     if len(unique_action_combo_map.keys()) > 0:
@@ -489,7 +504,7 @@ def show_average(all_episodes, episode_lengths):
 
 
 def list_missing_episodes():
-    episode_ids = set([i for i in range(1371)])
+    episode_ids = set([i for i in range(1020)])
     for key, val in task_episode_map.items():
         val_set = set([int(v) for v in val])
         missing_episodes = episode_ids.difference(val_set)
