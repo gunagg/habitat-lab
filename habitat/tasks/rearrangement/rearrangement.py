@@ -816,6 +816,7 @@ class GrabSuccess(Measure):
         return "grab_success"
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        self._metric = 0
         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
     def update_metric(
@@ -823,9 +824,7 @@ class GrabSuccess(Measure):
     ):
         gripped_object_id = self._sim.gripped_object_id
         if gripped_object_id != -1 and gripped_object_id != self.prev_gripped_object_id:
-            self._metric = 1
-        else:
-            self._metric = 0
+            self._metric += 1
         self.prev_gripped_object_id = gripped_object_id
 
 
@@ -851,7 +850,7 @@ class RearrangementTask(EmbodiedTask):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        # self._is_episode_active = False
+        self._is_episode_active = False
     
     def reset(self, **kwargs):
         # self._is_episode_active = False

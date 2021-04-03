@@ -287,6 +287,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
         count_checkpoints = 0
         start_update = 0
         prev_time = 0
+        reward_compute_time = 0
 
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
@@ -308,6 +309,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
             count_checkpoints = requeue_stats["count_checkpoints"]
             start_update = requeue_stats["start_update"]
             prev_time = requeue_stats["prev_time"]
+            reward_compute_time = requeue_stats["reward_compute_time"]
 
         with (
             TensorboardWriter(
@@ -341,6 +343,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                             count_checkpoints=count_checkpoints,
                             start_update=update,
                             prev_time=(time.time() - t_start) + prev_time,
+                            reward_compute_time=reward_compute_time,
                         )
                         save_interrupted_state(
                             dict(
@@ -362,6 +365,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                     (
                         delta_pth_time,
                         delta_env_time,
+                        delta_reward_compute_time,
                         delta_steps,
                     ) = self._collect_rollout_step(
                         rollouts, current_episode_reward, running_episode_stats, current_episode_pred_reward
@@ -369,6 +373,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                     pth_time += delta_pth_time
                     env_time += delta_env_time
                     count_steps_delta += delta_steps
+                    reward_compute_time += delta_reward_compute_time
 
                     # This is where the preemption of workers happens.  If a
                     # worker detects it will be a straggler, it preempts itself!
@@ -489,8 +494,8 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
 
                         logger.info(
                             "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
-                            "frames: {}".format(
-                                update, env_time, pth_time, count_steps
+                            "reward-compute-time: {:.3f}s\tframes: {}".format(
+                                update, env_time, pth_time, reward_compute_time, count_steps
                             )
                         )
                         logger.info(

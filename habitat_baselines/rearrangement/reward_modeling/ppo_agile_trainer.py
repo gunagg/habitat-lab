@@ -215,6 +215,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
     ):
         pth_time = 0.0
         env_time = 0.0
+        reward_compute_time = 0.0
 
         t_sample_action = time.time()
         # sample actions
@@ -263,12 +264,15 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         )
         rewards = rewards.unsqueeze(1)
 
+        t_compute_reward = time.time()
         # Use reward model to get rewards
-        learning_rewards = self.discriminator(batch)
+        with torch.no_grad():
+            learning_rewards = self.discriminator(batch)
+            learning_rewards = learning_rewards.clone().detach() > self.discr_thr
+            learning_rewards = (self.rescale_coef * learning_rewards.float()).clone().detach()
+            learning_rewards = learning_rewards.to(current_episode_reward.device)
 
-        learning_rewards = torch.tensor(
-            self.rescale_coef * (learning_rewards > self.discr_thr), dtype=torch.float, device=current_episode_pred_reward.device
-        )
+        reward_compute_time = time.time() - t_compute_reward
 
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones],
@@ -299,8 +303,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             with torch.no_grad():
                 batch["visual_features"] = self._encoder(batch)
 
-        current_episodes = self.envs.current_episodes()
-        current_scenes = [episode.scene_id for episode in current_episodes]
+        current_scenes = self.envs.current_scenes()
 
         rollouts.insert(
             batch,
@@ -315,7 +318,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
 
         pth_time += time.time() - t_update_stats
 
-        return pth_time, env_time, self.envs.num_envs
+        return pth_time, env_time, reward_compute_time, self.envs.num_envs
 
     @profiling_wrapper.RangeContext("_update_agent")
     def _update_agent(self, ppo_cfg, rollouts):
@@ -431,6 +434,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         pth_time = 0
         count_steps = 0
         count_checkpoints = 0
+        reward_compute_time = 0
 
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
@@ -457,6 +461,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                     (
                         delta_pth_time,
                         delta_env_time,
+                        delta_reward_compute_time,
                         delta_steps,
                     ) = self._collect_rollout_step(
                         rollouts, current_episode_reward, running_episode_stats, current_episode_pred_reward
@@ -464,6 +469,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                     pth_time += delta_pth_time
                     env_time += delta_env_time
                     count_steps += delta_steps
+                    reward_compute_time += delta_reward_compute_time
                 profiling_wrapper.range_pop()  # rollouts loop
 
                 (
@@ -531,8 +537,8 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
 
                     logger.info(
                         "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
-                        "frames: {}".format(
-                            update, env_time, pth_time, count_steps
+                        "reward-compute-time: {:.3f}s\tframes: {}".format(
+                            update, env_time, pth_time, reward_compute_time, count_steps
                         )
                     )
 

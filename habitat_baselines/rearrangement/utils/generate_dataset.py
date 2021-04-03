@@ -17,10 +17,11 @@ from PIL import Image
 config = habitat.get_config("habitat_baselines/config/object_rearrangement/il_object_rearrangement.yaml")
 
 
-def generate_episode_dataset(config):
+def generate_episode_dataset(config, mode):
     rearrangement_dataset = RearrangementEpisodeDataset(
         config,
         content_scenes=config.TASK_CONFIG.DATASET.CONTENT_SCENES,
+        mode=mode,
         use_iw=config.IL.USE_IW,
         inflection_weight_coef=config.MODEL.inflection_weight_coef
     )
@@ -34,6 +35,9 @@ def main():
     parser.add_argument(
         "--episodes", type=str, default="data/datasets/object_rearrangement/v0/train/train.json.gz"
     )
+    parser.add_argument(
+        "--mode", type=str, default="train"
+    )
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
@@ -45,7 +49,7 @@ def main():
     cfg.TASK_CONFIG = task_config
     cfg.freeze()
 
-    observations = generate_episode_dataset(cfg)
+    observations = generate_episode_dataset(cfg, args.mode)
 
 if __name__ == "__main__":
     main()

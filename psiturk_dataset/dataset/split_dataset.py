@@ -110,25 +110,6 @@ def train_val_split_instruction_holdout(data):
     return train_idxs, eval_idxs
 
 
-def train_val_split_instruction_holdout(data):
-    vocab = load_vocab()
-    instructions = vocab["sentences"]
-
-    rs_split = ShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-    train_idxs = []
-    eval_idxs = []
-    for train_instructions, eval_instructions in rs_split.split(instructions):
-        train_episode_idx = get_episode_idx_by_instructions(data, train_instructions)
-        eval_episode_idx = get_episode_idx_by_instructions(data, eval_instructions)
-
-        check_overlap(train_episode_idx, eval_episode_idx)
-
-        train_idxs.append(train_episode_idx)
-        eval_idxs.append(eval_episode_idx)
-
-    return train_idxs, eval_idxs
-
-
 def train_val_split_scene_holdout(data):
     vocab = load_vocab()
     scenes = ["house.glb", "empty_house.glb", "bigger_house.glb", "big_house.glb", "big_house_2.glb"]

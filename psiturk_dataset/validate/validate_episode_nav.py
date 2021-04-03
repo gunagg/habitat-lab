@@ -12,6 +12,7 @@ from habitat import Config
 from habitat_sim.utils import viz_utils as vut
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_sim.utils.common import quat_to_coeffs
+from psiturk_dataset.utils.utils import write_json
 
 
 config = habitat.get_config("configs/tasks/object_rearrangement.yaml")
@@ -76,9 +77,14 @@ def run_validation(cfg, num_steps=5):
             is_navigable = are_points_navigable(sim, points)
             navigable_episodes += int(is_navigable)
 
+            if not is_navigable:
+                non_navigable_episodes.append(env.current_episode.episode_id)
+
             if ep_id % 10 == 0:
                 print("Total {}/{} episodes are navigable".format(navigable_episodes, len(env.episodes)))
         print("Total {}/{} episodes are navigable".format(navigable_episodes, len(env.episodes)))
+        print(non_navigable_episodes)
+        write_json(non_navigable_episodes, "data/hit_data/non_navigable_episodes_ll.json")
 
 
 def main():

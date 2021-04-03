@@ -11,6 +11,7 @@ import sys
 from collections import defaultdict
 from tqdm import tqdm
 from habitat.datasets.utils import VocabFromText
+from psiturk_dataset.utils.utils import load_vocab
 
 
 max_instruction_len = 9
@@ -388,10 +389,6 @@ def prune_episode_end(reference_replay):
     reference_replay = pruned_reference_replay[:]
     return reference_replay
 
-def load_vocab(vocab_path="data/datasets/object_rearrangement/vocab.json"):
-    vocab_file = open(vocab_path, "r")
-    vocab = json.loads(vocab_file.read())
-    return vocab
 
 def compute_instruction_tokens(episodes):
     vocab = load_vocab()

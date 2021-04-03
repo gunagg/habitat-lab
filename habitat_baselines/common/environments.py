@@ -92,6 +92,7 @@ class RearrangementRLEnv(habitat.RLEnv):
         self._rl_config = config.RL
         self._core_env_config = config.TASK_CONFIG
         self._reward_measure_name = self._rl_config.REWARD_MEASURE
+        self._success_measure_name = self._rl_config.SUCCESS_MEASURE
         super().__init__(self._core_env_config, dataset)
 
     def reset(self):

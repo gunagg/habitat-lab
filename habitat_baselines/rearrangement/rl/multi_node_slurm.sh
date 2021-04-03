@@ -8,6 +8,7 @@
 #SBATCH --constraint=rtx_6000
 #SBATCH --output=slurm_logs/ddppo-%j.out
 #SBATCH --error=slurm_logs/ddppo-%j.err
+#SBATCH --exclude=claptrap
 
 source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate

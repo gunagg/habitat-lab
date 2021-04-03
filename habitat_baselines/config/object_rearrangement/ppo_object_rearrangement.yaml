@@ -12,7 +12,7 @@ VIDEO_DIR: "video_dir/ddppo_dense_reward_resnet18/eval"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_dense_reward_resnet18/ckpt.19.pth"
-NUM_PROCESSES: 5
+NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_dense_reward_resnet18"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10

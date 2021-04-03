@@ -71,7 +71,7 @@ RL:
     # Initialize just the visual encoder backbone with pretrained weights
     pretrained_encoder: False
     # Whether or not the visual encoder backbone will be trained.
-    train_encoder: False
+    train_encoder: True
     # Whether or not to reset the critic linear layer
     reset_critic: True
 
@@ -120,7 +120,6 @@ MODEL:
   TORCH_GPU_ID: 0
 
 DISCRIMINATOR:
-  inflection_weight_coef: 6.6991838665799275
   ablate_depth: False
   ablate_rgb: False
   ablate_instruction: False

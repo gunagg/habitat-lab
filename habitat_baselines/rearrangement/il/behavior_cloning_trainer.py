@@ -167,9 +167,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         prev_actions: Tensor,
         batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
-        action_indices: List[int],
-        reference_replays: List[Any],
-        action_match_count: List[Any]
     ) -> Tuple[
         Union[VectorEnv, RLEnv, Env],
         Tensor,
@@ -178,9 +175,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         Tensor,
         Dict[str, Tensor],
         List[List[Any]],
-        List[int],
-        List[Any],
-        List[Any]
     ]:
         # pausing self.envs with no new episode
         if len(envs_to_pause) > 0:
@@ -202,9 +196,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                 batch[k] = v[state_index]
 
             rgb_frames = [rgb_frames[i] for i in state_index]
-            action_indices = [action_indices[i] for i in state_index]
-            reference_replays = [reference_replays[i] for i in state_index]
-            action_match_count = [action_match_count[i] for i in state_index]
 
         return (
             envs,
@@ -214,9 +205,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             prev_actions,
             batch,
             rgb_frames,
-            action_indices,
-            reference_replays,
-            action_match_count
         )
     
 
@@ -323,6 +311,11 @@ class RearrangementBCTrainer(BaseILTrainer):
             while epoch <= config.IL.BehaviorCloning.max_epochs:
                 start_time = time.time()
                 avg_loss = 0.0
+                avg_load_time = 0.0
+                avg_slice_time = 0.0
+                avg_train_time = 0.0
+
+                batch_start_time = time.time()
 
                 for batch in train_loader:
                     torch.cuda.empty_cache()
@@ -336,6 +329,8 @@ class RearrangementBCTrainer(BaseILTrainer):
                      inflec_weights
                     ) = batch
 
+                    avg_load_time += ((time.time() - batch_start_time) / 60)
+
                     optim.zero_grad()
                     AuxLosses.clear()
 
@@ -344,6 +339,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                     num_steps = num_samples // timestep_batch_size + (num_samples % timestep_batch_size != 0)
                     batch_loss = 0
                     for i in range(num_steps):
+                        slice_start_time = time.time()
                         start_idx = i * timestep_batch_size
                         end_idx = start_idx + timestep_batch_size
                         observations_batch_sample = {
@@ -355,6 +351,10 @@ class RearrangementBCTrainer(BaseILTrainer):
                         gt_prev_action_sample = gt_prev_action[start_idx:end_idx].long().to(self.device)
                         episode_not_dones_sample = episode_not_done[start_idx:end_idx].long().to(self.device)
                         inflec_weights_sample = inflec_weights[start_idx:end_idx].long().to(self.device)
+
+                        avg_slice_time += ((time.time() - slice_start_time) / 60)
+
+                        train_time = time.time()
 
                         logits, rnn_hidden_states = self.model(
                             observations_batch_sample,
@@ -376,12 +376,14 @@ class RearrangementBCTrainer(BaseILTrainer):
                         batch_loss += loss.item()
                         rnn_hidden_states = rnn_hidden_states.detach()
 
+                        avg_train_time += ((time.time() - train_time) / 60)
+
                     avg_loss += batch_loss
 
                     if t % config.LOG_INTERVAL == 0:
                         logger.info(
-                            "[ Epoch: {}; iter: {}; loss: {:.3f} ]".format(
-                                epoch, t, batch_loss
+                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f}; samples: {:.3f}]".format(
+                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t, t
                             )
                         )
                         writer.add_scalar("train_loss", loss, t)
@@ -389,19 +391,22 @@ class RearrangementBCTrainer(BaseILTrainer):
                     optim.step()
                     scheduler.step()
                     rnn_hidden_states = torch.zeros(
-                                            config.MODEL.STATE_ENCODER.num_recurrent_layers,
-                                            batch_size,
-                                            config.MODEL.STATE_ENCODER.hidden_size,
-                                            device=self.device,
-                                        )
+                        config.MODEL.STATE_ENCODER.num_recurrent_layers,
+                        batch_size,
+                        config.MODEL.STATE_ENCODER.hidden_size,
+                        device=self.device,
+                    )
+                    batch_start_time = time.time()
 
                 end_time = time.time()
                 time_taken = "{:.1f}".format((end_time - start_time) / 60)
                 avg_loss = avg_loss / len(train_loader)
+                avg_train_time = avg_train_time / len(train_loader)
+                avg_load_time = avg_load_time / len(train_loader)
 
                 logger.info(
-                    "[ Epoch {} completed. Time taken: {} minutes. ]".format(
-                        epoch, time_taken
+                    "[ Epoch {} completed. Time taken: {} minutes. Load time: {} mins. Train time: {} mins]".format(
+                        epoch, time_taken, avg_load_time, avg_train_time
                     )
                 )
                 logger.info("[ Average loss: {:.3f} ]".format(avg_loss))
@@ -517,12 +522,12 @@ class RearrangementBCTrainer(BaseILTrainer):
         action_indices = [1] * self.envs.num_envs
         action_match_count = [(0, 0)] * self.envs.num_envs
         possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+        episode_count = 0
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
-            reference_replays = [episode.reference_replay for episode in current_episodes]
 
             with torch.no_grad():
                 (
@@ -537,12 +542,6 @@ class RearrangementBCTrainer(BaseILTrainer):
 
                 actions = torch.argmax(logits, dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))
-
-            for i in range(self.envs.num_envs):
-                gt_action = get_habitat_sim_action(reference_replays[i][action_indices[i]].action)
-                pred_action = actions[i].item()
-                num_action_match = action_match_count[i][0] + (gt_action == pred_action)
-                action_match_count[i] = (num_action_match, action_match_count[i][1] + 1)
 
             action_names = [possible_actions[a.item()] for a in actions.to(device="cpu")]
             # NB: Move actions to CPU.  If CUDA tensors are
@@ -569,11 +568,9 @@ class RearrangementBCTrainer(BaseILTrainer):
             ).unsqueeze(1)
             current_episode_reward += rewards
             next_episodes = self.envs.current_episodes()
-            reference_replays = [episode.reference_replay for episode in current_episodes]
             envs_to_pause = []
             n_envs = self.envs.num_envs
             for i in range(n_envs):
-                action_indices[i] = min(action_indices[i] + 1, len(reference_replays[i]) - 1)
                 if (
                     next_episodes[i].scene_id,
                     next_episodes[i].episode_id,
@@ -583,13 +580,8 @@ class RearrangementBCTrainer(BaseILTrainer):
                 # episode ended
                 if not_done_masks[i].item() == 0:
                     pbar.update()
-                    avg_action_match = action_match_count[i][0] / action_match_count[i][1]
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
-                    episode_stats["match_gt_trajectory"] = (avg_action_match == 1)
-                    episode_stats["avg_match_actions"] = avg_action_match
-                    episode_stats["ref_replay_len"] = len(current_episodes[i].reference_replay)
-                    episode_stats["pred_actions"] = action_match_count[i][1]
                     episode_stats.update(
                         self._extract_scalars_from_info(infos[i])
                     )
@@ -602,15 +594,14 @@ class RearrangementBCTrainer(BaseILTrainer):
                         )
                     ] = episode_stats
                     next_episodes = self.envs.current_episodes()
-                    action_match_count[i] = (0, 0)
-                    action_indices[i] = 1
+                    episode_count += 1
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
-                            episode_id=current_episodes[i].episode_id,
+                            episode_id=episode_count,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
@@ -636,9 +627,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
-                action_indices,
-                reference_replays,
-                action_match_count
             ) = self._pause_envs(
                 envs_to_pause,
                 self.envs,
@@ -648,38 +636,32 @@ class RearrangementBCTrainer(BaseILTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
-                action_indices,
-                reference_replays,
-                action_match_count
             )
 
-        aggregated_stats = dict()
-        for stat_key in next(iter(stats_episodes.values())).keys():
-            aggregated_stats[stat_key] = sum(
-                [v[stat_key] for v in stats_episodes.values()]
-            )
         num_episodes = len(stats_episodes)
-        print(aggregated_stats)
-        print(num_episodes)
+        aggregated_stats = {}
+        for stat_key in next(iter(stats_episodes.values())).keys():
+            aggregated_stats[stat_key] = (
+                sum(v[stat_key] for v in stats_episodes.values())
+                / num_episodes
+            )
 
-        episode_reward_mean = aggregated_stats["reward"] / num_episodes
-        episode_success_mean = aggregated_stats["success"] / num_episodes
-        episode_spl_mean = aggregated_stats["spl"] / num_episodes
-        episode_grab_success_mean = aggregated_stats["grab_success"] / num_episodes
+        for k, v in aggregated_stats.items():
+            logger.info(f"Average episode {k}: {v:.4f}")
 
-        episode_agent_object_distance_mean = aggregated_stats["agent_object_distance"] / num_episodes
-        episode_agent_receptacle_distance_mean = aggregated_stats["agent_receptacle_distance"] / num_episodes
-        match_gt_trajectory_mean = aggregated_stats["match_gt_trajectory"] / num_episodes
-        avg_match_actions_mean = aggregated_stats["avg_match_actions"] / num_episodes
+        step_id = checkpoint_index
+        if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
+            step_id = ckpt_dict["extra_state"]["step"]
 
-        logger.info(f"Average episode reward: {episode_reward_mean:.6f}")
-        logger.info(f"Average episode success: {episode_success_mean:.6f}")
-        logger.info(f"Average episode SPL: {episode_spl_mean:.6f}")
-        logger.info(f"Average episode grab success: {episode_grab_success_mean:.6f}")
-        logger.info(f"Average episode agent object distance: {episode_agent_object_distance_mean:.6f}")
-        logger.info(f"Average episode agent receptacle distance: {episode_agent_receptacle_distance_mean:.6f}")
-        logger.info(f"Average episode exact GT match: {match_gt_trajectory_mean:.6f}")
-        logger.info(f"Average episode percentage action match: {avg_match_actions_mean:.6f}")
+        writer.add_scalars(
+            "eval_reward",
+            {"average reward": aggregated_stats["reward"]},
+            step_id,
+        )
+
+        metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
+        if len(metrics) > 0:
+            writer.add_scalars("eval_metrics", metrics, step_id)
 
         self.envs.close()
 
@@ -719,12 +701,5 @@ class RearrangementBCTrainer(BaseILTrainer):
                 "rot_dist": rot_dist
             }
 
-        # pred_img = "../psiturk-habitat-sim/data/training_results/preds/task_3/img_{}.png".format(count)
-        # img = Image.fromarray(batch["rgb"].squeeze(0).numpy())
-        # img.save(pred_img)
-
-        # gt_img = "../psiturk-habitat-sim/data/training_results/gt/task_3/img_{}.png".format(count)
-        # img = Image.fromarray(obs_rgb[count][0].numpy().astype(np.uint8))
-        # img.save(gt_img)
         return agent_l2_distance, agent_quat_distance, sensor_quat_distance, object_dist_map
 

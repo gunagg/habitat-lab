@@ -33,7 +33,7 @@ IL:
   BehaviorCloning:
     lr: 0.001
     max_epochs: 20
-    batch_size: 8
+    batch_size: 1
     timestep_batch_size: 800
     freeze_encoder: False
 
@@ -51,7 +51,7 @@ MODEL:
   ablate_rgb: False
   ablate_instruction: False
   INSTRUCTION_ENCODER:
-    vocab_size: 66
+    vocab_size: 128
     embedding_size: 64
     hidden_size: 128
     use_pretrained_embeddings: False

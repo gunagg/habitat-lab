@@ -55,7 +55,7 @@ RL:
   DDPPO:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
-    distrib_backend: NCCL
+    distrib_backend: GLOO
     # Visual encoder backbone
     pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
     # Initialize with pretrained weights
@@ -63,7 +63,7 @@ RL:
     # Initialize just the visual encoder backbone with pretrained weights
     pretrained_encoder: False
     # Whether or not the visual encoder backbone will be trained.
-    train_encoder: False
+    train_encoder: True
     # Whether or not to reset the critic linear layer
     reset_critic: True
 

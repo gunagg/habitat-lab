@@ -62,6 +62,7 @@ GET_AGENT_POSE = "get_agent_pose"
 GET_OBJECT_STATE = "get_current_object_states"
 SCENES_SPLITS = "scene_splits"
 DATASETS = "datasets"
+SCENE_COMMAND = "current_scene"
 
 
 def _make_env_fn(
@@ -271,6 +272,10 @@ class VectorEnv:
                     result = env._env._dataset
                     connection_write_fn(result)
 
+                elif command == SCENE_COMMAND:
+                    result = env.current_episode.scene_id
+                    connection_write_fn(result)
+
                 else:
                     raise NotImplementedError
 
@@ -323,6 +328,16 @@ class VectorEnv:
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((EPISODE_COMMAND, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def current_scenes(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((SCENE_COMMAND, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())

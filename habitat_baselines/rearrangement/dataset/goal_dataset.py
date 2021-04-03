@@ -243,3 +243,37 @@ class RearrangementGoalDataset(Dataset):
             observations[k] = torch.from_numpy(obs)
 
         return observations
+
+    def get_items(self, idxs: int, scene_ids: str):
+        r"""Returns batches to trainer.
+
+        batch: (rgb, depth, seg)
+
+        """
+        org_scene_id = scene_id
+        scene_id = scene_id.split("/")[-1].replace(".", "_")
+        if self.lmdb_env is None:
+            self.lmdb_env = lmdb.open(
+                self.dataset_path,
+                map_size=int(1e11),
+                readonly=True,
+                lock=False,
+            )
+            self.lmdb_txn = self.lmdb_env.begin()
+            self.lmdb_cursor = self.lmdb_txn.cursor()
+        
+        height, width = int(self.resolution[0]), int(self.resolution[1])
+        batch_obs = defaultdict(list)
+        for idx, scene_id in zip(idxs, scene_ids):
+            obs_idx = "{0}_{1:0=6d}_obs".format(scene_id, idx)
+            observations_binary = self.lmdb_cursor.get(obs_idx.encode())
+            observations = msgpack_numpy.unpackb(observations_binary, raw=False)
+            for k, v in observations.items():
+                obs = np.array(observations[k])
+                obs = torch.from_numpy(obs)
+                batch_obs[k].append(obs)
+        
+        for key, val in batch_obs:
+            batch_obs[key] = torch.stack(batch_obs[key], 1)
+
+        return batch_obs
