@@ -675,6 +675,7 @@ class Collisions(Measure):
 @registry.register_measure
 class TopDownMap(Measure):
     r"""Top Down Map measure"""
+    cls_uuid = "top_down_map"
 
     def __init__(
         self, sim: "HabitatSim", config: Config, *args: Any, **kwargs: Any

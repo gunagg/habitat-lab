@@ -506,13 +506,11 @@ def generate_points(
     task_file = config["TASK"]["TASK_MAP_FILE"]
     object_groups = json.loads(open(task_file, "r").read())
 
-    num_tasks = 0
-    for object_group in object_groups:
-        num_tasks += len(object_group)
+    num_tasks = len(object_groups)
 
     num_episodes = num_tasks * num_episodes
     num_episodes = 10
-    print("Generating total {} episodes".format(num_episodes))
+    print("Generating total {}/{} episodes".format(num_episodes, num_tasks))
     while episode_count < num_episodes:
         print("Generating {} episodes".format(len(object_groups)))
         for i, object_list in enumerate(object_groups):
@@ -606,7 +604,7 @@ if __name__ == "__main__":
         "-n",
         "--num_episodes",
         type=int,
-        default=2,
+        default=1,
         help="Number of episodes to generate per object receptacle pair",
     )
     parser.add_argument(
@@ -632,7 +630,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--d_lower_lim",
         type=float,
-        default=0.5,
+        default=1.5,
         help="Closest distance between objects allowed.",
     )
     parser.add_argument(

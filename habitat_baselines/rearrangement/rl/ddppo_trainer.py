@@ -42,13 +42,13 @@ from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
 from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
     PointNavResNetPolicy,
 )
-from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
+from habitat_baselines.rearrangement.rl.ppo_trainer import RearrangementPPOTrainer
 from habitat_baselines.utils.common import batch_obs, linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
 
 
 @baseline_registry.register_trainer(name="rearrangement-ddppo")
-class RearrangementDDPPOTrainer(PPOTrainer):
+class RearrangementDDPPOTrainer(RearrangementPPOTrainer):
     # DD-PPO cuts rollouts short to mitigate the straggler effect
     # This, in theory, can cause some rollouts to be very short.
     # All rollouts contributed equally to the loss/model-update,

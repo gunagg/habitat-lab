@@ -196,7 +196,6 @@ def handle_step(step, episode, unique_id, timestamp):
                 object_data["position"] = data["objects"][idx]["position"]
                 object_data["rotation"] = data["objects"][idx]["rotation"]
                 object_data["motion_type"] = data["objects"][idx]["motionType"]
-                object_data["object_icon"] = data["objects"][idx]["objectIcon"]
                 object_data["is_receptacle"] = data["objects"][idx]["isReceptacle"]
                 episode["objects"].append(object_data)
 

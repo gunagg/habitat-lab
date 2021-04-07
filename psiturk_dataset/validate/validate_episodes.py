@@ -25,7 +25,7 @@ from habitat_sim.nav import NavMeshSettings
 from habitat.sims import make_sim
 from habitat_sim.utils.common import quat_from_coeffs, quat_from_magnum, quat_to_coeffs, quat_to_magnum
 from mpl_toolkits.mplot3d import Axes3D
-from psiturk_dataset.check_train_val_leak import load_dataset
+from psiturk_dataset.utils.utils import load_dataset
 
 
 ISLAND_RADIUS_LIMIT = 1.5
@@ -299,7 +299,7 @@ def validate_tasks(
     prev_episodes="data/tasks",
     scene_id="empty_house.glb",
     show_plot=False,
-    get_distance=False,
+    get_distance=True,
     check_tilt=False,
 ):
     sim = get_sim(config)
@@ -309,9 +309,9 @@ def validate_tasks(
 
     # Populate previously generated points
     tasks, all_points = get_all_tasks(prev_episodes, scene_id, sim)
-    sys.exit(1)
     if get_distance:
         get_points_distance(np.array(all_points), sim, show_plot)
+    sys.exit(1)
 
     results = []
     i = 0

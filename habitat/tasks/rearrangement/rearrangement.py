@@ -19,7 +19,7 @@ from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, Simulator, SensorTypes
 from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav import merge_sim_episode_config, DistanceToGoal
+from habitat.tasks.nav.nav import merge_sim_episode_config, DistanceToGoal, TopDownMap
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import SimulatorTaskAction, Measure
 from habitat.sims.habitat_simulator.actions import (
@@ -60,7 +60,9 @@ class RearrangementObjectSpec(RearrangementSpec):
     object_template: Optional[str] = attr.ib(
         default="", validator=not_none_validator
     )
-    object_icon: Optional[str] = attr.ib(default="")
+    object_icon: Optional[str] = attr.ib(
+        default="", validator=not_none_validator
+    )
     motion_type: Optional[str] = attr.ib(default=None)
     is_receptacle: Optional[bool] = attr.ib(default=None)
 
@@ -323,7 +325,7 @@ class ObjectToReceptacleDistance(Measure):
                 obj_id = scene_object.object_id
             else:
                 receptacle_id = scene_object.object_id
-
+        was_nan = False
         if receptacle_id == -1:
             self._metric = 0.0
         elif obj_id != -1:
@@ -341,6 +343,9 @@ class ObjectToReceptacleDistance(Measure):
             self._metric = self._geo_dist(
                 object_position, receptacle_position
             )
+            if self._metric == np.inf or self._metric == np.nan:
+                was_nan = True
+                self._metric = 2.0
         else:
             receptacle_position = np.array(
                 self._sim.get_translation(receptacle_id)
@@ -353,7 +358,10 @@ class ObjectToReceptacleDistance(Measure):
             self._metric = self._geo_dist(
                 agent_position, receptacle_position
             )
-        if np.isnan(self._metric) or math.isnan(self._metric):
+            if self._metric == np.inf or self._metric == np.nan:
+                was_nan = True
+                self._metric = 2.0
+        if was_nan:
             logger.error("object receptacle distance is nan: {} -- {} - {} -- {}".format(receptacle_id, obj_id, object_position, episode.episode_id))
 
 
@@ -400,7 +408,7 @@ class AgentToObjectDistance(Measure):
             scene_object = self._sim.get_object_from_scene(object_id)
             if scene_object.is_receptacle == False:
                 sim_obj_id = scene_object.object_id
-
+        was_nan = False
         if sim_obj_id != -1:
             object_position = np.array(
                 self._sim.get_translation(sim_obj_id)
@@ -414,9 +422,12 @@ class AgentToObjectDistance(Measure):
             self._metric = self._geo_dist(
                 agent_position, object_position
             )
+            if self._metric == np.inf or self._metric == np.nan:
+                was_nan = True
+                self._metric = 2.0
         else:
             self._metric = 0.0
-        if self._metric == np.inf or self._metric == math.inf:
+        if was_nan:
             logger.error("Agent object distance is inf: {} -- {} -- {}".format(sim_obj_id, object_position, episode.episode_id))
 
 
@@ -477,6 +488,9 @@ class AgentToReceptacleDistance(Measure):
             self._metric = self._geo_dist(
                 agent_position, receptacle_position 
             )
+            if self._metric == np.inf or self._metric == np.nan:
+                was_nan = True
+                self._metric = 2.0
 
 
 @registry.register_measure
@@ -511,16 +525,172 @@ class GoalObjectVisible(Measure):
             semantic = observations["semantic"]
             object_ids = self._sim.get_existing_object_ids()
             goal_visible_pixels = 0
-            for object_id in object_ids:
-                semantic_object_id = self._sim.obj_id_to_semantic_obj_id_map[object_id]
-                goal_visible_pixels += (semantic == semantic_object_id).sum() # Sum over all since we're not batched
+            semantic_object_id = self._sim.obj_id_to_semantic_obj_id_map[0]
+            # If object is gripped caclulate visible pixels for receptacle
+            if observations["gripped_object_id"] != -1:
+                semantic_object_id = self._sim.obj_id_to_semantic_obj_id_map[1]
+            
+            goal_visible_pixels += (semantic == semantic_object_id).sum() # Sum over all since we're not batched
             goal_visible_area = goal_visible_pixels / semantic.size
-
-            # if goal_visible_area > 0:
-            #     print(
-            #         f"goal_visible_area={goal_visible_pixels}"
-            #     )
             self._metric = goal_visible_area
+
+
+@registry.register_measure
+class Coverage(Measure):
+    """Coverage
+    Number of visited squares in a gridded environment
+    - this is not exactly what we want to reward, but a decent starting point
+    - the semantic coverage is agent-based i.e. we should reward new visuals/objects discovered
+    - Note, internal grid has origin at bottom left
+    EGOCENTRIC -- center + align the coverage reward.
+    """
+    cls_uuid: str = "coverage"
+
+    def __init__(self, sim, config, **kwargs: Any):
+        self._sim = sim
+        self._config = config
+
+        self._visited = None  # number of visits
+        self._mini_visited = None
+        self._step = None
+        self._reached_count = None
+        self._mini_reached = None
+        self._mini_delta = 0.5
+        self._grid_delta = config.GRID_DELTA
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return self.cls_uuid
+
+    def _to_grid(self, delta, sim_x, sim_y, sim_z=0):
+        # ! Note we actually get sim_x, sim_z in 2D case but that doesn't affect code
+        grid_x = int((sim_x) / delta)
+        grid_y = int((sim_y) / delta)
+        grid_z = int((sim_z) / delta)
+        return grid_x, grid_y, grid_z
+
+    def reset_metric(self, episode, task, observations, *args: Any, **kwargs: Any):
+        # If EGOCENTRIC, we use the episodic coordinate frame, as defined by GPS Sensor
+        # ! EGOCENTRIC will ASSUME sensor available (I don't know the API to check sensor atm)
+        # if self._config.EGOCENTRIC:
+        #     task.measurements.check_measure_dependencies(
+        #         self.uuid, [EpisodicGPSSensor.cls_uuid]
+        #     ) # Also better be 3D
+        self._visited = {}
+        self._mini_visited = {}
+        self._reached_count = 0
+        # Used for coverage prediction (not elegant, I know)
+        self._mini_reached = 0
+        self._step = 0  # Tracking episode length
+        current_visit = self._visit(task, observations)
+        self._metric = {
+            "reached": self._reached_count,
+            "mini_reached": self._mini_reached,
+            "visit_count": current_visit,
+            "step": self._step
+        }
+
+    def _visit(self, task, observations):
+        """ Returns number of times visited current square """
+        self._step += 1
+        if self._config.EGOCENTRIC:
+            global_loc = observations[EpisodicGPSSensor.cls_uuid]
+        else:
+            global_loc = self._sim.get_agent_state().position.tolist()
+
+        mini_loc = self._to_grid(self._mini_delta, *global_loc)
+        if mini_loc in self._mini_visited:
+            self._mini_visited[mini_loc] += 1
+        else:
+            self._mini_visited[mini_loc] = 1
+            self._mini_reached += 1
+
+        grid_loc = self._to_grid(self._grid_delta, *global_loc)
+        if grid_loc in self._visited:
+            self._visited[grid_loc] += 1
+            return self._visited[grid_loc]
+        self._visited[grid_loc] = 1
+        self._reached_count += 1
+        return self._visited[grid_loc]
+
+    def update_metric(
+        self, *args: Any, episode, action, task: EmbodiedTask, observations, **kwargs: Any
+    ):
+        current_visit = self._visit(task, observations)
+        self._metric = {
+            "reached": self._reached_count,
+            "mini_reached": self._mini_reached,
+            "visit_count": current_visit,
+            "step": self._step
+        }
+
+
+@registry.register_measure
+class CoverageExplorationReward(Measure):
+    # Parallels ExploreRLEnv in `environments.py`
+
+    cls_uuid: str = "coverage_explore_reward"
+
+    def __init__(self, sim, config, **kwargs: Any):
+        self._sim = sim
+        self._config = config
+        self._attenuation_penalty = 1.0
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return self.cls_uuid
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.cls_uuid,
+            [
+                Coverage.cls_uuid,
+            ],
+        )
+        self._attenuation_penalty = 1.0
+        self._metric = 0
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
+
+    def update_metric(
+        self, *args: Any, episode, task: EmbodiedTask, **kwargs: Any
+    ):
+        self._attenuation_penalty *= self._config.ATTENUATION
+        visit = task.measurements.measures[
+            Coverage.cls_uuid
+        ].get_metric()["visit_count"]
+        self._metric = self._attenuation_penalty * self._config.REWARD / (visit ** self._config.VISIT_EXP)
+
+
+@registry.register_measure
+class ReleaseFailed(Measure):
+    r"""Grab Success - whether an object was grabbed during episode or not
+    """
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._config = config
+        self.prev_gripped_object_id = -1
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "release_failed"
+
+    def reset_metric(self, episode, task, observations, *args: Any, **kwargs: Any):
+        self._metric = 0
+        self.prev_gripped_object_id = -1
+        self.update_metric(episode=episode, task=task, observations=observations, action={"action": 0}, *args, **kwargs)  # type: ignore
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, observations, action, *args: Any, **kwargs: Any
+    ):
+        action_name = task.get_action_name(action["action"])
+        gripped_object_id = observations["gripped_object_id"]
+        if action_name == "GRAB_RELEASE" and gripped_object_id != -1 and self.prev_gripped_object_id != -1 and gripped_object_id == self.prev_gripped_object_id:
+            self._metric += 1
+        self.prev_gripped_object_id = gripped_object_id
 
 
 @registry.register_measure
@@ -544,26 +714,108 @@ class RearrangementReward(Measure):
                 AgentToReceptacleDistance.cls_uuid,
                 GoalObjectVisible.cls_uuid,
                 RearrangementSuccess.cls_uuid,
+                Coverage.cls_uuid,
             ],
         )
         self._metric = 0
         self.step_count = 0
-        self._goal_was_seen = False
+        self._object_was_seen = False
+        self._recetpacle_was_seen = False
+        self._attenuation_penalty = 1.0
         self._gripped_object_count = defaultdict(int)
         self._previous_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()
         self._previous_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
         self._previous_gripped_object_id = -1
+        self._previous_exploration_area = None
         self.update_metric(episode=episode, task=task, action={"action": 0}, observations=observations, *args, **kwargs)
+    
+    def reward_coverage(
+        self,
+        episode,
+        task: EmbodiedTask,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._attenuation_penalty *= self._config.ATTENUATION
+        visit = task.measurements.measures[
+            Coverage.cls_uuid
+        ].get_metric()["visit_count"]
+        coverage_reward = self._attenuation_penalty * self._config.COVERAGE_REWARD / (visit ** self._config.VISIT_EXP)
+        return coverage_reward
+
+    def reward_exploration(
+        self,
+        episode,
+        task: EmbodiedTask,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        if self._config.USE_NORMALIZED_REWARD:
+            return self.reward_exploration_normalized(
+                episode, task, observations, *args, **kwargs
+            )
+        reward = 0
+        map_measures = task.measurements.measures[
+            TopDownMap.cls_uuid
+        ].get_metric()
+        if map_measures:
+            exploration_area = map_measures["fog_of_war_mask"].sum()
+        else:
+            exploration_area = 0.0
+
+        if (
+            not hasattr(self, "_previous_exploration_area")
+            or self._previous_exploration_area is None
+            or self._previous_exploration_area < 0.00001
+        ):
+            self._previous_exploration_area = exploration_area
+        reward += (
+            (max(exploration_area - self._previous_exploration_area, 0))
+            / MAX_AREA_EXPLORATION_DIFF
+            * self._config.EXP_REWARD_COEF
+        )
+        self._previous_exploration_area = exploration_area
+        return reward
+    
+    def reward_exploration_normalized(
+        self,
+        episode,
+        task: EmbodiedTask,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        reward = 0
+        map_measures = task.measurements.measures[
+            TopDownMap.cls_uuid
+        ].get_metric()
+        if map_measures:
+            exploration_ratio = (
+                map_measures["fog_of_war_mask"].sum()
+                / map_measures["fog_of_war_mask"].size
+            )
+        else:
+            exploration_ratio = 0.0
+
+        if not hasattr(self, "_previous_exploration_ratio"):
+            self._previous_exploration_ratio = exploration_ratio
+        reward += (
+            exploration_ratio - self._previous_exploration_ratio
+        ) * self._config.EXP_REWARD_COEF
+        self._previous_exploration_ratio = exploration_ratio
+        return reward
     
     def reward_grab_success(self, episode, task, action, observations, *args: Any, **kwargs: Any):
         reward = 0.0
         action_name = task.get_action_name(action["action"])
-        if action_name == "GRAB_RELEASE" and observations['gripped_object_id'] != -1 and\
-            observations['gripped_object_id'] != self._previous_measure["gripped_object_id"]:
+        if action_name == "GRAB_RELEASE" and observations["gripped_object_id"] != -1 and\
+            observations["gripped_object_id"] != self._previous_gripped_object_id:
             obj_id = observations["gripped_object_id"]
             self._gripped_object_count[obj_id] += 1
             reward += (
-                self.config.GRAB_SUCCESS_REWARD /
+                self._config.GRAB_SUCCESS_REWARD /
                 self._gripped_object_count[obj_id]
             )
         self._previous_gripped_object_id = observations["gripped_object_id"]
@@ -580,7 +832,7 @@ class RearrangementReward(Measure):
     ):
         reward = 0
         current_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()
-        current_agent_receptacle_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()
+        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
         action_name = task.get_action_name(action["action"])
 
         if action_name != "GRAB_RELEASE" and self._previous_gripped_object_id == -1:
@@ -590,8 +842,45 @@ class RearrangementReward(Measure):
 
         if action_name != "GRAB_RELEASE" and self._previous_gripped_object_id != -1:
             agent_receptacle_dist_reward = self._previous_agent_receptacle_distance - current_agent_receptacle_distance
-            self._previous_aagent_receptacle_distance = current_agent_receptacle_distance
+            self._previous_agent_receptacle_distance = current_agent_receptacle_distance
             reward += agent_receptacle_dist_reward
+        return reward
+
+    def reward_object_seen(
+        self,
+        task,
+        observations
+    ):
+        reward = 0
+        goal_object_visible = task.measurements.measures[
+            GoalObjectVisible.cls_uuid
+        ].get_metric()
+        # Object seen threshold is small as we have a lot of small objects
+        object_seen_reward_threshold = 0.001
+        receptacle_seen_reward_threshold = 0.005
+        if hasattr(self._config, "OBJECT_SEEN_REWARD_THRESHOLD"):
+            object_seen_reward_threshold = (
+                self._config.OBJECT_SEEN_REWARD_THRESHOLD
+            )
+        if hasattr(self._config, "RECEPTACLE_SEEN_REWARD_THRESHOLD"):
+            receptacle_seen_reward_threshold = (
+                self._config.RECEPTACLE_SEEN_REWARD_THRESHOLD
+            )
+
+        if (
+            goal_object_visible > object_seen_reward_threshold
+            and not self._object_was_seen
+        ):
+            self._object_was_seen = True
+            reward += self._config.OBJECT_SEEN_REWARD
+
+        if (
+            goal_object_visible > receptacle_seen_reward_threshold
+            and observations["gripped_object_id"] != -1
+            and not self._recetpacle_was_seen
+        ):
+            self._recetpacle_was_seen = True
+            reward += self._config.OBJECT_SEEN_REWARD
         return reward
 
     def reward_distance_to_object_plus_visible(
@@ -604,21 +893,18 @@ class RearrangementReward(Measure):
         **kwargs: Any,
     ):
         reward = 0
-        goal_object_visible = task.measurements.measures[
-            GoalObjectVisible.cls_uuid
-        ].get_metric()
+        # Object seen reward
+        reward += self.reward_object_seen(task=task, observations=observations)
 
-        goal_seen_reward_threshold = 0.001
-        if hasattr(self._config, "GOAL_SEEN_REWARD_THRESHOLD"):
-            goal_seen_reward_threshold = (
-                self._config.GOAL_SEEN_REWARD_THRESHOLD
-            )
-        if (
-            goal_object_visible > goal_seen_reward_threshold
-            and not self._goal_was_seen
-        ):
-            self._goal_was_seen = True
-            reward += self._config.GOAL_SEEN_REWARD
+        # Grab success reward
+        reward += self.reward_grab_success(
+            episode=episode,
+            task=task,
+            action=action,
+            observations=observations,
+            *args,
+            **kwargs,
+        )
 
         reward += self.reward_distance_to_object(
             episode=episode,
@@ -629,6 +915,48 @@ class RearrangementReward(Measure):
             **kwargs,
         )
 
+        return reward
+
+    def reward_explore_dt_when_object_visible(
+        self,
+        episode,
+        task: EmbodiedTask,
+        action,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        reward = 0
+        # Object seen reward
+        reward += self.reward_object_seen(task=task, observations=observations)
+
+        # Grab success reward
+        reward += self.reward_grab_success(
+            episode=episode,
+            task=task,
+            action=action,
+            observations=observations,
+            *args,
+            **kwargs,
+        )
+
+        if self._object_was_seen or self._recetpacle_was_seen:
+            reward += self.reward_distance_to_object(
+                episode=episode,
+                task=task,
+                action=action,
+                observations=observations,
+                *args,
+                **kwargs,
+            )
+        else:
+            reward += self.reward_coverage(
+                episode=episode,
+                task=task,
+                observations=observations,
+                *args,
+                **kwargs,
+            )
         return reward
 
     def update_metric(
@@ -644,11 +972,17 @@ class RearrangementReward(Measure):
         # reward = self._config.SLACK_REWARD if self.step_count > 20 else 0
         reward = 0
 
-        if (
-            self._config.MODE
-            == "DISTANCE_TO_GOAL_PLUS_VISIBLE"
-        ):
+        if self._config.MODE == "DISTANCE_TO_GOAL_PLUS_VISIBLE":
             reward += self.reward_distance_to_object_plus_visible(
+                episode=episode,
+                task=task,
+                action=action,
+                observations=observations,
+                *args,
+                **kwargs,
+            )
+        elif self._config.MODE == "DISTANCE_TO_GOAL_WHEN_VISIBLE_ELSE_EXPLORE":
+            reward += self.reward_explore_dt_when_object_visible(
                 episode=episode,
                 task=task,
                 action=action,
@@ -723,12 +1057,14 @@ class RearrangementSuccess(Measure):
             object_y = object_position.y
             receptacle_y = receptacle_position.y + self._sim.get_object_bb_y_coord(receptacle_id)
             is_object_stacked = (object_y > receptacle_y)
+        gripped_object_id = self._sim.gripped_object_id
 
         if (
             hasattr(task, "is_stop_called")
             and task.is_stop_called # type: ignore
             and distance_to_target <= self._config.SUCCESS_DISTANCE
             and is_object_stacked
+            and gripped_object_id == -1
         ):
             self._metric = 1.0
         else:
@@ -860,6 +1196,8 @@ class RearrangementTask(EmbodiedTask):
 
     def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
         is_object_out_of_bounds = self._sim.is_object_out_of_bounds()
+        if is_object_out_of_bounds:
+            logger.info("Object is OOB terminating episodes")
         return not getattr(self, "is_stop_called", False) and not is_object_out_of_bounds
 
     def overwrite_sim_config(self, sim_config, episode):

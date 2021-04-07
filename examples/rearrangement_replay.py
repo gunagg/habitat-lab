@@ -20,6 +20,11 @@ from PIL import Image
 config = habitat.get_config("configs/tasks/object_rearrangement.yaml")
 
 
+def save_image(img, file_name):
+    im = Image.fromarray(img)
+    im.save("demos/" + file_name)
+
+
 def save_grab_release_frames(env, i):
     if i + 1 <= len(env.current_episode.reference_replay) - 1:
         prev_action = env.current_episode.reference_replay[i - 1]
@@ -118,11 +123,18 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     observations = env._sim.get_observations_at(agent_state.position, agent_state.rotation, sensor_states, object_states)
 
                 info = env.get_metrics()
-                frame = observations_to_image({"rgb": observations["rgb"]}, info)
+                rgb_frame = observations_to_image({"rgb": observations["rgb"]}, {})
+                depth_frame = observations_to_image({"depth": observations["depth"]}, {})
                 # frame = append_text_to_image(frame, "Action: {}".format(action_name))
-                frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
-                observation_list.append(frame)
+                # frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
+                # print(info)
+                # if info["goal_vis_pixels"] > 0.002:
+                #     save_image(rgb_frame, "rgb.jpg")
+                #     save_image(depth_frame, "depth.jpg")
+                #     break
+                #observation_list.append(frame)
                 i+=1
+            break
             make_videos([observation_list], output_prefix, ep_id)
 
         if os.path.isfile("instructions.json"):

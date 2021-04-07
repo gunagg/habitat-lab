@@ -7,19 +7,19 @@ ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/resnet18_fold_0"
-VIDEO_DIR: "video_dir/resnet18_fold_0"
+TENSORBOARD_DIR: "tb/resnet18_unseen_instructions/seed_2/eval"
+VIDEO_DIR: "video_dir/resnet18_unseen_instructions/seed_2/eval"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/resnet18_fold_0/model_20.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/resnet18_unseen_instructions/seed_2/model_20.ckpt"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/resnet18_fold_0"
+NUM_PROCESSES: 5
+CHECKPOINT_FOLDER: "data/new_checkpoints/resnet18_unseen_instructions/seed_2"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 1
-DATASET_PATH: "data/datasets/object_rearrangement/v0/{split}/{scene_split}.db"
+DATASET_PATH: "data/datasets/object_rearrangement/unseen_instructions/{split}/{scene_split}.db"
 RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50

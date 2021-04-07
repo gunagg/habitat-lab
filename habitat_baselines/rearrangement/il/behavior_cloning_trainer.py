@@ -612,7 +612,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
-                        {"rgb": batch["rgb"][i]}, infos[i]
+                        {k: v[i] for k, v in batch.items()}, infos[i]
                     )
                     frame = append_text_to_image(frame, "Action: {}".format(action_names[i]))
                     frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))

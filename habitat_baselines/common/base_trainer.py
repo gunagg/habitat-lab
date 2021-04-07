@@ -53,6 +53,8 @@ class BaseTrainer:
         eval_cmd_opts = config.CMD_TRAILING_OPTS
 
         try:
+            print(config)
+            print("\n\n\n\n")
             config.merge_from_other_cfg(checkpoint_config)
             config.merge_from_other_cfg(self.config)
             config.merge_from_list(ckpt_cmd_opts)

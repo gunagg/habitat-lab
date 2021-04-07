@@ -59,7 +59,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         self._static_encoder = False
         self._encoder = None
 
-    def _setup_actor_critic_agent(self, ppo_cfg: Config, rl_config: Config) -> None:
+    def _setup_actor_critic_agent(self, ppo_cfg: Config) -> None:
         r"""Sets up actor critic and agent for PPO.
 
         Args:
@@ -69,10 +69,6 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             None
         """
         logger.add_filehandler(self.config.LOG_FILE)
-
-        rl_config.defrost()
-        rl_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
-        rl_config.freeze()
 
         policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
         observation_space = self.envs.observation_spaces[0]
@@ -85,12 +81,14 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             self.config, observation_space, self.envs.action_spaces[0]
         )
 
-        if rl_config.PPO.init_bc_baseline:
-            ckpt = self.load_checkpoint(rl_config.PPO.bc_baseline_ckpt, map_location="cpu")
+        if self.config.RL.PPO.init_bc_baseline:
+            ckpt = self.load_checkpoint(self.config.RL.PPO.bc_baseline_ckpt, map_location="cpu")
             self.actor_critic.load_state_dict(ckpt, strict=False)
 
-        if rl_config.PPO.freeze_encoder:
+        if self.config.RL.PPO.freeze_encoder:
             for param in self.actor_critic.net.rgb_encoder.parameters():
+                param.requires_grad_(False)
+            for param in self.actor_critic.net.depth_encoder.parameters():
                 param.requires_grad_(False)
 
         self.actor_critic.to(self.device)
@@ -384,7 +382,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         )
         if not os.path.isdir(self.config.CHECKPOINT_FOLDER):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
-        self._setup_actor_critic_agent(ppo_cfg, self.config.RL)
+        self._setup_actor_critic_agent(ppo_cfg)
         logger.info(
             "agent number of parameters: {}".format(
                 sum(param.numel() for param in self.agent.parameters())
@@ -603,7 +601,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
 
         logger.info(f"env config: {config}")
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
-        self._setup_actor_critic_agent(ppo_cfg, config.RL)
+        self._setup_actor_critic_agent(ppo_cfg)
 
         self.agent.load_state_dict(ckpt_dict["state_dict"])
         self.actor_critic = self.agent.actor_critic
@@ -658,6 +656,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()
         self.discriminator.eval()
+        episode_count = 0
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -703,11 +702,12 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
 
             with torch.no_grad():
                 learning_rewards = self.discriminator(batch)
-                learning_rewards = torch.tensor(
-                    self.rescale_coef * (learning_rewards > self.discr_thr), dtype=torch.float, device=self.device
-                )
+                learning_rewards = learning_rewards.clone().detach() > self.discr_thr
+                learning_rewards = (self.rescale_coef * learning_rewards.float()).clone().detach()
+                learning_rewards = learning_rewards.to(current_episode_reward.device)
                 current_episode_pred_reward += learning_rewards
-
+            
+            episode_count += 1
             rewards = torch.tensor(
                 rewards_l, dtype=torch.float, device=self.device
             ).unsqueeze(1)
@@ -746,7 +746,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
-                            episode_id=current_episodes[i].episode_id,
+                            episode_id=episode_count,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,

@@ -7,18 +7,18 @@ ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/ddppo_dense_reward_resnet18/eval"
-VIDEO_DIR: "video_dir/ddppo_dense_reward_resnet18/eval"
+TENSORBOARD_DIR: "tb/ppo_explore_dt_vis_both_objects/seed_1/"
+VIDEO_DIR: "video_dir/ppo_explore_dt_vis_both_objects/eval"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_dense_reward_resnet18/ckpt.19.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ppo_explore_dt_vis_both_objects/ckpt.19.pth"
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_dense_reward_resnet18"
+CHECKPOINT_FOLDER: "data/new_checkpoints/ppo_explore_dt_vis_both_objects"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 500
-DATASET_PATH: "data/datasets/object_rearrangement/v1/{split}/{split}.db"
+DATASET_PATH: "data/datasets/object_rearrangement/v2/{split}/{split}.db"
 RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
@@ -27,11 +27,8 @@ EVAL:
 
 
 RL:
-  REWARD_MEASURE: "agent_receptacle_distance"
-  REWARD_MEASURE_2: "agent_object_distance"
+  REWARD_MEASURE: "rearrangement_reward"
   SUCCESS_MEASURE: "success"
-  SUCCESS_REWARD: 2.5
-  GRAB_SUCCESS_REWARD: 1.5
 
   POLICY:
     name: "RearrangementSeqNetPolicy"
@@ -39,7 +36,7 @@ RL:
   PPO:
     # ppo params
     clip_param: 0.1
-    ppo_epoch: 4
+    ppo_epoch: 2
     num_mini_batch: 1
     value_loss_coef: 0.5
     entropy_coef: 0.01

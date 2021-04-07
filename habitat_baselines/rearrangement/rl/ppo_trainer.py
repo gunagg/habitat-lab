@@ -56,7 +56,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
         self._static_encoder = False
         self._encoder = None
 
-    def _setup_actor_critic_agent(self, ppo_cfg: Config, rl_config: Config) -> None:
+    def _setup_actor_critic_agent(self, ppo_cfg: Config) -> None:
         r"""Sets up actor critic and agent for PPO.
 
         Args:
@@ -78,11 +78,11 @@ class RearrangementPPOTrainer(BaseRLTrainer):
             self.config, observation_space, self.envs.action_spaces[0]
         )
 
-        if rl_config.PPO.init_bc_baseline:
-            ckpt = self.load_checkpoint(rl_config.PPO.bc_baseline_ckpt, map_location="cpu")
+        if self.config.RL.PPO.init_bc_baseline:
+            ckpt = self.load_checkpoint(self.config.RL.PPO.bc_baseline_ckpt, map_location="cpu")
             self.actor_critic.load_state_dict(ckpt, strict=False)
         
-        if rl_config.PPO.freeze_encoder:
+        if self.config.RL.PPO.freeze_encoder:
             for param in self.actor_critic.net.rgb_encoder.parameters():
                 param.requires_grad_(False)
 
@@ -137,7 +137,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward"}
 
     @classmethod
     def _extract_scalars_from_info(
@@ -571,6 +571,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()
+        episode_count = 0
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -592,6 +593,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
                 )
 
                 prev_actions.copy_(actions)  # type: ignore
+            action_names = [possible_actions[a.item()] for a in actions.to(device="cpu")]
 
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
@@ -644,13 +646,14 @@ class RearrangementPPOTrainer(BaseRLTrainer):
                             current_episodes[i].episode_id,
                         )
                     ] = episode_stats
+                    episode_count += 1
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
-                            episode_id=current_episodes[i].episode_id,
+                            episode_id=episode_count,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
@@ -664,6 +667,8 @@ class RearrangementPPOTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
+                    frame = append_text_to_image(frame, "Action: {}".format(action_names[i]))
+                    frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))
                     rgb_frames[i].append(frame)
 
             (

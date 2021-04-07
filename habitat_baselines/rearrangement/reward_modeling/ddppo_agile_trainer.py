@@ -114,8 +114,8 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
         if self.config.RL.DDPPO.init_bc_baseline:
             ckpt = self.load_checkpoint(self.config.RL.DDPPO.bc_baseline_ckpt, map_location="cpu")
             self.actor_critic.load_state_dict(ckpt, strict=False)
-
-        if not self.config.RL.DDPPO.train_encoder:
+        
+        if self.config.RL.PPO.freeze_encoder:
             for param in self.actor_critic.net.rgb_encoder.parameters():
                 param.requires_grad_(False)
             for param in self.actor_critic.net.depth_encoder.parameters():

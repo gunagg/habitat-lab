@@ -10,6 +10,7 @@ import sys
 
 from tqdm import tqdm
 from habitat.datasets.utils import VocabFromText
+from psiturk_dataset.dataset.check_train_val_leak import populate_points
 
 
 max_instruction_len = 9
@@ -20,6 +21,7 @@ num_actions_lte_tenk = 0
 total_episodes = 0
 excluded_ep = 0
 task_episode_map = {}
+VISITED_POINT_DICT = {}
 
 def read_csv(path, delimiter=","):
     file = open(path, "r")
@@ -84,8 +86,8 @@ def convert_to_episode(csv_reader, file_path):
 
                 if unique_id not in task_episode_map.keys():
                     task_episode_map[unique_id] = 0
-                else:
-                    print("Repeat episode: {}, File: {}, Unique Id: {}, Ep len: {}".format(unique_id, file_path, uunique_id, len(list(csv_reader))))
+                # else:
+                #     print("Repeat episode: {}, File: {}, Unique Id: {}, Ep len: {}".format(unique_id, file_path, uunique_id, len(list(csv_reader))))
                 task_episode_map[unique_id] += 1
                 break
 
@@ -96,15 +98,19 @@ def replay_to_episode(replay_path, output_path, max_episodes=1):
     }
 
     file_paths = glob.glob(replay_path + "/*.csv")
-    for file_path in file_paths:
+    for file_path in tqdm(file_paths):
         reader = read_csv(file_path)
         convert_to_episode(reader, file_path)
 
     if len(task_episode_map.keys()) > 0:
+        print("Total episodes: {}".format(len(task_episode_map.keys())))
+        count = 0
         print("Task episode map:\n")
         for key, v in task_episode_map.items():
             if v > 1:
                 print(key)
+                count += 1
+        print("Duplicate episodes: {}".format(count))
 
 
 
@@ -125,7 +131,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
