@@ -17,7 +17,7 @@ from time import sleep
 
 from PIL import Image
 
-config = habitat.get_config("configs/tasks/object_rearrangement.yaml")
+config = habitat.get_config("configs/tasks/rearrangement_video.yaml")
 
 
 def save_image(img, file_name):
@@ -123,8 +123,10 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     observations = env._sim.get_observations_at(agent_state.position, agent_state.rotation, sensor_states, object_states)
 
                 info = env.get_metrics()
-                rgb_frame = observations_to_image({"rgb": observations["rgb"]}, {})
+                frame = observations_to_image({"rgb": observations["rgb"]}, {})
                 depth_frame = observations_to_image({"depth": observations["depth"]}, {})
+                if data.action == 'GRAB_RELEASE':
+                    print("\n\nGrab action tried\n")
                 # frame = append_text_to_image(frame, "Action: {}".format(action_name))
                 # frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
                 # print(info)
@@ -132,10 +134,10 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 #     save_image(rgb_frame, "rgb.jpg")
                 #     save_image(depth_frame, "depth.jpg")
                 #     break
-                #observation_list.append(frame)
+                observation_list.append(frame)
                 i+=1
-            break
             make_videos([observation_list], output_prefix, ep_id)
+            break
 
         if os.path.isfile("instructions.json"):
             inst_file = open("instructions.json", "r")

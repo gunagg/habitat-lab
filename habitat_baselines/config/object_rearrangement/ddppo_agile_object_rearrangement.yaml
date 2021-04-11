@@ -119,6 +119,7 @@ MODEL:
   TORCH_GPU_ID: 0
 
 DISCRIMINATOR:
+  SEQUENTIAL: True
   ablate_depth: False
   ablate_rgb: False
   ablate_instruction: False

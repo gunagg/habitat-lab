@@ -325,7 +325,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
         )
         if not os.path.isdir(self.config.CHECKPOINT_FOLDER):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
-        self._setup_actor_critic_agent(ppo_cfg, self.config.RL)
+        self._setup_actor_critic_agent(ppo_cfg)
         logger.info(
             "agent number of parameters: {}".format(
                 sum(param.numel() for param in self.agent.parameters())
@@ -521,7 +521,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
 
         logger.info(f"env config: {config}")
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
-        self._setup_actor_critic_agent(ppo_cfg, config.RL)
+        self._setup_actor_critic_agent(ppo_cfg)
 
         self.agent.load_state_dict(ckpt_dict["state_dict"])
         self.actor_critic = self.agent.actor_critic

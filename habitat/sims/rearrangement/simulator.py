@@ -510,6 +510,7 @@ class RearrangementSim(HabitatSim):
             self._prev_sim_obs = sim_obs
 
             observations = self._sensor_suite.get_observations(sim_obs)
+            print(observations.keys())
             if not keep_agent_at_new_pose:
                 self.set_agent_state(
                     current_state.position,

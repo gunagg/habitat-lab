@@ -19,7 +19,12 @@ from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, Simulator, SensorTypes
 from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav import merge_sim_episode_config, DistanceToGoal, TopDownMap
+from habitat.tasks.nav.nav import (
+    merge_sim_episode_config,
+    DistanceToGoal,
+    TopDownMap,
+    PointGoalSensor
+)
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import SimulatorTaskAction, Measure
 from habitat.sims.habitat_simulator.actions import (
@@ -326,6 +331,7 @@ class ObjectToReceptacleDistance(Measure):
             else:
                 receptacle_id = scene_object.object_id
         was_nan = False
+        object_position = np.array([0, 0, 0])
         if receptacle_id == -1:
             self._metric = 0.0
         elif obj_id != -1:
@@ -409,6 +415,7 @@ class AgentToObjectDistance(Measure):
             if scene_object.is_receptacle == False:
                 sim_obj_id = scene_object.object_id
         was_nan = False
+        object_position = np.array([0, 0, 0])
         if sim_obj_id != -1:
             object_position = np.array(
                 self._sim.get_translation(sim_obj_id)
@@ -693,6 +700,45 @@ class ReleaseFailed(Measure):
         self.prev_gripped_object_id = gripped_object_id
 
 
+@registry.register_sensor
+class AllObjectPositions(PointGoalSensor):
+    cls_uuid = "all_object_positions"
+    
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        sensor_shape = (2, self._dimensionality,)
+
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=sensor_shape,
+            dtype=np.float32,
+        )
+
+    def get_observation(
+        self, *args: Any, observations, episode, **kwargs: Any
+    ):  
+        agent_state = self._sim.get_agent_state()
+        agent_position = agent_state.position
+        rotation_world_agent = agent_state.rotation
+        sensor_data = np.zeros((2, self._dimensionality))
+        objects = self._sim._scene_objects
+        existing_object_ids = self._sim.get_existing_object_ids()
+
+        for obj in objects:
+            object_id = obj.object_id
+
+            if object_id not in existing_object_ids:
+                sensor_data[object_id] = self._compute_pointgoal(
+                    agent_position, rotation_world_agent, agent_position
+                )
+            else:
+                object_position = self._sim.get_translation(object_id)
+                sensor_data[object_id] = self._compute_pointgoal(
+                    agent_position, rotation_world_agent, object_position
+                )
+        return sensor_data
+
+
 @registry.register_measure
 class RearrangementReward(Measure):
     r"""RearrangementReward"""
@@ -940,7 +986,15 @@ class RearrangementReward(Measure):
             **kwargs,
         )
 
-        if self._object_was_seen or self._recetpacle_was_seen:
+        if not self._object_was_seen and observations["gripped_object_id"] == -1:
+            reward += self.reward_coverage(
+                episode=episode,
+                task=task,
+                observations=observations,
+                *args,
+                **kwargs,
+            )
+        else:
             reward += self.reward_distance_to_object(
                 episode=episode,
                 task=task,
@@ -948,11 +1002,83 @@ class RearrangementReward(Measure):
                 observations=observations,
                 *args,
                 **kwargs,
+            ) 
+        return reward
+
+    def drop_penalty(
+        self,
+        task,
+        action,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        reward = 0.0
+        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
+        action_name = task.get_action_name(action["action"])
+
+        drop_penalty_dist_threshold = 3.0
+        if hasattr(self._config, "DROP_PENALTY_DIST_THRESHOLD"):
+            drop_penalty_dist_threshold = (
+                self._config.DROP_PENALTY_DIST_THRESHOLD
             )
-        else:
+
+        # If agent drops object too far from receptacle add penalty
+        if action_name == "GRAB_RELEASE" and self._previous_gripped_object_id != -1\
+             and current_agent_receptacle_distance > drop_penalty_dist_threshold:
+            reward += self._config.DROP_PENALTY
+        return reward
+
+    def reward_explore_dt_when_object_or_receptacle_visible(
+        self,
+        episode,
+        task: EmbodiedTask,
+        action,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        reward = 0
+        # Object seen reward
+        reward += self.reward_object_seen(task=task, observations=observations)
+
+        # Grab success reward
+        reward += self.reward_grab_success(
+            episode=episode,
+            task=task,
+            action=action,
+            observations=observations,
+            *args,
+            **kwargs,
+        )
+
+        # Explore until you find the object
+        if not self._object_was_seen and observations["gripped_object_id"] == -1:
+            # print("object not seen coverage")
             reward += self.reward_coverage(
                 episode=episode,
                 task=task,
+                observations=observations,
+                *args,
+                **kwargs,
+            )
+        # Explore after you grab the object until you find the receptacle
+        elif not self._recetpacle_was_seen and observations["gripped_object_id"] != -1:
+            # print("receptacle not seen coverage")
+            reward += self.reward_coverage(
+                episode=episode,
+                task=task,
+                observations=observations,
+                *args,
+                **kwargs,
+            )
+        # Use distance reward if you saw object and receptacle when solving the task
+        else:
+            # print("Distance when obj/recept seen")
+            reward += self.reward_distance_to_object(
+                episode=episode,
+                task=task,
+                action=action,
                 observations=observations,
                 *args,
                 **kwargs,
@@ -972,6 +1098,9 @@ class RearrangementReward(Measure):
         # reward = self._config.SLACK_REWARD if self.step_count > 20 else 0
         reward = 0
 
+        if self._config.ENABLE_PENALTY:
+            reward += self.drop_penalty(task, action, observations)
+
         if self._config.MODE == "DISTANCE_TO_GOAL_PLUS_VISIBLE":
             reward += self.reward_distance_to_object_plus_visible(
                 episode=episode,
@@ -983,6 +1112,15 @@ class RearrangementReward(Measure):
             )
         elif self._config.MODE == "DISTANCE_TO_GOAL_WHEN_VISIBLE_ELSE_EXPLORE":
             reward += self.reward_explore_dt_when_object_visible(
+                episode=episode,
+                task=task,
+                action=action,
+                observations=observations,
+                *args,
+                **kwargs,
+            )
+        elif self._config.MODE == "DISTANCE_TO_OBJ_THEN_RECPT_VISIBLE_ELSE_EXPLORE":
+            reward += self.reward_explore_dt_when_object_or_receptacle_visible(
                 episode=episode,
                 task=task,
                 action=action,

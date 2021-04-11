@@ -263,6 +263,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             rearrangement_dataset,
             collate_fn=collate_fn,
             batch_size=batch_size,
+            num_workers=8,
             shuffle=True,
         )
 

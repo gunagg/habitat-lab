@@ -29,7 +29,7 @@ from habitat_baselines.common.obs_transformers import (
 )
 from habitat_baselines.rearrangement.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.rearrangement.reward_modeling.ppo_agile import PPOAgile
+from habitat_baselines.rearrangement.reward_modeling.ppo_agile import PPOAgile, PPOAgileSeq
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
@@ -37,7 +37,7 @@ from habitat_baselines.utils.common import (
 )
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.rearrangement.reward_modeling.models.discriminator import DiscriminatorModel
-from habitat_baselines.rearrangement.dataset.goal_dataset import RearrangementGoalDataset
+from habitat_baselines.rearrangement.dataset.goal_dataset import RearrangementGoalDataset, RearrangementGoalDatasetV2
 
 
 @baseline_registry.register_trainer(name="rearrangement-ppo-agile")
@@ -100,7 +100,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         self.discr_thr = ppo_cfg.discr_thr
         self.rescale_coef = ppo_cfg.rescale_coef
 
-        self.agent = PPOAgile(
+        self.agent = PPOAgileSeq(
             actor_critic=self.actor_critic,
             discriminator=self.discriminator,
             clip_param=ppo_cfg.clip_param,
@@ -262,21 +262,26 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         )
         rewards = rewards.unsqueeze(1)
 
-        t_compute_reward = time.time()
-        # Use reward model to get rewards
-        with torch.no_grad():
-            learning_rewards = self.discriminator(batch)
-            learning_rewards = learning_rewards.clone().detach() > self.discr_thr
-            learning_rewards = (self.rescale_coef * learning_rewards.float()).clone().detach()
-            learning_rewards = learning_rewards.to(current_episode_reward.device)
-
-        reward_compute_time = time.time() - t_compute_reward
-
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones],
             dtype=torch.float,
             device=current_episode_reward.device,
         )
+
+        t_compute_reward = time.time()
+        # Use reward model to get rewards
+        with torch.no_grad():
+            learning_rewards, discr_rnn_hidden_states = self.discriminator(
+                batch,
+                rollouts.discr_recurrent_hidden_states[rollouts.step],
+                masks,
+                actions
+            )
+            learning_rewards = learning_rewards.clone().detach() > self.discr_thr
+            learning_rewards = (self.rescale_coef * learning_rewards.float()).clone().detach()
+            learning_rewards = learning_rewards.to(current_episode_reward.device)
+
+        reward_compute_time = time.time() - t_compute_reward
 
         current_episode_reward += rewards
         current_episode_pred_reward += learning_rewards
@@ -311,7 +316,8 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             values,
             learning_rewards,
             masks,
-            current_scenes
+            current_scenes,
+            discr_rnn_hidden_states
         )
 
         pth_time += time.time() - t_update_stats
@@ -350,7 +356,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         )
     
     def _setup_goal_state_dataset(self, config: Config, mode: str):
-        goal_state_dataset = RearrangementGoalDataset(
+        goal_state_dataset = RearrangementGoalDatasetV2(
             config,
             mode=mode,
         )

@@ -12,6 +12,7 @@ import torch
 
 from habitat_baselines.rearrangement.common.dictlist import DictList
 from habitat.utils.visualizations.utils import observations_to_image, images_to_video
+from habitat_baselines.rearrangement.dataset.goal_dataset import collate_fn
 
 
 class RolloutStorage:
@@ -26,6 +27,7 @@ class RolloutStorage:
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
         goal_state_dataset=None,
+        is_sequential=True,
     ):
         self.observations = {}
 
@@ -65,6 +67,14 @@ class RolloutStorage:
         if goal_state_dataset is not None:
             self.ground_truth_buffer = goal_state_dataset
             self.ground_truth_buffer_size = len(goal_state_dataset)
+            self.is_sequential = is_sequential
+
+            self.discr_recurrent_hidden_states = torch.zeros(
+                num_steps + 1,
+                num_recurrent_layers,
+                num_envs,
+                recurrent_hidden_state_size,
+            )
 
         self.num_steps = num_steps
         self.step = 0
@@ -81,6 +91,7 @@ class RolloutStorage:
         self.actions = self.actions.to(device)
         self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
+        self.discr_recurrent_hidden_states = self.discr_recurrent_hidden_states.to(device)
 
     def insert(
         self,
@@ -92,6 +103,7 @@ class RolloutStorage:
         rewards,
         masks,
         scene_ids,
+        discr_recurrent_hidden_states,
     ):
         for sensor in observations:
             self.observations[sensor][self.step + 1].copy_(
@@ -107,7 +119,9 @@ class RolloutStorage:
         self.rewards[self.step].copy_(rewards)
         self.masks[self.step + 1].copy_(masks)
         self.running_scenes[self.step + 1] = scene_ids
-
+        self.discr_recurrent_hidden_states[self.step + 1].copy_(
+            discr_recurrent_hidden_states
+        )
 
         self.step = self.step + 1
 
@@ -123,6 +137,9 @@ class RolloutStorage:
         self.masks[0].copy_(self.masks[self.step])
         self.prev_actions[0].copy_(self.prev_actions[self.step])
         self.running_scenes[0] = self.running_scenes[self.step]
+        self.discr_recurrent_hidden_states[0].copy_(
+            self.discr_recurrent_hidden_states[self.step]
+        )
         self.step = 0
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
@@ -257,6 +274,133 @@ class RolloutStorage:
                 discr_observations_batch,
                 discr_targets_batch
             )
+
+    def recurrent_generator_seq(self, advantages, num_mini_batch, discr_batch_size, discr_rho):
+        num_processes = self.rewards.size(1)
+        assert num_processes >= num_mini_batch, (
+            "Trainer requires the number of processes ({}) "
+            "to be greater than or equal to the number of "
+            "trainer mini batches ({}).".format(num_processes, num_mini_batch)
+        )
+        num_envs_per_batch = num_processes // num_mini_batch
+        perm = torch.randperm(num_processes)
+        for start_ind in range(0, num_processes, num_envs_per_batch):
+            observations_batch = defaultdict(list)
+
+            recurrent_hidden_states_batch = []
+            actions_batch = []
+            prev_actions_batch = []
+            value_preds_batch = []
+            return_batch = []
+            masks_batch = []
+            old_action_log_probs_batch = []
+            adv_targ = []
+            discr_observations_batch = defaultdict(list)
+            discr_targets_batch = []
+            discr_recurrent_hidden_states_batch = []
+            env_indices = []
+            for offset in range(num_envs_per_batch):
+                ind = perm[start_ind + offset]
+                env_indices.append(ind)
+
+                for sensor in self.observations:
+                    observations_batch[sensor].append(
+                        self.observations[sensor][: self.step, ind]
+                    )
+
+                recurrent_hidden_states_batch.append(
+                    self.recurrent_hidden_states[0, :, ind]
+                )
+
+                actions_batch.append(self.actions[: self.step, ind])
+                prev_actions_batch.append(self.prev_actions[: self.step, ind])
+                value_preds_batch.append(self.value_preds[: self.step, ind])
+                return_batch.append(self.returns[: self.step, ind])
+                masks_batch.append(self.masks[: self.step, ind])
+                old_action_log_probs_batch.append(
+                    self.action_log_probs[: self.step, ind]
+                )
+
+                adv_targ.append(advantages[: self.step, ind])
+
+                discr_recurrent_hidden_states_batch.append(
+                    self.discr_recurrent_hidden_states[0, :, ind]
+                )
+            
+            (
+                discriminator_gt_observations,
+                discr_gt_prev_actions_batch,
+                discr_gt_masks_batch
+            ) = self.sample_sequential_discr_observations(
+                self.step, discr_batch_size, env_indices, self.actions.device
+            )
+            for sensor in discriminator_gt_observations:
+                discr_observations_batch[sensor] = discriminator_gt_observations[sensor]
+
+            T, N = self.step, num_envs_per_batch
+
+            # These are all tensors of size (T, N, -1)
+            for sensor in observations_batch:
+                observations_batch[sensor] = torch.stack(
+                    observations_batch[sensor], 1
+                )
+
+            actions_batch = torch.stack(actions_batch, 1)
+            prev_actions_batch = torch.stack(prev_actions_batch, 1)
+            value_preds_batch = torch.stack(value_preds_batch, 1)
+            return_batch = torch.stack(return_batch, 1)
+            masks_batch = torch.stack(masks_batch, 1)
+            old_action_log_probs_batch = torch.stack(
+                old_action_log_probs_batch, 1
+            )
+            adv_targ = torch.stack(adv_targ, 1)
+
+            # States is just a (num_recurrent_layers, N, -1) tensor
+            recurrent_hidden_states_batch = torch.stack(
+                recurrent_hidden_states_batch, 1
+            )
+
+            discr_recurrent_hidden_states_batch = torch.stack(
+                discr_recurrent_hidden_states_batch, 1
+            )
+
+            # Flatten the (T, N, ...) tensors to (T * N, ...)
+            for sensor in observations_batch:
+                observations_batch[sensor] = self._flatten_helper(
+                    T, N, observations_batch[sensor]
+                )
+
+            actions_batch = self._flatten_helper(T, N, actions_batch)
+            prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
+            value_preds_batch = self._flatten_helper(T, N, value_preds_batch)
+            return_batch = self._flatten_helper(T, N, return_batch)
+            masks_batch = self._flatten_helper(T, N, masks_batch)
+            old_action_log_probs_batch = self._flatten_helper(
+                T, N, old_action_log_probs_batch
+            )
+            adv_targ = self._flatten_helper(T, N, adv_targ)
+
+            for sensor in discr_observations_batch:
+                discr_T, discr_N = discr_observations_batch[sensor].shape[0], discr_observations_batch[sensor].shape[1]
+                discr_observations_batch[sensor] = self._flatten_helper(discr_T, discr_N, discr_observations_batch[sensor])
+                discr_gt_masks_batch = self._flatten_helper(discr_T, discr_N, discr_gt_masks_batch)
+                discr_gt_prev_actions_batch = self._flatten_helper(discr_T, discr_N, discr_gt_prev_actions_batch)
+
+            yield (
+                observations_batch,
+                recurrent_hidden_states_batch,
+                actions_batch,
+                prev_actions_batch,
+                value_preds_batch,
+                return_batch,
+                masks_batch,
+                old_action_log_probs_batch,
+                adv_targ,
+                discr_observations_batch,
+                discr_recurrent_hidden_states_batch,
+                discr_gt_masks_batch,
+                discr_gt_prev_actions_batch,
+            )
     
     def sample_discriminator_observations(self, num_steps, batch_size, env_index, discr_rho, device):
         half_batch_size = batch_size // 2
@@ -303,6 +447,45 @@ class RolloutStorage:
         discr_targets = torch.ones(half_batch_size, device=device)
         discr_targets = torch.cat([discr_targets, -1 * discr_targets], 0)
         return discr_observations, discr_targets
+
+    def sample_sequential_discr_observations(self, num_steps, batch_size, env_indices, device):
+        half_batch_size = batch_size // 2
+        batch = []
+        for env_index  in env_indices:
+            scene_step_count_map = defaultdict(int)
+            for scenes in self.running_scenes[1:]:
+                scene_step_count_map[scenes[env_index]] += 1
+
+            ground_truth_sample_obs = defaultdict(list)
+            scenes = list(scene_step_count_map.keys())
+            total_ground_truth_samples = 0
+            for scene in scenes:
+                percent_steps_in_rollout = scene_step_count_map[scene] / num_steps
+                scene_batch_size = int(half_batch_size * percent_steps_in_rollout)
+
+                # If on last scene pick all remaining gt samples from last scene
+                if total_ground_truth_samples + scene_batch_size < half_batch_size and scene == scenes[-1]:
+                    scene_batch_size += (half_batch_size - (total_ground_truth_samples + scene_batch_size))
+
+                scene_ground_truth_buffer_size = self.ground_truth_buffer.get_scene_episode_length(scene)
+                indices = np.random.randint(scene_ground_truth_buffer_size, size=scene_batch_size)
+
+                for idx in indices:
+                    sample = self.ground_truth_buffer.get_item(idx, scene)
+                    batch.append(sample)
+                total_ground_truth_samples += scene_batch_size
+        
+        # Ignore next and prev actions for now
+        observations, prev_actions_batch, masks_batch = collate_fn(batch)
+
+        # Postprocess after collate
+        for sensor in self.observations.keys():
+            # Ignore sensors not in ground truth buffer
+            if sensor not in observations.keys():
+                continue
+            ground_truth_sample_obs[sensor] = observations[sensor]
+
+        return ground_truth_sample_obs, prev_actions_batch, masks_batch
 
     @staticmethod
     def _flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:

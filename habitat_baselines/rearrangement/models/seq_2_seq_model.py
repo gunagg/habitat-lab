@@ -8,6 +8,10 @@ import torch.nn.functional as F
 
 from gym import Space
 from habitat import Config
+from habitat.tasks.nav.nav import (
+    EpisodicCompassSensor,
+    EpisodicGPSSensor,
+)
 from habitat_baselines.rearrangement.models.encoders.instruction import InstructionEncoder
 from habitat_baselines.rearrangement.models.encoders.resnet_encoders import (
     TorchVisionResNet50,
@@ -83,9 +87,6 @@ class Seq2SeqNet(Net):
                 trainable=model_config.RGB_ENCODER.train_encoder,
             )
 
-        if model_config.SEQ2SEQ.use_prev_action:
-            self.prev_action_embedding = nn.Embedding(num_actions + 1, 32)
-
         # Init the RNN state decoder
         rnn_input_size = (
             self.instruction_encoder.output_size
@@ -93,7 +94,26 @@ class Seq2SeqNet(Net):
             + model_config.RGB_ENCODER.output_size
         )
 
+        if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
+            input_gps_dim = observation_space.spaces[
+                EpisodicGPSSensor.cls_uuid
+            ].shape[0]
+            self.gps_embedding = nn.Linear(input_gps_dim, 32)
+            rnn_input_size += 32
+        
+        if EpisodicCompassSensor.cls_uuid in observation_space.spaces:
+            assert (
+                observation_space.spaces[EpisodicCompassSensor.cls_uuid].shape[
+                    0
+                ]
+                == 1
+            ), "Expected compass with 2D rotation."
+            input_compass_dim = 2  # cos and sin of the angle
+            self.compass_embedding = nn.Linear(input_compass_dim, 32)
+            rnn_input_size += 32
+
         if model_config.SEQ2SEQ.use_prev_action:
+            self.prev_action_embedding = nn.Embedding(num_actions + 1, 32)
             rnn_input_size += self.prev_action_embedding.embedding_dim
 
         self.state_encoder = RNNStateEncoder(
@@ -134,14 +154,32 @@ class Seq2SeqNet(Net):
         if self.model_config.ablate_rgb:
             rgb_embedding = rgb_embedding * 0
 
-        x = torch.cat([instruction_embedding, depth_embedding, rgb_embedding], dim=1)
+        x = [instruction_embedding, depth_embedding, rgb_embedding]
+
+        if EpisodicGPSSensor.cls_uuid in observations:
+            x.append(
+                self.gps_embedding(observations[EpisodicGPSSensor.cls_uuid])
+            )
+        
+        if EpisodicCompassSensor.cls_uuid in observations:
+            compass_observations = torch.stack(
+                [
+                    torch.cos(observations[EpisodicCompassSensor.cls_uuid]),
+                    torch.sin(observations[EpisodicCompassSensor.cls_uuid]),
+                ],
+                -1,
+            )
+            x.append(
+                self.compass_embedding(compass_observations.squeeze(dim=1))
+            )
 
         if self.model_config.SEQ2SEQ.use_prev_action:
             prev_actions_embedding = self.prev_action_embedding(
                 ((prev_actions.float() + 1) * masks).long().view(-1)
             )
-            x = torch.cat([x, prev_actions_embedding], dim=1)
+            x.append(prev_actions_embedding)
 
+        x = torch.cat(x, dim=1)
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
 
         return x, rnn_hidden_states

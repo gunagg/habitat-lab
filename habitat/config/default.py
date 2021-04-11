@@ -121,6 +121,11 @@ _C.TASK.GPS_SENSOR = CN()
 _C.TASK.GPS_SENSOR.TYPE = "GPSSensor"
 _C.TASK.GPS_SENSOR.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
+# ALL OBJECT POSITION SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ALL_OBJECT_POSITIONS = CN()
+_C.TASK.ALL_OBJECT_POSITIONS.TYPE = "AllObjectPositions"
+# -----------------------------------------------------------------------------
 # PROXIMITY SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.PROXIMITY_SENSOR = CN()

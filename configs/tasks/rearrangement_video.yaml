@@ -66,8 +66,8 @@ TASK:
     OBJECT_SEEN_REWARD_THRESHOLD: 0.001
     RECEPTACLE_SEEN_REWARD_THRESHOLD: 0.005
     OBJECT_SEEN_REWARD: 1.5
-    SUCCESS_REWARD: 3.5
-    GRAB_SUCCESS_REWARD: 2.5
+    SUCCESS_REWARD: 2.5
+    GRAB_SUCCESS_REWARD: 1.5
     EXP_REWARD_COEF: 1.0
     USE_NORMALIZED_REWARD: True
     SLACK_REWARD: -0.01
@@ -94,7 +94,7 @@ TASK:
     DRAW_SHORTEST_PATH: False
 
 DATASET:
-  TYPE: RearrangementDataset-v0
+  TYPE: RearrangementDataset-v1
   SPLIT: "train"
   DATA_PATH: "data/datasets/object_rearrangement/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/habitat-test-scenes/"

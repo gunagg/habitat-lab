@@ -18,6 +18,7 @@ LOG_METRICS: True
 CHECKPOINT_INTERVAL: 5000
 DATASET_PATH: "data/datasets/object_rearrangement/v2/{split}/{split}.db"
 RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
+SENSORS: ["RGB_SENSOR", "SEMANTIC_SENSOR", "DEPTH_SENSOR"]
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:

@@ -32,7 +32,7 @@ def are_points_navigable(sim, points):
             if dist == np.inf or dist == math.inf:
                 return False
     
-    if np.sum(is_navigable_list) != 3:
+    if np.sum(is_navigable_list) != len(is_navigable_list):
         return False
     return True
 
@@ -55,6 +55,7 @@ def run_validation(cfg, num_steps=5):
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
         obs_list = []
+        non_navigable_episodes = []
         navigable_episodes = 0
 
         print("Total episodes: {}".format(len(env.episodes)))
