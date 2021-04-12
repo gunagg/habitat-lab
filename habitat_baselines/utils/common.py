@@ -92,7 +92,10 @@ def _to_tensor(v: Union[Tensor, ndarray]) -> torch.Tensor:
     if torch.is_tensor(v):
         return v
     elif isinstance(v, np.ndarray):
-        return torch.from_numpy(v)
+        if v.dtype == np.uint32:
+            return torch.from_numpy(v.astype(int))
+        else:
+            return torch.from_numpy(v)
     else:
         return torch.tensor(v, dtype=torch.float)
 

@@ -198,7 +198,6 @@ class RearrangementEpisodeDataset(Dataset):
             "depth": [],
             "instruction": [],
         }
-        obs_list = []
         reference_replay = episode.reference_replay
         instruction = episode.instruction
         for state_index in state_index_queue:
@@ -225,11 +224,6 @@ class RearrangementEpisodeDataset(Dataset):
             observations["instruction"].append(instruction_tokens)
             next_actions.append(next_action)
             prev_actions.append(prev_action)
-
-            frame = observations_to_image(
-                {"rgb": observation["rgb"]}, {}
-            )
-            obs_list.append(frame)
         
         oracle_actions = np.array(next_actions)
         inflection_weights = np.concatenate(([1], oracle_actions[1:] != oracle_actions[:-1]))

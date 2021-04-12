@@ -118,8 +118,11 @@ def train_val_split_scene_holdout(data):
     train_idxs = []
     eval_idxs = []
     for train_scenes, eval_scenes in rs_split.split(scenes):
-        train_episode_idx = get_episode_idx_by_scene_ids(data, train_scenes)
-        eval_episode_idx = get_episode_idx_by_scene_ids(data, eval_scenes)
+        train_scenes = [scenes[i] for i in train_scenes]
+        eval_scenes = [scenes[i] for i in eval_scenes]
+
+        train_episode_idx = get_episode_idx_by_scene_ids(data["episodes"], train_scenes)
+        eval_episode_idx = get_episode_idx_by_scene_ids(data["episodes"], eval_scenes)
 
         check_overlap(train_episode_idx, eval_episode_idx)
 

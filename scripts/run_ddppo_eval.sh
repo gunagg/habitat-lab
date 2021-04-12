@@ -7,4 +7,4 @@ cd /srv/share3/rramrakhya6/habitat-lab
 echo "Starting ppo eval"
 echo "hab sim: ${PYTHONPATH}"
 
-python habitat_baselines/run.py --exp-config habitat_baselines/config/object_rearrangement/ppo_object_rearrangement.yaml --run-type eval
+python habitat_baselines/run.py --exp-config habitat_baselines/config/object_rearrangement/ddppo_object_rearrangement.yaml --run-type eval

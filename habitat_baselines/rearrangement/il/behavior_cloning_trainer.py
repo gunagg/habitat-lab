@@ -117,7 +117,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         save_seg_results(gt_seg[0], pred_seg[0], path)
         save_depth_results(gt_depth[0], pred_depth[0], path)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward"}
 
     @classmethod
     def _extract_scalars_from_info(
@@ -468,12 +468,10 @@ class RearrangementBCTrainer(BaseILTrainer):
             action_space,
             config.MODEL
         )
-        # self.model = torch.nn.DataParallel(self.model, dim=1)
 
         # Map location CPU is almost always better than mapping to a CUDA device.
         ckpt_dict = torch.load(checkpoint_path, map_location=self.device)
         self.model.load_state_dict(ckpt_dict, strict=True)
-        # self.model = self.model.module
         self.model.to(self.device)
         self.model.eval()
 

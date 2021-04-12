@@ -463,12 +463,20 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                         count_steps,
                     )
 
+                    metrics = {
+                        k: v / deltas["count"]
+                        for k, v in deltas.items()
+                        if k in {"grab_success", "release_failed"}
+                    }
+
+                    writer.add_scalars("grab_metrics", metrics, count_steps)
+
                     # Check to see if there are any metrics
                     # that haven't been logged yet
                     metrics = {
                         k: v / deltas["count"]
                         for k, v in deltas.items()
-                        if k not in {"reward", "count", "pred_reward"}
+                        if k not in {"reward", "count", "pred_reward", "grab_success", "release_failed"}
                     }
                     if len(metrics) > 0:
                         print("\n writing metrics")

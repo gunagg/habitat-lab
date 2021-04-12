@@ -1002,7 +1002,7 @@ class RearrangementReward(Measure):
                 observations=observations,
                 *args,
                 **kwargs,
-            ) 
+            )
         return reward
 
     def drop_penalty(
