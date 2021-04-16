@@ -26,7 +26,7 @@ class RolloutStorage:
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
-        goal_state_dataset=None,
+        scene_goal_dataset_map=None,
         is_sequential=True,
     ):
         self.observations = {}
@@ -64,9 +64,8 @@ class RolloutStorage:
 
         self.masks = torch.zeros(num_steps + 1, num_envs, 1)
 
-        if goal_state_dataset is not None:
-            self.ground_truth_buffer = goal_state_dataset
-            self.ground_truth_buffer_size = len(goal_state_dataset)
+        if scene_goal_dataset_map is not None:
+            self.scene_goal_dataset_map = scene_goal_dataset_map
             self.is_sequential = is_sequential
 
             self.discr_recurrent_hidden_states = torch.zeros(
@@ -118,7 +117,11 @@ class RolloutStorage:
         self.value_preds[self.step].copy_(value_preds)
         self.rewards[self.step].copy_(rewards)
         self.masks[self.step + 1].copy_(masks)
-        self.running_scenes[self.step + 1] = scene_ids
+        pruned_scene_ids = []
+        for scene_id in scene_ids:
+            scene_id = scene_id.split("/")[-1].split(".")[0]
+            pruned_scene_ids.append(scene_id)
+        self.running_scenes[self.step + 1] = pruned_scene_ids
         self.discr_recurrent_hidden_states[self.step + 1].copy_(
             discr_recurrent_hidden_states
         )
@@ -466,12 +469,13 @@ class RolloutStorage:
                 # If on last scene pick all remaining gt samples from last scene
                 if total_ground_truth_samples + scene_batch_size < half_batch_size and scene == scenes[-1]:
                     scene_batch_size += (half_batch_size - (total_ground_truth_samples + scene_batch_size))
+                scene_dataset = self.scene_goal_dataset_map[scene]
 
-                scene_ground_truth_buffer_size = self.ground_truth_buffer.get_scene_episode_length(scene)
+                scene_ground_truth_buffer_size = len(scene_dataset)
                 indices = np.random.randint(scene_ground_truth_buffer_size, size=scene_batch_size)
 
                 for idx in indices:
-                    sample = self.ground_truth_buffer.get_item(idx, scene)
+                    sample = scene_dataset[idx]
                     batch.append(sample)
                 total_ground_truth_samples += scene_batch_size
         
@@ -484,7 +488,10 @@ class RolloutStorage:
             if sensor not in observations.keys():
                 continue
             ground_truth_sample_obs[sensor] = observations[sensor]
+            ground_truth_sample_obs[sensor] = ground_truth_sample_obs[sensor].to(device)
 
+        prev_actions_batch = prev_actions_batch.to(device)
+        masks_batch = masks_batch.to(device)
         return ground_truth_sample_obs, prev_actions_batch, masks_batch
 
     @staticmethod

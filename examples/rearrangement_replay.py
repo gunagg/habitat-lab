@@ -104,14 +104,21 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             }
             instructions.append(data)
             step_index = 1 # env.current_episode.start_index
+            grab_seen = False
+            grab_count = 0
+            total_reward = 0.0
+            episode = env.current_episode
             for data in env.current_episode.reference_replay[step_index:]:
+            # for i in range(len(episode.actions)):
                 if log_action:
                     log_action_data(data, i)
                 action = possible_actions.index(data.action)
+                action = possible_actions.index(episode.actions[i])
                 # action = get_habitat_sim_action(data)
                 action_name = env.task.get_action_name(
                     action
                 )
+
                 if step_env:
                     observations = env.step(action=action)
                 elif not restore_state:
@@ -125,18 +132,18 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 info = env.get_metrics()
                 frame = observations_to_image({"rgb": observations["rgb"]}, {})
                 depth_frame = observations_to_image({"depth": observations["depth"]}, {})
-                if data.action == 'GRAB_RELEASE':
-                    print("\n\nGrab action tried\n")
-                # frame = append_text_to_image(frame, "Action: {}".format(action_name))
-                # frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
-                # print(info)
-                # if info["goal_vis_pixels"] > 0.002:
-                #     save_image(rgb_frame, "rgb.jpg")
-                #     save_image(depth_frame, "depth.jpg")
-                #     break
+                total_reward += info["rearrangement_reward"]
+
+                if action_name == "GRAB_RELEASE":
+                    print("Grab action: {} -- {}".format(info["rearrangement_reward"], total_reward))
+                
+                # if grab_seen:
+                #     print("Action - {}, Reward: {}".format(action_name, info["rearrangement_reward"]))
+
                 observation_list.append(frame)
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
+            print("Total reward for trajectory: {} - {}".format(total_reward, grab_count))
             break
 
         if os.path.isfile("instructions.json"):

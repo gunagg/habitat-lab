@@ -38,7 +38,7 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     requeue_job,
     save_interrupted_state,
 )
-from habitat_baselines.rearrangement.reward_modeling.ddppo_agile import DDPPOAgile
+from habitat_baselines.rearrangement.reward_modeling.ddppo_agile import DDPPOAgile, DDPPOAgileSeq
 from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
     PointNavResNetPolicy,
 )
@@ -122,7 +122,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                 param.requires_grad_(False)
 
         self.discriminator = self._setup_reward_model(
-            observation_space, self.envs.action_spaces[0], self.config.MODEL
+            observation_space, self.envs.action_spaces[0], self.config.DISCRIMINATOR
         )
         self.discriminator.to(self.device)
         self.discr_thr = ppo_cfg.discr_thr
@@ -132,7 +132,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
 
-        self.agent = DDPPOAgile(
+        self.agent = DDPPOAgileSeq(
             actor_critic=self.actor_critic,
             discriminator=self.discriminator,
             clip_param=ppo_cfg.clip_param,
@@ -243,7 +243,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
             with torch.no_grad():
                 batch["visual_features"] = self._encoder(batch)
 
-        goal_state_dataset = self._setup_goal_state_dataset(self.config, "train_goals")
+        scene_goal_dataset_map = self._setup_goal_state_dataset(self.config, "train_goals")
 
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
@@ -252,7 +252,7 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
             self.envs.action_spaces[0],
             ppo_cfg.hidden_size,
             num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
-            goal_state_dataset=goal_state_dataset,
+            scene_goal_dataset_map=scene_goal_dataset_map,
         )
         rollouts.to(self.device)
 
@@ -482,13 +482,11 @@ class RearrangementDDPPOAgileTrainer(RearrangementPPOAgileTrainer):
                         print("\n writing metrics")
                         writer.add_scalars("metrics", metrics, count_steps)
 
-                    print("Writitng losses")
                     writer.add_scalars(
                         "losses",
                         {k: l for l, k in zip(losses, ["value", "policy"])},
                         count_steps,
                     )
-                    print("Writitng losses")
 
                     # log stats
                     if update > 0 and update % self.config.LOG_INTERVAL == 0:

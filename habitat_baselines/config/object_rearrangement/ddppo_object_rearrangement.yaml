@@ -4,13 +4,13 @@ ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/ddppo_coverage_dt_when_visible_reward/seed_1/"
-VIDEO_DIR: "video_dir/ddppo_coverage_dt_when_visible_reward/seed_1/eval"
+TENSORBOARD_DIR: "tb/ddppo_init_bc_delta_dist_no_gps/"
+VIDEO_DIR: "video_dir/ddppo_init_bc_delta_dist_no_gps/seed_1/eval"
 # To evaluate on all episodes, set this to -1
-TEST_EPISODE_COUNT: 100
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_coverage_dt_when_visible_reward/seed_1/ckpt.12.pth"
+TEST_EPISODE_COUNT: -1
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_init_bc_delta_dist_no_gps/seed_1/ckpt.7.pth"
 NUM_PROCESSES: 2
-CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_coverage_dt_when_visible_reward/seed_1/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_init_bc_delta_dist_no_gps/seed_1/"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 NUM_UPDATES: 50000
 LOG_INTERVAL: 10
@@ -54,7 +54,7 @@ RL:
   DDPPO:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
-    distrib_backend: GLOO
+    distrib_backend: NCCL
     # Visual encoder backbone
     pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
     # Initialize with pretrained weights

@@ -8,7 +8,6 @@
 #SBATCH --constraint=rtx_6000
 #SBATCH --output=slurm_logs/ddppo-%j.out
 #SBATCH --error=slurm_logs/ddppo-%j.err
-#SBATCH --exclude=claptrap
 
 source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate
@@ -22,7 +21,15 @@ export MAGNUM_LOG=quiet
 MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 export MASTER_ADDR
 
+sensor=$1
 set -x
-srun python -u -m habitat_baselines.run \
-    --exp-config habitat_baselines/config/object_rearrangement/ddppo_object_rearrangement.yaml \
+if [[ $sensor == "pos" ]]; then
+    echo "in pos ppo"
+    srun python -u -m habitat_baselines.run \
+    --exp-config habitat_baselines/config/object_rearrangement/ddppo_object_rearrangement_pos.yaml \
     --run-type train
+else
+    srun python -u -m habitat_baselines.run \
+        --exp-config habitat_baselines/config/object_rearrangement/ddppo_object_rearrangement.yaml \
+        --run-type train
+fi

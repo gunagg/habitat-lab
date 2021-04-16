@@ -150,6 +150,9 @@ class RearrangementEpisode(Episode):
     objects: List[RearrangementObjectSpec] = attr.ib(
         default=None, validator=not_none_validator
     )
+    actions: List[str] = attr.ib(
+        default=None, validator=not_none_validator
+    )
     # start_index: int = attr.ib(
     #     default=None, validator=not_none_validator
     # )
@@ -746,6 +749,7 @@ class RearrangementReward(Measure):
     def __init__(self, sim, config: Config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._config = config
+        self.step_count = 0
         self._gripped_object_count = defaultdict(int)
         super().__init__()
 
@@ -790,69 +794,6 @@ class RearrangementReward(Measure):
         coverage_reward = self._attenuation_penalty * self._config.COVERAGE_REWARD / (visit ** self._config.VISIT_EXP)
         return coverage_reward
 
-    def reward_exploration(
-        self,
-        episode,
-        task: EmbodiedTask,
-        observations,
-        *args: Any,
-        **kwargs: Any,
-    ):
-        if self._config.USE_NORMALIZED_REWARD:
-            return self.reward_exploration_normalized(
-                episode, task, observations, *args, **kwargs
-            )
-        reward = 0
-        map_measures = task.measurements.measures[
-            TopDownMap.cls_uuid
-        ].get_metric()
-        if map_measures:
-            exploration_area = map_measures["fog_of_war_mask"].sum()
-        else:
-            exploration_area = 0.0
-
-        if (
-            not hasattr(self, "_previous_exploration_area")
-            or self._previous_exploration_area is None
-            or self._previous_exploration_area < 0.00001
-        ):
-            self._previous_exploration_area = exploration_area
-        reward += (
-            (max(exploration_area - self._previous_exploration_area, 0))
-            / MAX_AREA_EXPLORATION_DIFF
-            * self._config.EXP_REWARD_COEF
-        )
-        self._previous_exploration_area = exploration_area
-        return reward
-    
-    def reward_exploration_normalized(
-        self,
-        episode,
-        task: EmbodiedTask,
-        observations,
-        *args: Any,
-        **kwargs: Any,
-    ):
-        reward = 0
-        map_measures = task.measurements.measures[
-            TopDownMap.cls_uuid
-        ].get_metric()
-        if map_measures:
-            exploration_ratio = (
-                map_measures["fog_of_war_mask"].sum()
-                / map_measures["fog_of_war_mask"].size
-            )
-        else:
-            exploration_ratio = 0.0
-
-        if not hasattr(self, "_previous_exploration_ratio"):
-            self._previous_exploration_ratio = exploration_ratio
-        reward += (
-            exploration_ratio - self._previous_exploration_ratio
-        ) * self._config.EXP_REWARD_COEF
-        self._previous_exploration_ratio = exploration_ratio
-        return reward
-    
     def reward_grab_success(self, episode, task, action, observations, *args: Any, **kwargs: Any):
         reward = 0.0
         action_name = task.get_action_name(action["action"])
@@ -860,11 +801,12 @@ class RearrangementReward(Measure):
             observations["gripped_object_id"] != self._previous_gripped_object_id:
             obj_id = observations["gripped_object_id"]
             self._gripped_object_count[obj_id] += 1
-            reward += (
-                self._config.GRAB_SUCCESS_REWARD /
-                self._gripped_object_count[obj_id]
-            )
-        self._previous_gripped_object_id = observations["gripped_object_id"]
+            # Reward only on first grab action
+            if self._gripped_object_count[obj_id] <= 1:
+                reward += (
+                    self._config.GRAB_SUCCESS_REWARD /
+                    self._gripped_object_count[obj_id]
+                )
         return reward
 
     def reward_distance_to_object(
@@ -883,13 +825,41 @@ class RearrangementReward(Measure):
 
         if action_name != "GRAB_RELEASE" and self._previous_gripped_object_id == -1:
             agent_object_dist_reward = self._previous_agent_object_distance - current_agent_object_distance
-            self._previous_agent_object_distance = current_agent_object_distance
             reward += agent_object_dist_reward
 
         if action_name != "GRAB_RELEASE" and self._previous_gripped_object_id != -1:
             agent_receptacle_dist_reward = self._previous_agent_receptacle_distance - current_agent_receptacle_distance
-            self._previous_agent_receptacle_distance = current_agent_receptacle_distance
             reward += agent_receptacle_dist_reward
+        return reward
+
+    def reward_distance_to_goal(
+        self,
+        episode,
+        task: EmbodiedTask,
+        action,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        reward = 0
+        # Grab success reward
+        reward += self.reward_grab_success(
+            episode=episode,
+            task=task,
+            action=action,
+            observations=observations,
+            *args,
+            **kwargs,
+        )
+
+        reward += self.reward_distance_to_object(
+            episode=episode,
+            task=task,
+            action=action,
+            observations=observations,
+            *args,
+            **kwargs,
+        )
         return reward
 
     def reward_object_seen(
@@ -903,7 +873,7 @@ class RearrangementReward(Measure):
         ].get_metric()
         # Object seen threshold is small as we have a lot of small objects
         object_seen_reward_threshold = 0.001
-        receptacle_seen_reward_threshold = 0.005
+        receptacle_seen_reward_threshold = 0.001
         if hasattr(self._config, "OBJECT_SEEN_REWARD_THRESHOLD"):
             object_seen_reward_threshold = (
                 self._config.OBJECT_SEEN_REWARD_THRESHOLD
@@ -1017,7 +987,7 @@ class RearrangementReward(Measure):
         current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
         action_name = task.get_action_name(action["action"])
 
-        drop_penalty_dist_threshold = 3.0
+        drop_penalty_dist_threshold = 2.0
         if hasattr(self._config, "DROP_PENALTY_DIST_THRESHOLD"):
             drop_penalty_dist_threshold = (
                 self._config.DROP_PENALTY_DIST_THRESHOLD
@@ -1098,6 +1068,9 @@ class RearrangementReward(Measure):
         # reward = self._config.SLACK_REWARD if self.step_count > 20 else 0
         reward = 0
 
+        current_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()
+        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
+
         if self._config.ENABLE_PENALTY:
             reward += self.drop_penalty(task, action, observations)
 
@@ -1129,7 +1102,7 @@ class RearrangementReward(Measure):
                 **kwargs,
             )
         elif self._config.MODE == "DISTANCE_TO_GOAL":
-            reward += self.reward_distance_to_object(
+            reward += self.reward_distance_to_goal(
                 episode=episode,
                 task=task,
                 action=action,
@@ -1141,6 +1114,9 @@ class RearrangementReward(Measure):
         if task.measurements.measures[RearrangementSuccess.cls_uuid].get_metric():
             reward += self._config.SUCCESS_REWARD
 
+        self._previous_agent_object_distance = current_agent_object_distance
+        self._previous_agent_receptacle_distance = current_agent_receptacle_distance
+        self._previous_gripped_object_id = observations["gripped_object_id"]
         self._metric = reward
 
 

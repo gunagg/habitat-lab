@@ -265,7 +265,7 @@ class RearrangementSim(HabitatSim):
                 # find no collision point
                 count = 0
                 contact = self.is_collision(scene_object.object_handle, new_object_position)
-                while contact and count < 5:
+                while contact and count < 2:
                     new_object_position = mn.Vector3(
                         new_object_position.x,
                         new_object_position.y + 0.25,
@@ -455,8 +455,10 @@ class RearrangementSim(HabitatSim):
                     sensor_data = replay_data.agent_state.sensor_data
                     self.restore_sensor_states(sensor_data)
                 else:
+                    position = np.array(replay_data.agent_state.position)
+                    rotation = np.array(replay_data.agent_state.rotation)
                     success = self.set_agent_state(
-                        replay_data.agent_state.position, replay_data.agent_state.rotation, reset_sensors=False
+                        position, rotation, reset_sensors=False
                     )
                 collided = replay_data.collision
                 self._last_state = self._default_agent.get_state()
@@ -510,7 +512,6 @@ class RearrangementSim(HabitatSim):
             self._prev_sim_obs = sim_obs
 
             observations = self._sensor_suite.get_observations(sim_obs)
-            print(observations.keys())
             if not keep_agent_at_new_pose:
                 self.set_agent_state(
                     current_state.position,

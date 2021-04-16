@@ -21,10 +21,6 @@ from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit, Strati
 
 
 def check_overlap(train_episode_idx, eval_episode_idx):
-    print("Train split: {}, max: {}".format(len(train_episode_idx), max(train_episode_idx)))
-    print("Train split overlap exclude: {}".format(set(train_episode_idx).intersection(exclude_idx)))
-    print("Eval split: {}".format(len(eval_episode_idx)))
-
     print("Train episode indices: {}, Unique indices {}".format(len(train_episode_idx), len(set(train_episode_idx))))
     print("Eval episode indices: {}, Unique indices {}".format(len(eval_episode_idx), len(set(eval_episode_idx))))
 

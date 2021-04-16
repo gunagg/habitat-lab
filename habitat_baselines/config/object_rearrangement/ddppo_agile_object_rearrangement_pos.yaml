@@ -1,23 +1,23 @@
-BASE_TASK_CONFIG_PATH: "configs/tasks/object_rearrangement.yaml"
+BASE_TASK_CONFIG_PATH: "configs/tasks/object_rearrangement_pos.yaml"
 TRAINER_NAME: "rearrangement-ddppo-agile"
 ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/ddppo_agile_binary_reward_pruned/seed_1/eval"
-VIDEO_DIR: "video_dir/ddppo_agile_binary_reward_pruned/seed_1/eval"
+TENSORBOARD_DIR: "tb/ddppo_agile_seq_rm_pos_instruction/seed_1"
+VIDEO_DIR: "video_dir/ddppo_agile_seq_rm_pos_instruction/seed_1/eval"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_agile_binary_reward_pruned/seed_1/ckpt.19.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_agile_seq_rm_pos_instruction/seed_1/ckpt.3.pth"
 NUM_PROCESSES: 2
-CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_agile_binary_reward_pruned/seed_1"
+CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_agile_seq_rm_pos_instruction/seed_1"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 NUM_UPDATES: 50000
 LOG_INTERVAL: 10
 LOG_METRICS: True
-CHECKPOINT_INTERVAL: 1000
-DATASET_PATH: "data/datasets/object_rearrangement/v2/{split}/{split}.db"
-GOAL_DATASET_PATH: "data/datasets/object_rearrangement/v2/{split}/{split}.db"
+CHECKPOINT_INTERVAL: 5000
+DATASET_PATH: "data/datasets/object_rearrangement/v3/{split}/{split}.db"
+GOAL_DATASET_PATH: "data/datasets/object_rearrangement/v3/{split}/{scene_split}.db"
 RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
@@ -55,10 +55,10 @@ RL:
 
     # Reward model parameters
     discr_lr: 3e-4
-    discr_batch_size: 128
+    discr_batch_size: 2
     discr_rho: 1.0
     rescale_coef: 0.1
-    discr_thr: 0.0
+    discr_thr: 0.5
 
 
   DDPPO:
@@ -121,6 +121,7 @@ MODEL:
 
 DISCRIMINATOR:
   SEQUENTIAL: True
+  max_objects: 2
   ablate_depth: False
   ablate_rgb: False
   ablate_instruction: False

@@ -191,6 +191,8 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
 
     if "semantic" in observation:
         semantic_map = observation["semantic"].squeeze()
+        if not isinstance(semantic_map, np.ndarray):
+            semantic_map = semantic_map.cpu().numpy()
         colors = make_rgb_palette(2)
         semantic_colors = colors[semantic_map % 2] * 255
         semantic_colors = semantic_colors.astype(np.uint8)

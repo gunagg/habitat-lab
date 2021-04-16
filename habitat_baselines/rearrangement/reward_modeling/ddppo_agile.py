@@ -11,7 +11,7 @@ from torch import Tensor
 from torch import distributed as distrib
 
 from habitat_baselines.rearrangement.common.rollout_storage import RolloutStorage
-from habitat_baselines.rearrangement.reward_modeling.ppo_agile import PPOAgile
+from habitat_baselines.rearrangement.reward_modeling.ppo_agile import PPOAgile, PPOAgileSeq
 
 EPS_PPO = 1e-5
 
@@ -98,4 +98,7 @@ class DecentralizedDistributedMixin:
 
 
 class DDPPOAgile(DecentralizedDistributedMixin, PPOAgile):
+    pass
+
+class DDPPOAgileSeq(DecentralizedDistributedMixin, PPOAgileSeq):
     pass

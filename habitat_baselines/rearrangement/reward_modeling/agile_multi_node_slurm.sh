@@ -21,7 +21,16 @@ export MAGNUM_LOG=quiet
 MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 export MASTER_ADDR
 
+sensor=$1
+
 set -x
-srun python -u -m habitat_baselines.run \
-    --exp-config habitat_baselines/config/object_rearrangement/ddppo_agile_object_rearrangement.yaml \
-    --run-type train
+if [[ $sensor == "pos" ]]; then
+    echo "in pos agile ppo"
+    srun python -u -m habitat_baselines.run \
+        --exp-config habitat_baselines/config/object_rearrangement/ddppo_agile_object_rearrangement_pos.yaml \
+        --run-type train
+else
+    srun python -u -m habitat_baselines.run \
+        --exp-config habitat_baselines/config/object_rearrangement/ddppo_agile_object_rearrangement.yaml \
+        --run-type train
+fi

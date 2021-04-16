@@ -327,6 +327,7 @@ class PPOAgileSeq(nn.Module):
         discr_loss_epoch = 0.0
         discr_accuracy_epoch = 0.0
         num_discr_updates = 0.0
+        bce_loss = nn.BCEWithLogitsLoss()
 
         for _e in range(self.ppo_epoch):
             profiling_wrapper.range_push("PPO.update epoch")
@@ -415,11 +416,14 @@ class PPOAgileSeq(nn.Module):
                 discr_gt_targets = torch.ones(discr_gt_logits.size(0), device=actions_batch.device)
 
                 # Targets for experience episodes
-                discr_experience_targets = -1 * torch.ones(discr_experience_logits.size(0), device=actions_batch.device)
-                discr_targets = torch.cat([discr_gt_targets, discr_experience_targets], 0)
+                # discr_experience_targets = -1 * torch.ones(discr_experience_logits.size(0), device=actions_batch.device)
+                discr_experience_targets = torch.zeros(discr_experience_logits.size(0), device=actions_batch.device)
+                discr_targets = torch.cat([discr_gt_targets, discr_experience_targets], 0).unsqueeze(1)
 
-                discr_loss = F.softplus(-discr_logits * discr_targets).mean()
-                discr_accuracy = ((discr_logits > self.discr_thr) == (discr_targets > 0)).float().mean()
+                # discr_loss = F.softplus(-discr_logits * discr_targets).mean()
+                discr_loss = bce_loss(discr_logits, discr_targets).mean()
+                # discr_accuracy = ((discr_logits > self.discr_thr) == (discr_targets > 0)).float().mean()
+                discr_accuracy = ((torch.sigmoid(discr_logits) > self.discr_thr) == (discr_targets > 0)).float().mean()
                 num_discr_updates += 1
 
                 self.optimizer.zero_grad()
@@ -445,8 +449,6 @@ class PPOAgileSeq(nn.Module):
                 dist_entropy_epoch += dist_entropy.item()
                 discr_loss_epoch += discr_loss.item()
                 discr_accuracy_epoch += discr_accuracy
-
-                sys.exit(1)
 
             profiling_wrapper.range_pop()  # PPO.update epoch
 

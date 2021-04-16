@@ -81,9 +81,12 @@ class RearrangementPPOTrainer(BaseRLTrainer):
         if self.config.RL.PPO.init_bc_baseline:
             ckpt = self.load_checkpoint(self.config.RL.PPO.bc_baseline_ckpt, map_location="cpu")
             self.actor_critic.load_state_dict(ckpt, strict=False)
+            logger.info("Loaded BC baseline ckpt")
         
         if self.config.RL.PPO.freeze_encoder:
             for param in self.actor_critic.net.rgb_encoder.parameters():
+                param.requires_grad_(False)
+            for param in self.actor_critic.net.depth_encoder.parameters():
                 param.requires_grad_(False)
 
         self.actor_critic.to(self.device)
@@ -137,7 +140,7 @@ class RearrangementPPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward"}
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward", "coverage"}
 
     @classmethod
     def _extract_scalars_from_info(
@@ -580,6 +583,8 @@ class RearrangementPPOTrainer(BaseRLTrainer):
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()
         episode_count = 0
+        possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+        pred_actions = []
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0

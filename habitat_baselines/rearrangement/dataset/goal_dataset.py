@@ -333,17 +333,24 @@ class RearrangementGoalDataset(Dataset):
 class RearrangementGoalDatasetV2(Dataset):
     """Pytorch dataset for object rearrangement task for each episode"""
 
-    def __init__(self, config, mode="train_goals"):
+    def __init__(self, config, mode="train_goals", content_scenes=["*"]):
         """
         Args:
             env (habitat.Env): Habitat environment
             config: Config
             mode: 'train'/'val'
         """
+        scene_split_name = "train"
+        if content_scenes[0] != "*":
+            scene_split_name = "_".join(content_scenes)
+
         self.config = config.TASK_CONFIG
-        self.dataset_path = config.GOAL_DATASET_PATH.format(split=mode)
-        # print(config)
-        # env_class = get_env_class(config.ENV_NAME)
+        self.dataset_path = config.GOAL_DATASET_PATH.format(split=mode, scene_split=scene_split_name)
+
+        self.config.defrost()
+        self.config.DATASET.CONTENT_SCENES = content_scenes
+        self.config.freeze()
+
         self.env = habitat.Env(config=self.config)
         self.episodes = self.env._dataset.episodes
         self.instruction_vocab = self.env._dataset.instruction_vocab
@@ -351,7 +358,7 @@ class RearrangementGoalDatasetV2(Dataset):
         self.resolution = self.env._sim.get_resolution()
         self.possible_actions = config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
 
-        self.scene_ids = []
+        self.count = 0
         self.scene_episode_dict = defaultdict(list)
         self.scene_episode_idx_dict = defaultdict(int)
 
@@ -367,7 +374,7 @@ class RearrangementGoalDatasetV2(Dataset):
             """
 
             logger.info(
-                "Dataset cache not found. Saving goal state observations"
+                "Dataset cache not found/ignored. Saving goal state observations"
             )
             logger.info(
                 "Number of {} episodes: {}".format(mode, len(self.episodes))
@@ -452,14 +459,18 @@ class RearrangementGoalDatasetV2(Dataset):
             )
             obs_list.append(frame)
 
-        count = self.scene_episode_idx_dict[scene_id]
-        self.scene_episode_idx_dict[scene_id] += 1
-        scene_id = scene_id.split("/")[-1].replace(".", "_")
-        sample_key = "{0}_{1:0=6d}".format(scene_id, count)
+        # count = self.scene_episode_idx_dict[scene_id]
+        # self.scene_episode_idx_dict[scene_id] += 1
+        # scene_id = scene_id.split("/")[-1].replace(".", "_")
+        # sample_key = "{0}_{1:0=6d}".format(scene_id, count)
+        logger.info("Episode: {} - {}".format(self.count, len(observations["compass"])))
+        sample_key = "{0:0=6d}".format(self.count)
         with self.lmdb_env.begin(write=True) as txn:
             txn.put((sample_key + "_obs").encode(), msgpack_numpy.packb(observations, use_bin_type=True))
             txn.put((sample_key + "_next_action").encode(), np.array(next_actions).tobytes())
             txn.put((sample_key + "_prev_action").encode(), np.array(prev_actions).tobytes())
+
+        self.count += 1
 
         # images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}_{}".format(scene_id, count))
 
@@ -494,7 +505,36 @@ class RearrangementGoalDatasetV2(Dataset):
         batch: (rgb, depth, seg)
 
         """
-        return
+        if self.lmdb_env is None:
+            self.lmdb_env = lmdb.open(
+                self.dataset_path,
+                map_size=int(1e11),
+                readonly=True,
+                lock=False,
+            )
+            self.lmdb_txn = self.lmdb_env.begin()
+            self.lmdb_cursor = self.lmdb_txn.cursor()
+        
+        height, width = int(self.resolution[0]), int(self.resolution[1])
+
+        obs_idx = "{0:0=6d}_obs".format(idx)
+        observations_binary = self.lmdb_cursor.get(obs_idx.encode())
+        observations = msgpack_numpy.unpackb(observations_binary, raw=False)
+        for k, v in observations.items():
+            obs = np.array(observations[k])
+            observations[k] = torch.from_numpy(obs)
+
+        next_action_idx = "{0:0=6d}_next_action".format(idx)
+        next_action_binary = self.lmdb_cursor.get(next_action_idx.encode())
+        next_action = np.frombuffer(next_action_binary, dtype="int")
+        next_action = torch.from_numpy(np.copy(next_action))
+
+        prev_action_idx = "{0:0=6d}_prev_action".format(idx)
+        prev_action_binary = self.lmdb_cursor.get(prev_action_idx.encode())
+        prev_action = np.frombuffer(prev_action_binary, dtype="int")
+        prev_action = torch.from_numpy(np.copy(prev_action))
+
+        return observations, prev_action, next_action
     
     def get_item(self, idx: int, scene_id: str):
         r"""Returns batches to trainer.

@@ -7,4 +7,11 @@ cd /srv/share3/rramrakhya6/habitat-lab
 echo "Starting agile ppo eval"
 echo "hab sim: ${PYTHONPATH}"
 
-python habitat_baselines/run.py --exp-config habitat_baselines/config/object_rearrangement/ppo_agile_object_rearrangement.yaml --run-type eval
+sensor=$1
+
+if [[ $sensor == "pos" ]]; then
+    echo "Agile pos eval"
+    python habitat_baselines/run.py --exp-config habitat_baselines/config/object_rearrangement/ddppo_agile_object_rearrangement_pos.yaml --run-type eval
+else
+    python habitat_baselines/run.py --exp-config habitat_baselines/config/object_rearrangement/ddppo_agile_object_rearrangement.yaml --run-type eval
+fi

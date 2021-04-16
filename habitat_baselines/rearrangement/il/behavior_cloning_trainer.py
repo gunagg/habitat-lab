@@ -117,7 +117,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         save_seg_results(gt_seg[0], pred_seg[0], path)
         save_depth_results(gt_depth[0], pred_depth[0], path)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward"}
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward", "coverage"}
 
     @classmethod
     def _extract_scalars_from_info(

@@ -115,12 +115,14 @@ class RearrangementDDPPOTrainer(RearrangementPPOTrainer):
         if self.config.RL.DDPPO.init_bc_baseline:
             ckpt = self.load_checkpoint(self.config.RL.DDPPO.bc_baseline_ckpt, map_location="cpu")
             self.actor_critic.load_state_dict(ckpt, strict=False)
+            logger.info("Loading BC checkpoint")
 
         if not self.config.RL.DDPPO.train_encoder:
             for param in self.actor_critic.net.rgb_encoder.parameters():
                 param.requires_grad_(False)
             for param in self.actor_critic.net.depth_encoder.parameters():
                 param.requires_grad_(False)
+            logger.info("Freezing encoders")
 
         if self.config.RL.DDPPO.reset_critic:
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
@@ -432,6 +434,8 @@ class RearrangementDDPPOTrainer(RearrangementPPOTrainer):
                         for k, v in deltas.items()
                         if k not in {"reward", "count", "grab_success", "release_failed"}
                     }
+                    if len(metrics) > 0:
+                        writer.add_scalars("metrics", metrics, count_steps)
 
                     writer.add_scalars(
                         "losses",

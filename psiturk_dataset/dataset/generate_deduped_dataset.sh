@@ -14,6 +14,4 @@ unzip -o $filename
 echo "Starting episode parsing!"
 python psiturk_dataset/parsing/parser.py --replay-path data/hit_data/visualisation/unapproved_hits/ --output-path $output --max-episode-length $maxEpLength
 
-python psiturk_dataset/parsing/check_train_val_leak --input-path-1 $output --list-duplicate
-
-python psiturk_dataset/parsing/sample_episodes --input-path $output --output-path $output --sample_episodes
+python psiturk_dataset/parsing/check_train_val_leak --input-path-1 $output --list-duplicate --write-deduped $output

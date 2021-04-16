@@ -65,12 +65,9 @@ def sample_episodes_by_episode_ids(path, output_path):
     for episode in data["episodes"]:
         scene_id = episode["scene_id"]
         episode_id = episode["episode_id"]
-
-        if episode_id in episode_ids:
+        # Exclude episodes
+        if episode_id not in episode_ids:
             sample_episodes["episodes"].append(episode)
-        
-        if len(sample_episodes["episodes"]) == len(episode_ids):
-            break
     
     print("Sampled episodes: {}".format(len(sample_episodes["episodes"])))
     

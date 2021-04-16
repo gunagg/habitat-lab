@@ -100,6 +100,7 @@ class Seq2SeqNet(Net):
             ].shape[0]
             self.gps_embedding = nn.Linear(input_gps_dim, 32)
             rnn_input_size += 32
+            logger.info("\n\nSetting up GPS sensor")
         
         if EpisodicCompassSensor.cls_uuid in observation_space.spaces:
             assert (
@@ -111,6 +112,7 @@ class Seq2SeqNet(Net):
             input_compass_dim = 2  # cos and sin of the angle
             self.compass_embedding = nn.Linear(input_compass_dim, 32)
             rnn_input_size += 32
+            logger.info("\n\nSetting up Compass sensor")
 
         if model_config.SEQ2SEQ.use_prev_action:
             self.prev_action_embedding = nn.Embedding(num_actions + 1, 32)

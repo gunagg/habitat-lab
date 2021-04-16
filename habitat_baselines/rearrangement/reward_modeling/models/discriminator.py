@@ -146,6 +146,7 @@ class SeqDiscriminatorNet(Net):
         self.instruction_encoder = InstructionEncoder(model_config.INSTRUCTION_ENCODER)
 
         rnn_input_size = 0
+        rnn_input_size += self.instruction_encoder.output_size
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
@@ -256,6 +257,9 @@ class SeqDiscriminatorNet(Net):
         object_state_embedding = self.get_object_state_encoding(observations)
         object_state_embedding = object_state_embedding.flatten(1)
         x.append(object_state_embedding)
+
+        instruction_embedding = self.instruction_encoder(observations)
+        x.append(instruction_embedding)
 
         x = torch.cat(x, dim=1)
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)

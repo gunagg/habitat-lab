@@ -2,7 +2,7 @@ import argparse
 import gzip
 import json
 
-from psiturk_dataset.utils.utils import load_dataset, load_json_dataset, write_json
+from psiturk_dataset.utils.utils import load_dataset, load_json_dataset, write_json, write_gzip
 
 
 VISITED_POINT_DICT = {}
@@ -138,19 +138,38 @@ def validate_episode_init_leak(input_path_1, input_path_2):
         print(dup)
 
 
-def find_duplicate_episode(input_path):
-    train_data = load_dataset(input_path)
-    train_episodes = train_data["episodes"]
-
-    redundant_points_train_episodes, single_point_train_duplicate_episodes = populate_points(train_episodes)
-    print("\n\nEpisode leak in train episodes: {}".format(len(redundant_points_train_episodes)))
-    print("\n\Init points leak in train episodes: {}".format(len(single_point_train_duplicate_episodes)))
-    print("\n\nEpisodes: {}".format(redundant_points_train_episodes))
-    print("\n\nEpisodes: {}".format(single_point_train_duplicate_episodes))
+def filter_episodes(episodes, episode_ids):
+    filtered_episodes = []
+    for episode in episodes:
+        episode_id = episode["episode_id"]
+        # Exclude episodes
+        if episode_id not in episode_ids:
+            filtered_episodes.append(episode)
     
-    for dup in redundant_points_train_episodes:
-        print(dup["episode_id"])
-    write_json(redundant_points_train_episodes, "data/hit_data/duplicate_episodes.py")
+    return filtered_episodes
+
+
+def find_duplicate_episode(input_path, output_path=None):
+    data = load_dataset(input_path)
+    episodes = data["episodes"]
+
+    redundant_points_episodes, single_point_duplicate_episodes = populate_points(episodes)
+    print("\n\nEpisode leak in train episodes: {}".format(len(redundant_points_episodes)))
+    print("\n\Init points leak in train episodes: {}".format(len(single_point_duplicate_episodes)))
+    print("\n\nEpisodes: {}".format(redundant_points_episodes))
+    print("\n\nEpisodes: {}".format(single_point_duplicate_episodes))
+    
+    duplicate_episode_ids = []
+    for dup in redundant_points_episodes:
+        duplicate_episode_ids.append(dup["episode_id"])
+    # write_json(redundant_points_episodes, "data/hit_data/duplicate_episodes.json")
+
+    if output_path is not None:
+        filtered_episodes = filter_episodes(episodes, duplicate_episode_ids)
+        data["episodes"] = filtered_episodes
+        write_json(data, output_path)
+        write_gzip(output_path, output_path)
+        print("Num episodes after dedup: {}".format(len(data["episodes"])))
 
 
 def main():
@@ -167,13 +186,16 @@ def main():
     parser.add_argument(
         "--list-duplicate", dest='list_duplicate', action='store_true'
     )
+    parser.add_argument(
+        "--write-deduped", type=str, default=None
+    )
     args = parser.parse_args()
 
 
     if args.check_leak:
         validate_episode_init_leak(args.input_path_1, args.input_path_2)
     elif args.list_duplicate:
-        find_duplicate_episode(args.input_path_1)
+        find_duplicate_episode(args.input_path_1, args.write_deduped)
     else:
         validate_data(args.input_path_1, args.input_path_2)
 

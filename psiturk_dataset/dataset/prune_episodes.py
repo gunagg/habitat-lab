@@ -5,42 +5,27 @@ import random
 import numpy as np
 
 from tqdm import tqdm
-
-
-def load_dataset(path):
-    with gzip.open(path, "rb") as file:
-        data = json.loads(file.read(), encoding="utf-8")
-    return data
-
-
-def load_json_dataset(path):
-    file = open(path, "r")
-    data = json.loads(file.read())
-    return data
-
-
-def write_json(data, path):
-    with open(path, 'w') as file:
-        file.write(json.dumps(data))
-
-
-def write_gzip(input_path, output_path):
-    with open(input_path, "rb") as input_file:
-        with gzip.open(output_path + ".gz", "wb") as output_file:
-            output_file.writelines(input_file)
+from psiturk_dataset.utils.utils import load_dataset, load_json_dataset, write_gzip, write_json
 
 
 def get_random_int(lb, ub):
     return random.randint(lb, ub)
 
 
+def is_grab_release_action(step):
+    if step.get("action") in ["GRAB_RELEASE", "grabReleaseObject"]:
+        return True
+
+
 def generate_closer_initialization(input_path, output_path, num_steps):
     data = load_dataset(input_path)
 
+    avg_steps = 0
+    avg_steps_before = 0
     for ep_id, episode in tqdm(enumerate(data["episodes"])):
         first_grab_action_index = 0
         for i, step in enumerate(episode["reference_replay"]):
-            if step.get("action") == "grabReleaseObject" and step["is_grab_action"] and step["action_data"]["gripped_object_id"] != -1:
+            if is_grab_release_action(step) and step["is_grab_action"] and step["action_data"]["gripped_object_id"] != -1:
                 first_grab_action_index = i - 5
                 break
         
@@ -51,7 +36,18 @@ def generate_closer_initialization(input_path, output_path, num_steps):
         episode["start_position"] = step["agent_state"]["position"]
         episode["start_rotation"] = step["agent_state"]["rotation"]
         # episode["start_index"] = step_index
-    
+
+        # Modify replay buffer to start from intermediate step
+        avg_steps_before += len(episode["reference_replay"])
+        episode["reference_replay"][0]["agent_state"]["position"] = episode["start_position"]
+        episode["reference_replay"][0]["agent_state"]["rotation"] = episode["start_rotation"]
+        episode["reference_replay"] = [episode["reference_replay"][0]] + episode["reference_replay"][step_index:]
+
+        avg_steps += len(episode["reference_replay"])
+
+    print("Average number of steps before pruning: {}".format(avg_steps_before / len(data["episodes"])))
+    print("Average number of steps after pruning: {}".format(avg_steps / len(data["episodes"])))
+
     write_json(data, output_path)
     write_gzip(output_path, output_path)
 

@@ -14,9 +14,10 @@ import numpy as np
 import torch
 import tqdm
 from torch.optim.lr_scheduler import LambdaLR
+from torch.utils.data import ConcatDataset
 
 from gym import Space
-from habitat import Config, logger
+from habitat import Config, logger, make_dataset
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
@@ -167,7 +168,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "coverage", "rearrangement_reward"}
 
     @classmethod
     def _extract_scalars_from_info(
@@ -274,13 +275,16 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             learning_rewards, discr_rnn_hidden_states = self.discriminator(
                 batch,
                 rollouts.discr_recurrent_hidden_states[rollouts.step],
-                masks,
-                actions
+                masks.to(self.device),
+                actions.to(self.device)
             )
-            learning_rewards = learning_rewards.clone().detach() > self.discr_thr
-            learning_rewards = (self.rescale_coef * learning_rewards.float()).clone().detach()
+            # learning_rewards = learning_rewards.clone().detach() > self.discr_thr
+            # learning_rewards = (self.rescale_coef * learning_rewards.float()).clone().detach()
+            learning_rewards = torch.sigmoid(learning_rewards).clone().detach()
+            # learning_rewards = (self.rescale_coef * learning_rewards.float()).clone().detach()
             learning_rewards = learning_rewards.to(current_episode_reward.device)
 
+        masks.to(current_episode_reward.device)
         reward_compute_time = time.time() - t_compute_reward
 
         current_episode_reward += rewards
@@ -356,12 +360,22 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         )
     
     def _setup_goal_state_dataset(self, config: Config, mode: str):
-        goal_state_dataset = RearrangementGoalDatasetV2(
-            config,
-            mode=mode,
-        )
-        return goal_state_dataset
-
+        content_scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
+        if "*" in content_scenes:
+            dataset = make_dataset(
+                config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
+            )
+            content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
+        datasets = []
+        scene_dataset_map = {}
+        for i, scene in enumerate(content_scenes):
+            dataset = RearrangementGoalDatasetV2(
+                config,
+                content_scenes=[scene],
+                mode=mode
+            )
+            scene_dataset_map[scene] = dataset
+        return scene_dataset_map
 
     @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
@@ -396,7 +410,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
         )
 
         scene_splits = self.envs.scene_splits()
-        goal_state_dataset = self._setup_goal_state_dataset(self.config, "train_goals")
+        scene_goal_dataset_map = self._setup_goal_state_dataset(self.config, "train_goals")
 
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
@@ -405,7 +419,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             self.envs.action_spaces[0],
             ppo_cfg.hidden_size,
             self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
-            goal_state_dataset,
+            scene_goal_dataset_map,
         )
         rollouts.to(self.device)
 
@@ -638,6 +652,12 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             ppo_cfg.hidden_size,
             device=self.device,
         )
+        discr_recurrent_hidden_states = torch.zeros(
+            self.actor_critic.net.num_recurrent_layers,
+            self.config.NUM_PROCESSES,
+            ppo_cfg.hidden_size,
+            device=self.device,
+        )
         prev_actions = torch.zeros(
             self.config.NUM_PROCESSES, 1, device=self.device, dtype=torch.long
         )
@@ -715,13 +735,16 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
             )
 
             with torch.no_grad():
-                learning_rewards = self.discriminator(batch)
-                learning_rewards = learning_rewards.clone().detach() > self.discr_thr
-                learning_rewards = (self.rescale_coef * learning_rewards.float()).clone().detach()
+                learning_rewards, discr_recurrent_hidden_states = self.discriminator(
+                    batch,
+                    discr_recurrent_hidden_states,
+                    not_done_masks,
+                    actions.to(self.device)
+                )
+                learning_rewards = torch.sigmoid(learning_rewards).clone().detach()
                 learning_rewards = learning_rewards.to(current_episode_reward.device)
                 current_episode_pred_reward += learning_rewards
-            
-            episode_count += 1
+
             rewards = torch.tensor(
                 rewards_l, dtype=torch.float, device=self.device
             ).unsqueeze(1)
@@ -754,6 +777,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                             current_episodes[i].episode_id,
                         )
                     ] = episode_stats
+                    episode_count += 1
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
@@ -784,6 +808,8 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
+                discr_recurrent_hidden_states,
+                current_episode_pred_reward,
             ) = self._pause_envs(
                 envs_to_pause,
                 self.envs,
@@ -793,6 +819,8 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
+                discr_recurrent_hidden_states,
+                current_episode_pred_reward,
             )
 
         num_episodes = len(stats_episodes)
