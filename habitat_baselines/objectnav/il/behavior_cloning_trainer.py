@@ -36,10 +36,8 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.rearrangement.common.aux_losses import AuxLosses
-from habitat_baselines.rearrangement.dataset.dataset import RearrangementDataset
-from habitat_baselines.rearrangement.dataset.episode_dataset import RearrangementEpisodeDataset, collate_fn
-from habitat_baselines.rearrangement.models.seq_2_seq_model import Seq2SeqNet, Seq2SeqModel
+from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, collate_fn
+from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.utils.common import (
     batch_obs,
@@ -60,12 +58,11 @@ from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, get_dista
 from PIL import Image
 
 
-@baseline_registry.register_trainer(name="rearrangement-behavior-cloning")
-class RearrangementBCTrainer(BaseILTrainer):
-    r"""Trainer class for PPO algorithm
-    Paper: https://arxiv.org/abs/1707.06347.
+@baseline_registry.register_trainer(name="objectnav-behavior-cloning")
+class ObjectNavBCTrainer(BaseILTrainer):
+    r"""Trainer class for IL algorithm
     """
-    supported_tasks = ["RearrangementTask-v0"]
+    supported_tasks = ["ObjectNav-v1"]
 
     def __init__(self, config=None):
         super().__init__(config)
@@ -80,9 +77,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        # self.device = (
-        #     torch.device("cpu")
-        # )
 
     def _make_results_dir(self):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
@@ -228,7 +222,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
         for scene in content_scenes:
-            dataset = RearrangementEpisodeDataset(
+            dataset = ObjectNavEpisodeDataset(
                 config,
                 content_scenes=[scene],
                 use_iw=config.IL.USE_IW,
@@ -249,34 +243,14 @@ class RearrangementBCTrainer(BaseILTrainer):
         """
 
         config = self.config
-        if config.IL.distrib_training:
-            self.local_rank, tcp_store = init_distrib_slurm(
-                self.config.IL.distrib_backend
-            )
-
-            self.world_rank = distrib.get_rank()
-            self.world_size = distrib.get_world_size()
-
-            self.config.defrost()
-            self.config.TORCH_GPU_ID = self.local_rank
-            self.config.SIMULATOR_GPU_ID = self.local_rank
-            # Multiply by the number of simulators to make sure they also get unique seeds
-            self.config.TASK_CONFIG.SEED += (
-                self.world_rank * self.config.NUM_PROCESSES
-            )
-            self.config.freeze()
-
-            if torch.cuda.is_available():
-                self.device = torch.device("cuda", self.local_rank)
-                torch.cuda.set_device(self.device)
-            else:
-                self.device = torch.device("cpu")
 
         random.seed(self.config.TASK_CONFIG.SEED)
         np.random.seed(self.config.TASK_CONFIG.SEED)
         torch.manual_seed(self.config.TASK_CONFIG.SEED)
 
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
+        print(self.envs.scene_splits())
+        sys.exit(1)
 
         rearrangement_dataset = self._setup_dataset()
         batch_size = config.IL.BehaviorCloning.batch_size
@@ -285,6 +259,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             rearrangement_dataset,
             collate_fn=collate_fn,
             batch_size=batch_size,
+            num_workers=0,
             shuffle=True,
         )
 
@@ -303,15 +278,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
         self.model = torch.nn.DataParallel(self.model, dim=1)
         self.model.to(self.device)
-
-        if config.IL.distrib_training:
-            # Distributed data parallel setup
-            if torch.cuda.is_available():
-                self.model = torch.nn.parallel.DistributedDataParallel(
-                    self.model, device_ids=[self.device], output_device=self.device
-                )
-            else:
-                self.model = torch.nn.parallel.DistributedDataParallel(self.model)
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -333,7 +299,6 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
-        AuxLosses.activate()
         with (
             TensorboardWriter(
                 config.TENSORBOARD_DIR, flush_secs=self.flush_secs
@@ -363,7 +328,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                     avg_load_time += ((time.time() - batch_start_time) / 60)
 
                     optim.zero_grad()
-                    AuxLosses.clear()
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size
@@ -643,7 +607,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
-                    frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))
+                    frame = append_text_to_image(frame, "Action: {}".format(action_names[i]))
                     rgb_frames[i].append(frame)
 
 
@@ -694,40 +658,4 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.envs.close()
 
         print ("environments closed")
-
-    def get_agent_object_distance(self, agent_state, object_states, batch, obs_rgb):
-        eval_agent_state = self.envs.get_agent_pose()[0]
-        eval_object_states = self.envs.get_current_object_states()[0]
-        if "semantic" in agent_state["sensor_data"]:
-            del agent_state["sensor_data"]["semantic"]
-        if "depth" in eval_agent_state["sensor_data"]:
-            del eval_agent_state["sensor_data"]["depth"]
-        if "depth" in agent_state["sensor_data"]:
-            del agent_state["sensor_data"]["depth"]
-
-        agent_l2_distance = get_distance(agent_state["position"], eval_agent_state["position"], "l2")
-        agent_quat_distance = get_distance(agent_state["rotation"], eval_agent_state["rotation"], "quat")
-        sensor_quat_distance = get_distance(agent_state["sensor_data"]["rgb"]["rotation"], eval_agent_state["sensor_data"]["rgb"]["rotation"], "quat")
-
-        object_dist_map = {}
-        for idx in range(len(object_states)):
-            object_id = object_states[idx]["object_id"]
-            eval_idx = -1
-            for idx2 in range(len(eval_object_states)):
-                eval_object_id = eval_object_states[idx2]["object_id"]
-                handle = eval_object_states[idx2]["object_handle"].split("/")[-1].split(".")[0]
-                if object_id == eval_object_id:
-                    eval_idx = idx2
-                    break
-            trans_dist = -1
-            rot_dist = -1
-            if eval_idx != -1:
-                trans_dist = get_distance(object_states[idx]["translation"], eval_object_states[eval_idx]["translation"], "l2")
-                rot_dist = get_distance(object_states[idx]["rotation"], eval_object_states[eval_idx]["rotation"], "quat")
-            object_dist_map[handle] = {
-                "trans_dist": trans_dist,
-                "rot_dist": rot_dist
-            }
-
-        return agent_l2_distance, agent_quat_distance, sensor_quat_distance, object_dist_map
 

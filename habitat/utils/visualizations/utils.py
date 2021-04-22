@@ -109,7 +109,7 @@ def images_to_video(
     images: List[np.ndarray],
     output_dir: str,
     video_name: str,
-    fps: int = 15,
+    fps: int = 10,
     quality: Optional[float] = 5,
     **kwargs,
 ):

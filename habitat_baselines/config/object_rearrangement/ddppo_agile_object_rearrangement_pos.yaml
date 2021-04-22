@@ -4,12 +4,12 @@ ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/ddppo_agile_seq_rm_pos_instruction/seed_1"
+TENSORBOARD_DIR: "tb/ddppo_agile_seq_rm_pos_instruction/seed_1/eval"
 VIDEO_DIR: "video_dir/ddppo_agile_seq_rm_pos_instruction/seed_1/eval"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_agile_seq_rm_pos_instruction/seed_1/ckpt.3.pth"
-NUM_PROCESSES: 2
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_agile_seq_rm_pos_instruction/seed_1/ckpt.6.pth"
+NUM_PROCESSES: 5
 CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_agile_seq_rm_pos_instruction/seed_1"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 NUM_UPDATES: 50000

@@ -1,26 +1,26 @@
 # Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
 # for better hyperparameters for actual training
 
-BASE_TASK_CONFIG_PATH: "configs/tasks/object_rearrangement.yaml"
-TRAINER_NAME: "rearrangement-behavior-cloning"
-ENV_NAME: RearrangementRLEnv
+BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il.yaml"
+TRAINER_NAME: "objectnav-behavior-cloning"
+ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/resnet18_random_split_v4/seed_2/"
-VIDEO_DIR: "video_dir/resnet18_random_split_v4/seed_2/eval"
+TENSORBOARD_DIR: "tb/objectnav/resnet18/seed_1/"
+VIDEO_DIR: "video_dir/objectnav/resnet18/seed_1/eval"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/resnet18_random_split_v4/seed_2/model_500.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/resnet18/seed_1/model_20.ckpt"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/resnet18_random_split_v4/seed_2"
-OUTPUT_LOG_DIR: data/object_rearrangement/logs
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/resnet18/seed_1"
+OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 1
-DATASET_PATH: "data/datasets/object_rearrangement/v4/{split}/{scene_split}.db"
-RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
+DATASET_PATH: "data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
+RESULTS_DIR: "data/objectnav/results/{split}/{type}"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
@@ -32,32 +32,26 @@ IL:
   distrib_backend: GLOO
   BehaviorCloning:
     lr: 0.001
-    max_epochs: 10
-    batch_size: 8
+    max_epochs: 20
+    batch_size: 3
     timestep_batch_size: 800
     freeze_encoder: False
 
 RL:
-  REWARD_MEASURE: "agent_receptacle_distance"
-  REWARD_MEASURE_2: "agent_object_distance"
-  SUCCESS_MEASURE: "success"
-  SLACK_REWARD: -0.01
   SUCCESS_REWARD: 2.5
-  GRAB_SUCCESS_REWARD: 1.5
+  SLACK_REWARD: -1e-3
 
 MODEL:
-  inflection_weight_coef: 6.933316942425072
+  inflection_weight_coef: 6.6991838665799275
   ablate_depth: False
   ablate_rgb: False
-  ablate_instruction: False
-  INSTRUCTION_ENCODER:
-    vocab_size: 128
-    embedding_size: 64
-    hidden_size: 128
-    use_pretrained_embeddings: False
-    rnn_type: "LSTM"
-    final_state_only: True
-    bidirectional: False
+  hidden_size: 512
+  num_recurrent_layers: 2
+  rnn_type: "GRU"
+  backbone: "resnet18"
+  resnet_baseplanes: 32
+  normalize_visual_inputs: False
+  force_blind_policy: False
   RGB_ENCODER:
     cnn_type: "ResnetRGBEncoder"
     output_size: 256

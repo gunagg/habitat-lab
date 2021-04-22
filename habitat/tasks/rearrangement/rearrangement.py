@@ -150,9 +150,9 @@ class RearrangementEpisode(Episode):
     objects: List[RearrangementObjectSpec] = attr.ib(
         default=None, validator=not_none_validator
     )
-    actions: List[str] = attr.ib(
-        default=None, validator=not_none_validator
-    )
+    # actions: List[str] = attr.ib(
+    #     default=None, validator=not_none_validator
+    # )
     # start_index: int = attr.ib(
     #     default=None, validator=not_none_validator
     # )
@@ -777,6 +777,8 @@ class RearrangementReward(Measure):
         self._previous_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
         self._previous_gripped_object_id = -1
         self._previous_exploration_area = None
+        self._previous_placement_success = 0
+        self._placed_success = False
         self.update_metric(episode=episode, task=task, action={"action": 0}, observations=observations, *args, **kwargs)
     
     def reward_coverage(
@@ -797,8 +799,13 @@ class RearrangementReward(Measure):
     def reward_grab_success(self, episode, task, action, observations, *args: Any, **kwargs: Any):
         reward = 0.0
         action_name = task.get_action_name(action["action"])
-        if action_name == "GRAB_RELEASE" and observations["gripped_object_id"] != -1 and\
-            observations["gripped_object_id"] != self._previous_gripped_object_id:
+        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
+        current_object_receptacle_distance = task.measurements.measures[ObjectToReceptacleDistance.cls_uuid].get_metric()
+
+        if action_name != "GRAB_RELEASE":
+            return reward
+
+        if observations["gripped_object_id"] != -1 and observations["gripped_object_id"] != self._previous_gripped_object_id:
             obj_id = observations["gripped_object_id"]
             self._gripped_object_count[obj_id] += 1
             # Reward only on first grab action
@@ -807,6 +814,28 @@ class RearrangementReward(Measure):
                     self._config.GRAB_SUCCESS_REWARD /
                     self._gripped_object_count[obj_id]
                 )
+        # Add penalty if agent drops object too far
+        if self._config.ENABLE_PENALTY:
+            drop_penalty_dist_threshold = (
+                self._config.DROP_PENALTY_DIST_THRESHOLD
+            )
+
+            # If agent drops object too far from receptacle add penalty
+            if self._previous_gripped_object_id != -1 and current_agent_receptacle_distance > drop_penalty_dist_threshold:
+                reward += self._config.DROP_PENALTY
+        
+        # If the agent drops an object at it's successful position, 
+        # give a positive reward, if it removes from a successful position,
+        # give a negative reward
+        if observations['gripped_object_id'] == -1:
+            placement_threshold = self._config.SUCCESS_DISTANCE
+            is_success = int(current_object_receptacle_distance <= placement_threshold)
+            # New success will be in {-1, 0, 1}
+            new_success = (is_success - self._previous_placement_success)
+
+            reward += self._config.GRAB_SUCCESS_REWARD * new_success
+            self._previous_placement_success = is_success
+        
         return reward
 
     def reward_distance_to_object(
@@ -975,30 +1004,6 @@ class RearrangementReward(Measure):
             )
         return reward
 
-    def drop_penalty(
-        self,
-        task,
-        action,
-        observations,
-        *args: Any,
-        **kwargs: Any,
-    ):
-        reward = 0.0
-        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
-        action_name = task.get_action_name(action["action"])
-
-        drop_penalty_dist_threshold = 2.0
-        if hasattr(self._config, "DROP_PENALTY_DIST_THRESHOLD"):
-            drop_penalty_dist_threshold = (
-                self._config.DROP_PENALTY_DIST_THRESHOLD
-            )
-
-        # If agent drops object too far from receptacle add penalty
-        if action_name == "GRAB_RELEASE" and self._previous_gripped_object_id != -1\
-             and current_agent_receptacle_distance > drop_penalty_dist_threshold:
-            reward += self._config.DROP_PENALTY
-        return reward
-
     def reward_explore_dt_when_object_or_receptacle_visible(
         self,
         episode,
@@ -1070,9 +1075,6 @@ class RearrangementReward(Measure):
 
         current_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()
         current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
-
-        if self._config.ENABLE_PENALTY:
-            reward += self.drop_penalty(task, action, observations)
 
         if self._config.MODE == "DISTANCE_TO_GOAL_PLUS_VISIBLE":
             reward += self.reward_distance_to_object_plus_visible(

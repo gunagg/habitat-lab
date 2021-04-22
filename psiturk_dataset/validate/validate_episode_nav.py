@@ -15,9 +15,6 @@ from habitat_sim.utils.common import quat_to_coeffs
 from psiturk_dataset.utils.utils import write_json
 
 
-config = habitat.get_config("configs/tasks/object_rearrangement.yaml")
-
-
 def are_points_navigable(sim, points):
     pathfinder = sim.pathfinder
     is_navigable_list = []
@@ -37,7 +34,27 @@ def are_points_navigable(sim, points):
     return True
 
 
-def get_object_and_agent_state(sim):
+def are_goals_reachable(sim, points, goals):
+    pathfinder = sim.pathfinder
+    is_navigable_list = []
+    for point in points:
+        is_navigable_list.append(pathfinder.is_navigable(point))
+    
+    # for point in goals:
+    #     is_navigable_list.append(pathfinder.is_navigable(point))
+    any_reachable = False
+    for i in range(len(points)):
+        for j in range(len(goals)):
+            dist = sim.geodesic_distance(points[i], goals[j])
+            if dist != np.inf or dist != math.inf:
+                any_reachable = True
+    
+    if np.sum(is_navigable_list) != len(is_navigable_list):
+        return False
+    return any_reachable
+
+
+def get_object_and_agent_state(sim, episode):
     points = []
     # Append agent state
     agent_position = sim.get_agent_state().position
@@ -48,7 +65,12 @@ def get_object_and_agent_state(sim):
     for object_id in object_ids:
         points.append(sim.get_translation(object_id))
     
-    return points
+    # Append goal state
+    goals = []
+    for goal in episode.goals:
+        goals.append(goal.position)
+    
+    return points, goals
 
 
 def run_validation(cfg, num_steps=5):
@@ -64,21 +86,21 @@ def run_validation(cfg, num_steps=5):
 
             obs = env.reset()
 
-            print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
-            physics_simulation_library = env._sim.get_physics_simulation_library()
-            print("Physics simulation library: {}".format(physics_simulation_library))
-            print("Episode length: {}, Episode index: {}".format(len(env.current_episode.reference_replay), ep_id))
-            print("Scene Id : {}".format(env.current_episode.scene_id))
+            # print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
+            # physics_simulation_library = env._sim.get_physics_simulation_library()
+            # print("Physics simulation library: {}".format(physics_simulation_library))
+            # print("Scene Id : {}".format(env.current_episode.scene_id))
             
-            action = possible_actions.index("NO_OP")
-            for i in range(num_steps):
-                observations = env.step(action=action)
+            # action = possible_actions.index("NO_OP")
+            # for i in range(num_steps):
+            #     observations = env.step(action=action)
             sim = env._sim
-            points = get_object_and_agent_state(sim)
+            points, goals = get_object_and_agent_state(sim, env.current_episode)
             is_navigable = are_points_navigable(sim, points)
-            navigable_episodes += int(is_navigable)
+            is_reachable = are_goals_reachable(sim, points, goals)
+            navigable_episodes += int(is_navigable and is_reachable)
 
-            if not is_navigable:
+            if not is_navigable or not is_reachable:
                 non_navigable_episodes.append(env.current_episode.episode_id)
 
             if ep_id % 10 == 0:
@@ -96,7 +118,11 @@ def main():
     parser.add_argument(
         "--num-steps", type=int, default=5
     )
+    parser.add_argument(
+        "--config", type=str, default="configs/tasks/object_rearrangement.yaml"
+    )
     args = parser.parse_args()
+    config = habitat.get_config(args.config)
     cfg = config
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.episodes

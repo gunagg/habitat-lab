@@ -1,5 +1,5 @@
 ENVIRONMENT:
-  MAX_EPISODE_STEPS: 1502
+  MAX_EPISODE_STEPS: 2002
 SIMULATOR:
   FORWARD_STEP_SIZE: 0.15
   TURN_ANGLE: 5
@@ -75,8 +75,9 @@ TASK:
     VISIT_EXP: 1
     ATTENUATION: 0.995
     ENABLE_PENALTY: True
-    DROP_PENALTY: -1.0
+    DROP_PENALTY: -0.5
     DROP_PENALTY_DIST_THRESHOLD: 3.0
+    SUCCESS_DISTANCE: 1.5
   COVERAGE:
     TYPE: "Coverage"
     GRID_DELTA: 0.25
@@ -96,5 +97,5 @@ TASK:
 DATASET:
   TYPE: RearrangementDataset-v0
   SPLIT: "train"
-  DATA_PATH: "data/datasets/object_rearrangement/v2/{split}/{split}.json.gz"
+  DATA_PATH: "data/datasets/object_rearrangement/v4/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/habitat-test-scenes/"

@@ -19,7 +19,7 @@ from torch.utils.data import ConcatDataset
 from gym import Space
 from habitat import Config, logger, make_dataset
 from habitat.utils import profiling_wrapper
-from habitat.utils.visualizations.utils import observations_to_image
+from habitat.utils.visualizations.utils import observations_to_image, append_text_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import get_env_class
@@ -798,6 +798,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
+                    frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))
                     rgb_frames[i].append(frame)
 
             (
@@ -810,7 +811,7 @@ class RearrangementPPOAgileTrainer(BaseRLTrainer):
                 rgb_frames,
                 discr_recurrent_hidden_states,
                 current_episode_pred_reward,
-            ) = self._pause_envs(
+            ) = self._pause_envs_discr(
                 envs_to_pause,
                 self.envs,
                 test_recurrent_hidden_states,

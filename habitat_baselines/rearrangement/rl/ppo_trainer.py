@@ -680,7 +680,6 @@ class RearrangementPPOTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
-                    frame = append_text_to_image(frame, "Action: {}".format(action_names[i]))
                     frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))
                     rgb_frames[i].append(frame)
 

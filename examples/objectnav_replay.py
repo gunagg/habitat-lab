@@ -17,27 +17,12 @@ from time import sleep
 
 from PIL import Image
 
-config = habitat.get_config("configs/tasks/rearrangement_video.yaml")
+config = habitat.get_config("configs/tasks/objectnav_mp3d_video.yaml")
 
 
 def save_image(img, file_name):
     im = Image.fromarray(img)
     im.save("demos/" + file_name)
-
-
-def save_grab_release_frames(env, i):
-    if i + 1 <= len(env.current_episode.reference_replay) - 1:
-        prev_action = env.current_episode.reference_replay[i - 1]
-        prev_prev_action = env.current_episode.reference_replay[i - 2]
-        if data.action == "grabReleaseObject":
-            im = Image.fromarray(observations["rgb"])
-            im.save('outfile{}.jpg'.format(i))
-        if prev_action.action == "grabReleaseObject" and data.action == "stepPhysics":
-            im = Image.fromarray(observations["rgb"])
-            im.save('outfile{}.jpg'.format(i))
-        if prev_prev_action.action == "grabReleaseObject" and prev_action.action == "stepPhysics":
-            im = Image.fromarray(observations["rgb"])
-            im.save('outfile{}.jpg'.format(i))
 
 
 def make_videos(observations_list, output_prefix, ep_id):
@@ -54,16 +39,10 @@ def get_habitat_sim_action(data):
         return HabitatSimActions.TURN_LEFT
     elif data.action == "moveForward":
         return HabitatSimActions.MOVE_FORWARD
-    elif data.action == "moveBackward":
-        return HabitatSimActions.MOVE_BACKWARD
     elif data.action == "lookUp":
         return HabitatSimActions.LOOK_UP
     elif data.action == "lookDown":
         return HabitatSimActions.LOOK_DOWN
-    elif data.action == "grabReleaseObject":
-        return HabitatSimActions.GRAB_RELEASE
-    elif data.action == "stepPhysics":
-        return HabitatSimActions.NO_OP
     return HabitatSimActions.STOP
 
 
@@ -99,52 +78,35 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 "episodeId": env.current_episode.episode_id,
                 "sceneId": env.current_episode.scene_id,
                 "video": "{}_{}.mp4".format(output_prefix, ep_id),
-                "task": env.current_episode.instruction.instruction_text,
                 "episodeLength": len(env.current_episode.reference_replay)
             }
             instructions.append(data)
-            step_index = 1 # env.current_episode.start_index
+            step_index = 1
             grab_seen = False
             grab_count = 0
             total_reward = 0.0
             episode = env.current_episode
             for data in env.current_episode.reference_replay[step_index:]:
-            # for i in range(len(episode.actions)):
                 if log_action:
                     log_action_data(data, i)
                 action = possible_actions.index(data.action)
-                # action = possible_actions.index(episode.actions[i])
-                # action = get_habitat_sim_action(data)
                 action_name = env.task.get_action_name(
                     action
                 )
 
                 if step_env:
                     observations = env.step(action=action)
-                elif not restore_state:
-                    observations = env.step(action=action, replay_data=data)
-                else:
-                    agent_state = data.agent_state
-                    sensor_states = data.agent_state.sensor_data
-                    object_states = data.object_states
-                    observations = env._sim.get_observations_at(agent_state.position, agent_state.rotation, sensor_states, object_states)
 
                 info = env.get_metrics()
                 frame = observations_to_image({"rgb": observations["rgb"]}, {})
                 depth_frame = observations_to_image({"depth": observations["depth"]}, {})
-                total_reward += info["rearrangement_reward"]
 
-                # if action_name == "GRAB_RELEASE":
-                #     print("Grab action: {} -- {}".format(info["rearrangement_reward"], total_reward))
-                
-                # if grab_seen:
-                #     print("Action - {}, Reward: {}".format(action_name, info["rearrangement_reward"]))
+                frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
 
                 observation_list.append(frame)
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, grab_count))
-            # break
 
         if os.path.isfile("instructions.json"):
             inst_file = open("instructions.json", "r")
@@ -175,9 +137,9 @@ def main():
     )
     args = parser.parse_args()
     cfg = config
-    cfg.defrost()
-    cfg.DATASET.DATA_PATH = args.replay_episode
-    cfg.freeze()
+    # cfg.defrost()
+    # cfg.DATASET.DATA_PATH = args.replay_episode
+    # cfg.freeze()
 
     observations = run_reference_replay(
         cfg, args.restore_state, args.step_env, args.log_action,

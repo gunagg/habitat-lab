@@ -1,11 +1,14 @@
 import argparse
 import json
+import glob
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import gzip
 
-from psiturk_dataset.utils.utils import write_json, write_gzip
+from collections import defaultdict
+from psiturk_dataset.utils.utils import write_json, write_gzip, load_dataset
 
 # eval success episodes
 # episode_ids = ['A1L3937MY09J3I:3Z7EFSHGNBH1CG7U84ECI5ABGYYCX5','A1ZE52NWZPN85P:3C6FJU71TSWMYFE4ZRLEVP3QQU9YUY','A2CWA5VQZ6IWMQ:3YGXWBAF72KAEEJKOTC7LUDDNIP4C8','APGX2WZ59OWDN:358010RM5GWXBPDUZL9H8XY015IVXR']
@@ -75,6 +78,48 @@ def sample_episodes_by_episode_ids(path, output_path):
     write_gzip(output_path, output_path)
 
 
+def sample_objectnav_episodes(path, output_path):
+    files = glob.glob(path + "/*.json.gz")
+    hits = []
+    scene_ep_map = defaultdict(int)
+    for file_path in files:
+        data = load_dataset(file_path)
+        scene_id = file_path.split("/")[-1].split(".")[0]
+        object_category_map = defaultdict(int)
+        episodes = []
+        for episode in data["episodes"]:
+            object_category = episode["object_category"]
+            if object_category_map[object_category] < 5:
+                object_category_map[object_category] += 1
+                episodes.append(episode)
+        data["episodes"] = episodes
+        dest_path = os.path.join(output_path, "{}.json".format(scene_id))
+        write_json(data, dest_path)
+
+        scene_ep_map[scene_id] = len(data['episodes'])
+
+        data["episodes"] = episodes[:1]
+        dest_path = os.path.join(output_path, "{}_train.json".format(scene_id))
+        write_json(data, dest_path)
+
+        ep = {
+            "name": "{}.json".format(scene_id),
+            "config": "tasks/objectnav/{}.json".format(scene_id),
+            "scene": "{}.glb".format(scene_id),
+            "trainingTask": {
+                "name": "{}_train.json".format(scene_id),
+                "config": "tasks/objectnav/{}_train.json".format(scene_id)
+            }
+        }
+
+        hits.append(ep)
+    # print(json.dumps(hits, indent=4))
+    with open("hits.json", "w") as f:
+        f.write(json.dumps(hits, indent=4))
+    with open("scene_ep_map.json", "w") as f:
+        f.write(json.dumps(scene_ep_map))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -89,8 +134,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sample-episodes", dest='sample_episodes', action='store_true'
     )
+    parser.add_argument(
+        "--objectnav", dest='is_objectnav', action='store_true'
+    )
     args = parser.parse_args()
-    if args.sample_episodes:
+    if args.sample_episodes and not args.is_objectnav:
         sample_episodes_by_episode_ids(args.input_path, args.output_path)
+    elif args.sample_episodes and args.is_objectnav:
+        sample_objectnav_episodes(args.input_path, args.output_path)
     else:
         sample_episodes(args.input_path, args.output_path, args.per_scene_limit)

@@ -38,9 +38,6 @@ class Seq2SeqNet(Net):
         super().__init__()
         self.model_config = model_config
 
-        # Init the instruction encoder
-        self.instruction_encoder = InstructionEncoder(model_config.INSTRUCTION_ENCODER)
-
         # Init the depth encoder
         assert model_config.DEPTH_ENCODER.cnn_type in [
             "SimpleDepthCNN",
@@ -89,8 +86,7 @@ class Seq2SeqNet(Net):
 
         # Init the RNN state decoder
         rnn_input_size = (
-            self.instruction_encoder.output_size
-            + model_config.DEPTH_ENCODER.output_size
+            model_config.DEPTH_ENCODER.output_size
             + model_config.RGB_ENCODER.output_size
         )
 
@@ -110,7 +106,8 @@ class Seq2SeqNet(Net):
                 == 1
             ), "Expected compass with 2D rotation."
             input_compass_dim = 2  # cos and sin of the angle
-            self.compass_embedding = nn.Linear(input_compass_dim, 32)
+            self.compass_embedding_dim = 32
+            self.compass_embedding = nn.Linear(input_compass_dim, self.compass_embedding_dim)
             rnn_input_size += 32
             logger.info("\n\nSetting up Compass sensor")
 
@@ -145,35 +142,33 @@ class Seq2SeqNet(Net):
         depth_embedding: [batch_size x DEPTH_ENCODER.output_size]
         rgb_embedding: [batch_size x RGB_ENCODER.output_size]
         """
-        instruction_embedding = self.instruction_encoder(observations)
         depth_embedding = self.depth_encoder(observations)
         rgb_embedding = self.rgb_encoder(observations)
 
-        if self.model_config.ablate_instruction:
-            instruction_embedding = instruction_embedding * 0
         if self.model_config.ablate_depth:
             depth_embedding = depth_embedding * 0
         if self.model_config.ablate_rgb:
             rgb_embedding = rgb_embedding * 0
 
-        x = [instruction_embedding, depth_embedding, rgb_embedding]
+        x = [depth_embedding, rgb_embedding]
 
         if EpisodicGPSSensor.cls_uuid in observations:
-            x.append(
-                self.gps_embedding(observations[EpisodicGPSSensor.cls_uuid])
-            )
+            obs_gps = observations[EpisodicGPSSensor.cls_uuid]
+            obs_gps = obs_gps.view(-1, obs_gps.size(2))
+            x.append(self.gps_embedding(obs_gps))
         
         if EpisodicCompassSensor.cls_uuid in observations:
+            obs_compass = observations["compass"]
+            obs_compass = obs_compass.contiguous().view(-1, obs_compass.size(2))
             compass_observations = torch.stack(
                 [
-                    torch.cos(observations[EpisodicCompassSensor.cls_uuid]),
-                    torch.sin(observations[EpisodicCompassSensor.cls_uuid]),
+                    torch.cos(obs_compass),
+                    torch.sin(obs_compass),
                 ],
                 -1,
             )
-            x.append(
-                self.compass_embedding(compass_observations.squeeze(dim=1))
-            )
+            compass_embedding = self.compass_embedding(compass_observations.squeeze(dim=1))
+            x.append(compass_embedding)
 
         if self.model_config.SEQ2SEQ.use_prev_action:
             prev_actions_embedding = self.prev_action_embedding(
@@ -197,6 +192,17 @@ class Seq2SeqModel(nn.Module):
             model_config=model_config,
             num_actions=action_space.n,
         )
+        # self.net = PointNavResNetNet(
+        #     observation_space=observation_space,
+        #     action_space=action_space,
+        #     hidden_size=model_config.hidden_size,
+        #     num_recurrent_layers=model_config.num_recurrent_layers,
+        #     rnn_type=model_config.rnn_type,
+        #     backbone=model_config.backbone,
+        #     resnet_baseplanes=model_config.resnet_baseplanes,
+        #     normalize_visual_inputs=model_config.normalize_visual_inputs,
+        #     force_blind_policy=model_config.force_blind_policy,
+        # )
         self.action_distribution = CategoricalNet(
             self.net.output_size, action_space.n
         )
