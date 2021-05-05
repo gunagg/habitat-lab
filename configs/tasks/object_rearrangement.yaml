@@ -9,12 +9,11 @@ SIMULATOR:
   AGENT_0:
     SENSORS: ["RGB_SENSOR", "SEMANTIC_SENSOR", "DEPTH_SENSOR"]
     MAX_CLIMB: 0.5
-  CROSSHAIR_POS: [128, 128]
-  GRAB_DISTANCE: 2.0
-  VISUAL_SENSOR: "rgb"
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
     ENABLE_PHYSICS: True
+  CROSSHAIR_POS: [128, 128]
+  GRAB_DISTANCE: 2.0
   RGB_SENSOR:
     WIDTH: 256
     HEIGHT: 256
@@ -97,5 +96,5 @@ TASK:
 DATASET:
   TYPE: RearrangementDataset-v0
   SPLIT: "train"
-  DATA_PATH: "data/datasets/object_rearrangement/v4/{split}/{split}.json.gz"
+  DATA_PATH: "data/datasets/object_rearrangement/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/habitat-test-scenes/"

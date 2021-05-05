@@ -33,7 +33,7 @@ def calculate_inflection_weight(path):
         total_actions += num_actions
 
     print("Total episodes: {}".format(len(episodes)))
-    print("Inflection weight: {}".format(inflections / total_actions))
+    print("Inflection weight: {}".format(total_actions / inflections))
 
     instructions = convert_instruction_tokens(episodes)
     print("Num of distinct instructions: {}".format(len(set(instructions))))

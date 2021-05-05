@@ -249,6 +249,8 @@ class RearrangementBCTrainer(BaseILTrainer):
         """
 
         config = self.config
+        self.world_rank = 0
+        self.world_size = 1
         if config.IL.distrib_training:
             self.local_rank, tcp_store = init_distrib_slurm(
                 self.config.IL.distrib_backend
@@ -276,17 +278,33 @@ class RearrangementBCTrainer(BaseILTrainer):
         np.random.seed(self.config.TASK_CONFIG.SEED)
         torch.manual_seed(self.config.TASK_CONFIG.SEED)
 
-        self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
+        self.envs = construct_envs(
+            config,
+            get_env_class(config.ENV_NAME),
+            workers_ignore_signals=True
+        )
 
         rearrangement_dataset = self._setup_dataset()
         batch_size = config.IL.BehaviorCloning.batch_size
+
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            rearrangement_dataset,
+            num_replicas=self.world_size,
+            rank=self.world_rank,
+            shuffle=True,
+            drop_last=True,
+        )
+        logger.info("Setup dataloader")
 
         train_loader = DataLoader(
             rearrangement_dataset,
             collate_fn=collate_fn,
             batch_size=batch_size,
-            shuffle=True,
+            shuffle=False,
+            sampler=train_sampler,
+            num_workers=0,
         )
+        logger.info("Dataloader setup")
 
         logger.info(
             "[ train_loader has {} samples ]".format(
@@ -301,10 +319,9 @@ class RearrangementBCTrainer(BaseILTrainer):
             action_space,
             config.MODEL
         )
-        self.model = torch.nn.DataParallel(self.model, dim=1)
-        self.model.to(self.device)
 
         if config.IL.distrib_training:
+            self.model.to(self.device)
             # Distributed data parallel setup
             if torch.cuda.is_available():
                 self.model = torch.nn.parallel.DistributedDataParallel(
@@ -312,6 +329,9 @@ class RearrangementBCTrainer(BaseILTrainer):
                 )
             else:
                 self.model = torch.nn.parallel.DistributedDataParallel(self.model)
+        else:
+            self.model = torch.nn.DataParallel(self.model, dim=1)
+            self.model.to(self.device)
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -324,22 +344,19 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
 
-        rnn_hidden_states = torch.zeros(
-            config.MODEL.STATE_ENCODER.num_recurrent_layers,
-            batch_size,
-            config.MODEL.STATE_ENCODER.hidden_size,
-            device=self.device,
-        )
-
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
         AuxLosses.activate()
+        logger.info("Starting training")
         with (
             TensorboardWriter(
-                config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+                self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
             )
+            if self.world_rank == 0
+            else contextlib.suppress()
         ) as writer:
             while epoch <= config.IL.BehaviorCloning.max_epochs:
+                train_sampler.set_epoch(epoch)
                 start_time = time.time()
                 avg_loss = 0.0
                 avg_load_time = 0.0
@@ -359,8 +376,15 @@ class RearrangementBCTrainer(BaseILTrainer):
                      gt_next_action,
                      inflec_weights
                     ) = batch
-
+                    # logger.info("batch: {} -- {} -- {} -- {}".format(observations_batch["rgb"].shape, gt_next_action.shape, episode_not_done.shape, self.world_rank))
                     avg_load_time += ((time.time() - batch_start_time) / 60)
+
+                    rnn_hidden_states = torch.zeros(
+                        config.MODEL.STATE_ENCODER.num_recurrent_layers,
+                        gt_prev_action.shape[1],
+                        config.MODEL.STATE_ENCODER.hidden_size,
+                        device=self.device,
+                    )
 
                     optim.zero_grad()
                     AuxLosses.clear()
@@ -404,30 +428,29 @@ class RearrangementBCTrainer(BaseILTrainer):
                         action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
                         loss = (action_loss / num_steps)
                         loss.backward()
-                        batch_loss += loss.item()
+                        # Sync loss
+                        stats = torch.tensor(
+                            [loss.detach().item()],
+                            device=self.device,
+                        )
+                        if config.IL.distrib_training:
+                            distrib.all_reduce(stats)
+                        batch_loss += stats[0].item()
                         rnn_hidden_states = rnn_hidden_states.detach()
 
                         avg_train_time += ((time.time() - train_time) / 60)
 
-                    avg_loss += batch_loss
-
-                    if t % config.LOG_INTERVAL == 0:
+                    if t % config.LOG_INTERVAL == 0 and self.world_rank == 0:
                         logger.info(
                             "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f}; samples: {:.3f}]".format(
                                 epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t, t
                             )
                         )
-                        writer.add_scalar("train_loss", loss, t)
 
                     optim.step()
                     scheduler.step()
-                    rnn_hidden_states = torch.zeros(
-                        config.MODEL.STATE_ENCODER.num_recurrent_layers,
-                        batch_size,
-                        config.MODEL.STATE_ENCODER.hidden_size,
-                        device=self.device,
-                    )
                     batch_start_time = time.time()
+                    avg_loss += batch_loss
 
                 end_time = time.time()
                 time_taken = "{:.1f}".format((end_time - start_time) / 60)
@@ -435,23 +458,26 @@ class RearrangementBCTrainer(BaseILTrainer):
                 avg_train_time = avg_train_time / len(train_loader)
                 avg_load_time = avg_load_time / len(train_loader)
 
-                logger.info(
-                    "[ Epoch {} completed. Time taken: {} minutes. Load time: {} mins. Train time: {} mins]".format(
-                        epoch, time_taken, avg_load_time, avg_train_time
+                if self.world_rank == 0:
+                    logger.info(
+                        "[ Epoch {} completed. Time taken: {} minutes. Load time: {} mins. Train time: {} mins]".format(
+                            epoch, time_taken, avg_load_time, avg_train_time
+                        )
                     )
-                )
-                logger.info("[ Average loss: {:.3f} ]".format(avg_loss))
-                writer.add_scalar("avg_train_loss", avg_loss, epoch)
+                    logger.info("[ Average loss: {:.3f} ]".format(avg_loss / self.world_size))
+                    writer.add_scalar("avg_train_loss", avg_loss / self.world_size, epoch)
 
-                print("-----------------------------------------")
+                    print("-----------------------------------------")
 
-                if epoch % config.CHECKPOINT_INTERVAL == 0:
-                    self.save_checkpoint(
-                        self.model.module.state_dict(), "model_{}.ckpt".format(epoch)
-                    )
+                    if epoch % config.CHECKPOINT_INTERVAL == 0:
+                        self.save_checkpoint(
+                            self.model.module.state_dict(), "model_{}.ckpt".format(epoch)
+                        )
 
                 epoch += 1
+        logger.info("Epochs ended")
         self.envs.close()
+        logger.info("Closing envs")
 
     def _eval_checkpoint(
         self,
@@ -694,40 +720,3 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.envs.close()
 
         print ("environments closed")
-
-    def get_agent_object_distance(self, agent_state, object_states, batch, obs_rgb):
-        eval_agent_state = self.envs.get_agent_pose()[0]
-        eval_object_states = self.envs.get_current_object_states()[0]
-        if "semantic" in agent_state["sensor_data"]:
-            del agent_state["sensor_data"]["semantic"]
-        if "depth" in eval_agent_state["sensor_data"]:
-            del eval_agent_state["sensor_data"]["depth"]
-        if "depth" in agent_state["sensor_data"]:
-            del agent_state["sensor_data"]["depth"]
-
-        agent_l2_distance = get_distance(agent_state["position"], eval_agent_state["position"], "l2")
-        agent_quat_distance = get_distance(agent_state["rotation"], eval_agent_state["rotation"], "quat")
-        sensor_quat_distance = get_distance(agent_state["sensor_data"]["rgb"]["rotation"], eval_agent_state["sensor_data"]["rgb"]["rotation"], "quat")
-
-        object_dist_map = {}
-        for idx in range(len(object_states)):
-            object_id = object_states[idx]["object_id"]
-            eval_idx = -1
-            for idx2 in range(len(eval_object_states)):
-                eval_object_id = eval_object_states[idx2]["object_id"]
-                handle = eval_object_states[idx2]["object_handle"].split("/")[-1].split(".")[0]
-                if object_id == eval_object_id:
-                    eval_idx = idx2
-                    break
-            trans_dist = -1
-            rot_dist = -1
-            if eval_idx != -1:
-                trans_dist = get_distance(object_states[idx]["translation"], eval_object_states[eval_idx]["translation"], "l2")
-                rot_dist = get_distance(object_states[idx]["rotation"], eval_object_states[eval_idx]["rotation"], "quat")
-            object_dist_map[handle] = {
-                "trans_dist": trans_dist,
-                "rot_dist": rot_dist
-            }
-
-        return agent_l2_distance, agent_quat_distance, sensor_quat_distance, object_dist_map
-

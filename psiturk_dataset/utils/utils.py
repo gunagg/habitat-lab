@@ -62,3 +62,9 @@ def get_episodes_by_episode_index(episodes, indices):
             filtered_episodes.append(episode)
     return filtered_episodes
 
+
+def get_unique_scenes(episodes):
+    scenes = []
+    for ep in episodes:
+        scenes.append(ep["scene_id"])
+    return list(set(scenes))

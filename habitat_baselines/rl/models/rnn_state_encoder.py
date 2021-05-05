@@ -136,7 +136,7 @@ class RNNStateEncoder(nn.Module):
         return x, hidden_states
 
     def forward(self, x, hidden_states, masks):
-        if x.size(0) == hidden_states.size(1):
-            return self.single_forward(x, hidden_states, masks)
-        else:
-            return self.seq_forward(x, hidden_states, masks)
+        # if x.size(0) == hidden_states.size(1):
+        #     return self.single_forward(x, hidden_states, masks)
+        # else:
+        return self.seq_forward(x, hidden_states, masks)

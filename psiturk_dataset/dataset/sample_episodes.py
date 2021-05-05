@@ -4,11 +4,13 @@ import glob
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 import gzip
 
 from collections import defaultdict
 from psiturk_dataset.utils.utils import write_json, write_gzip, load_dataset
+from tqdm import tqdm
 
 # eval success episodes
 # episode_ids = ['A1L3937MY09J3I:3Z7EFSHGNBH1CG7U84ECI5ABGYYCX5','A1ZE52NWZPN85P:3C6FJU71TSWMYFE4ZRLEVP3QQU9YUY','A2CWA5VQZ6IWMQ:3YGXWBAF72KAEEJKOTC7LUDDNIP4C8','APGX2WZ59OWDN:358010RM5GWXBPDUZL9H8XY015IVXR']
@@ -26,8 +28,7 @@ def load_duplicate_episodes(path="data/hit_data/duplicate_episode.json"):
 
 
 def sample_episodes(path, output_path, per_scene_limit=10):
-    episode_file = open(path, "r")
-    data = json.loads(episode_file.read())
+    data = load_dataset(path)
 
     print("Number of episodes {}".format(len(data["episodes"])))
 
@@ -120,6 +121,40 @@ def sample_objectnav_episodes(path, output_path):
         f.write(json.dumps(scene_ep_map))
 
 
+def sample_episodes_by_scene(path, output_path, limit=500):
+    data = load_dataset(path)
+
+    ep_inst_map = {}
+    episodes = []
+    excluded_episodes = []
+    for ep in tqdm(data["episodes"]):
+        instruction = ep["instruction"]["instruction_text"].replace(" ", "_")
+        scene_id = ep["scene_id"]
+
+        if scene_id not in ep_inst_map.keys():
+            ep_inst_map[scene_id] = {}
+        else:
+            if instruction not in ep_inst_map[scene_id].keys():
+                ep_inst_map[scene_id][instruction] = 1
+                episodes.append(ep)
+            else:
+                ep_inst_map[scene_id][instruction] += 1
+                excluded_episodes.append(ep)
+
+    sample_length = limit - len(episodes)
+    if sample_length > 0:
+        sampled = np.random.choice(excluded_episodes, sample_length)
+        episodes.extend(sampled.tolist())
+    else:
+        sampled = np.random.choice(episodes, limit)
+        episodes = sampled.tolist()
+
+    data["episodes"] = episodes
+
+    write_json(data, output_path)
+    write_gzip(output_path, output_path)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -132,15 +167,23 @@ if __name__ == "__main__":
         "--per-scene-limit", type=int, default=10
     )
     parser.add_argument(
+        "--limit", type=int, default=10
+    )
+    parser.add_argument(
+        "--per-scene", dest='per_scene', action='store_true'
+    )
+    parser.add_argument(
         "--sample-episodes", dest='sample_episodes', action='store_true'
     )
     parser.add_argument(
         "--objectnav", dest='is_objectnav', action='store_true'
     )
     args = parser.parse_args()
-    if args.sample_episodes and not args.is_objectnav:
+    if args.sample_episodes and not args.is_objectnav and not args.per_scene:
         sample_episodes_by_episode_ids(args.input_path, args.output_path)
     elif args.sample_episodes and args.is_objectnav:
         sample_objectnav_episodes(args.input_path, args.output_path)
+    elif args.per_scene and args.sample_episodes:
+        sample_episodes_by_scene(args.input_path, args.output_path, args.limit)
     else:
         sample_episodes(args.input_path, args.output_path, args.per_scene_limit)

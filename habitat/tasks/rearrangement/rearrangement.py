@@ -624,7 +624,7 @@ class Coverage(Measure):
         return self._visited[grid_loc]
 
     def update_metric(
-        self, *args: Any, episode, action, task: EmbodiedTask, observations, **kwargs: Any
+        self, episode, action, task: EmbodiedTask, observations, *args: Any, **kwargs: Any
     ):
         current_visit = self._visit(task, observations)
         self._metric = {
@@ -662,7 +662,7 @@ class CoverageExplorationReward(Measure):
         self.update_metric(episode=episode, task=task, *args, **kwargs)
 
     def update_metric(
-        self, *args: Any, episode, task: EmbodiedTask, **kwargs: Any
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         self._attenuation_penalty *= self._config.ATTENUATION
         visit = task.measurements.measures[
@@ -718,7 +718,7 @@ class AllObjectPositions(PointGoalSensor):
         )
 
     def get_observation(
-        self, *args: Any, observations, episode, **kwargs: Any
+        self, observations, episode, *args: Any, **kwargs: Any
     ):  
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position

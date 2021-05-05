@@ -47,6 +47,7 @@ class RearrangementSim(HabitatSim):
         self.nearest_object_id = -1
         self.gripped_object_id = -1
         self.gripped_object_transformation = None
+        self.max_distance = 2.0
         self.agent_object_handle = "cylinderSolid_rings_1_segments_12_halfLen_1_useTexCoords_false_useTangents_false_capEnds_true"
 
         agent_id = self.habitat_config.DEFAULT_AGENT_ID
@@ -71,6 +72,8 @@ class RearrangementSim(HabitatSim):
 
         self._prev_sim_obs = sim_obs
         self._prev_sim_obs["gripped_object_id"] = -1
+        self._prev_sim_obs["object_under_cross_hair"] = -1
+        self._prev_step_data = defaultdict(int)
         self.did_reset = True
         self.gripped_object_id = -1
         self.nearest_object_id = -1
@@ -236,15 +239,24 @@ class RearrangementSim(HabitatSim):
         agent_config = self._default_agent.agent_config
         action_spec = agent_config.action_space[action]
 
+        crosshair_pos = np.array(self.get_resolution()) // 2
+        crosshair_pos = list(map(int, crosshair_pos))
+
+        ray = self.unproject(crosshair_pos)
+        cross_hair_point = ray.direction
+        ref_point = self._default_agent.body.object.absolute_translation
+
+        nearest_object_id = self.find_nearest_object_under_crosshair(
+            cross_hair_point, ref_point, self.get_resolution(), self.max_distance
+        )
+        object_under_cross_hair = nearest_object_id
+        self._prev_step_data["nearest_object_id"] = nearest_object_id
+        self._prev_step_data["gripped_object_id"] = self.gripped_object_id
+
         if action_spec.name == "grab_or_release_object_under_crosshair":
-            ray = self.unproject(action_spec.actuation.crosshair_pos)
-            cross_hair_point = ray.direction
-            ref_point = self._default_agent.body.object.absolute_translation
-
-            nearest_object_id = self.find_nearest_object_under_crosshair(
-                cross_hair_point, ref_point, self.get_resolution(), action_spec.actuation.amount
-            )
-
+            self._prev_step_data["action"] = action_spec.name
+            self._prev_step_data["is_grab_action"] = self.gripped_object_id == -1
+            self._prev_step_data["is_release_action"] = self.gripped_object_id != -1
             # already gripped an object
             if self.gripped_object_id != -1:
                 ref_transform = self._default_agent.body.object.transformation
@@ -286,6 +298,10 @@ class RearrangementSim(HabitatSim):
                     self.set_object_semantic_id(scene_object.semantic_object_id, new_object_id)
 
                     self.update_object_in_scene(self.gripped_object_id, new_object_id)
+                    self._prev_step_data["new_object_translation"] = np.array(new_object_position).tolist()
+                    self._prev_step_data["new_object_id"] = new_object_id
+                    self._prev_step_data["object_handle"] = scene_object.object_handle
+                    self._prev_step_data["gripped_object_id"] = self.gripped_object_id
                     self.gripped_object_id = -1
             elif nearest_object_id != -1:
                 self.gripped_object_transformation = self.get_transformation(
@@ -295,6 +311,7 @@ class RearrangementSim(HabitatSim):
                 if object_.is_receptacle != True:
                     self.remove_object(nearest_object_id)
                     self.gripped_object_id = nearest_object_id
+                self._prev_step_data["gripped_object_id"] = self.gripped_object_id
         elif action_spec.name == "no_op":
             pass
         else:
@@ -308,10 +325,14 @@ class RearrangementSim(HabitatSim):
         # step world physics
         super().step_world(dt)
 
+        self.draw_bb_around_nearest_object(object_under_cross_hair)
+
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=False)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=True)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
+        self._prev_sim_obs["object_under_cross_hair"] = object_under_cross_hair
+        self._prev_step_data["collided"] = collided
 
         observations = self._sensor_suite.get_observations(self._prev_sim_obs)
         return observations
@@ -355,7 +376,8 @@ class RearrangementSim(HabitatSim):
             object_state = ObjectStateSpec(
                 object_id=object_id,
                 translation=np.array(translation).tolist(),
-                rotation=quat_to_coeffs(rotation).tolist()
+                rotation=quat_to_coeffs(rotation).tolist(),
+                object_handle=scene_object.object_handle,
             )
             object_states.append(object_state)
         return object_states

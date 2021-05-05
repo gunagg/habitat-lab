@@ -35,7 +35,7 @@ class GrabReleaseActuationSpec(ActuationSpec):
 class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
     def __init__(self, config):
         super().__init__(config)
-        self.config = config
+        # self.config = config
         if not HabitatSimActions.has_action("GRAB_RELEASE"):
             HabitatSimActions.extend_action_space("GRAB_RELEASE")
         if not HabitatSimActions.has_action("MOVE_BACKWARD"):
@@ -46,7 +46,7 @@ class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
             HabitatSimActions.extend_action_space("STOP")
 
     def get(self):
-        config = self.config
+        #config = super().get()
         new_config = {
             HabitatSimActions.STOP: habitat_sim.ActionSpec("stop"),
             HabitatSimActions.MOVE_FORWARD: habitat_sim.ActionSpec(
@@ -80,15 +80,13 @@ class RearrangementSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
             HabitatSimActions.GRAB_RELEASE: habitat_sim.ActionSpec(
                 "grab_or_release_object_under_crosshair",
                 GrabReleaseActuationSpec(
-                    visual_sensor_name=self.config.VISUAL_SENSOR,
                     crosshair_pos=self.config.CROSSHAIR_POS,
                     amount=self.config.GRAB_DISTANCE,
                 ),
             ),
         }
 
-        config.update(new_config)
-        return config
+        return new_config
 
 
 @registry.register_task_action

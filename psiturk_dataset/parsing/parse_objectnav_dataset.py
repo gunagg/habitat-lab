@@ -175,7 +175,7 @@ def handle_step(step, episode, unique_id, timestamp):
             data = copy.deepcopy(step["data"]["episode"])
             task_episode_map[data["scene_id"]].append(int(data["episode_id"]))
 
-            episode["episode_id"] = data["episode_id"]
+            episode["episode_id"] = unique_id # data["episode_id"]
             episode["scene_id"] = data["scene_id"]
             episode["start_position"] = data["startState"]["position"]
             episode["start_rotation"] = data["startState"]["rotation"]
@@ -273,7 +273,6 @@ def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_le
         scene_episode_map = defaultdict(list)
 
         for file_path in tqdm(file_paths):
-            print(file_path)
             reader = read_csv(file_path)
 
             episode, counts = convert_to_episode(reader)

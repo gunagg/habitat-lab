@@ -59,6 +59,7 @@ def main():
     cfg.defrost()
     task_config = get_task_config(cfg.BASE_TASK_CONFIG_PATH)
     task_config.defrost()
+    task_config.DATASET.TYPE = "RearrangementDataset-v1"
     task_config.DATASET.DATA_PATH = args.episodes
     task_config.DATASET.CONTENT_SCENES = [args.scene]
     task_config.freeze()

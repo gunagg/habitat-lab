@@ -134,12 +134,6 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 depth_frame = observations_to_image({"depth": observations["depth"]}, {})
                 total_reward += info["rearrangement_reward"]
 
-                # if action_name == "GRAB_RELEASE":
-                #     print("Grab action: {} -- {}".format(info["rearrangement_reward"], total_reward))
-                
-                # if grab_seen:
-                #     print("Action - {}, Reward: {}".format(action_name, info["rearrangement_reward"]))
-
                 observation_list.append(frame)
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
@@ -177,6 +171,7 @@ def main():
     cfg = config
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
+    cfg.DATASET.CONTENT_SCENES = ["S9hNv5qa7GM"]
     cfg.freeze()
 
     observations = run_reference_replay(

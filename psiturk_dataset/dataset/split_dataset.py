@@ -15,7 +15,8 @@ from psiturk_dataset.utils.utils import (
     get_episode_idx_by_instructions,
     get_episode_idx_by_scene_ids,
     get_episodes_by_episode_ids,
-    get_episodes_by_episode_index
+    get_episodes_by_episode_index,
+    get_unique_scenes
 )
 from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit, StratifiedKFold
 
@@ -108,7 +109,8 @@ def train_val_split_instruction_holdout(data):
 
 def train_val_split_scene_holdout(data):
     vocab = load_vocab()
-    scenes = ["house.glb", "empty_house.glb", "bigger_house.glb", "big_house.glb", "big_house_2.glb"]
+    # scenes = ["house.glb", "empty_house.glb", "bigger_house.glb", "big_house.glb", "big_house_2.glb"]
+    scenes = get_unique_scenes(data["episodes"])
 
     rs_split = ShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
     train_idxs = []
@@ -116,6 +118,8 @@ def train_val_split_scene_holdout(data):
     for train_scenes, eval_scenes in rs_split.split(scenes):
         train_scenes = [scenes[i] for i in train_scenes]
         eval_scenes = [scenes[i] for i in eval_scenes]
+        print("Train scenes: {}".format(train_scenes))
+        print("Eval scenes: {}".format(eval_scenes))
 
         train_episode_idx = get_episode_idx_by_scene_ids(data["episodes"], train_scenes)
         eval_episode_idx = get_episode_idx_by_scene_ids(data["episodes"], eval_scenes)

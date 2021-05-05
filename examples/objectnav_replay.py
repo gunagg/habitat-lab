@@ -58,11 +58,14 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
         obs_list = []
+        success = 0
+        spl = 0
 
         if num_episodes is None:
             num_episodes = len(env.episodes)
 
         print("Total episodes: {}".format(len(env.episodes)))
+        fails = []
         for ep_id in range(len(env.episodes)):
             observation_list = []
 
@@ -78,6 +81,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 "episodeId": env.current_episode.episode_id,
                 "sceneId": env.current_episode.scene_id,
                 "video": "{}_{}.mp4".format(output_prefix, ep_id),
+                "task": "Find and go to {}".format(env.current_episode.object_category),
                 "episodeLength": len(env.current_episode.reference_replay)
             }
             instructions.append(data)
@@ -86,6 +90,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             grab_count = 0
             total_reward = 0.0
             episode = env.current_episode
+            ep_success = 0
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
                     log_action_data(data, i)
@@ -103,10 +108,21 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
 
                 frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
 
+                if info["success"]:
+                    ep_success = 1
+
                 observation_list.append(frame)
+
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, grab_count))
+            success += ep_success
+            spl += info["spl"]
+            if ep_success == 0:
+                fails.append({
+                    "episodeId": instructions[-1]["episodeId"],
+                    "distanceToGoal": info["distance_to_goal"]
+                })
 
         if os.path.isfile("instructions.json"):
             inst_file = open("instructions.json", "r")
@@ -115,6 +131,9 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
 
         inst_file = open("instructions.json", "w")
         inst_file.write(json.dumps(instructions))
+        print("Total episode success: {}".format(success))
+        print("SPL: {}, {}, {}".format(spl/num_episodes, spl, num_episodes))
+        print("Failed episodes: {}".format(fails))
         return obs_list
 
 
