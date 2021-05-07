@@ -40,8 +40,9 @@
     VIDEO_DIR
     CHECKPOINT_FOLDER
     ```
+3. Set the value of `MODEL.inflection_weight_coef` based on the split you are training. Find the values for each splits [here](https://www.notion.so/ab2173d31ce3425a97a4fad874920b5d?v=65c29317d4494122918b56e63e421dad)
 
-3. Run
+4. Run
     ```
     cd /path/to/habitat-lab
     srun -p long --constraint rtx_6000 --gres gpu:8 -c 8 --job-name il bash /path/to/habitat-lab/scripts/run_training.sh
