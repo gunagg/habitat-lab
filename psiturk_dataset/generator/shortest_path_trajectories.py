@@ -6,6 +6,7 @@ import json
 import sys
 import time
 import os
+import numpy as np
 
 from habitat import Config, get_config as get_task_config
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
@@ -102,6 +103,47 @@ def get_episode_json(episode, reference_replay):
     return attr.asdict(episode)
 
 
+def is_object_gripped(sim):
+    return sim._prev_step_data["gripped_object_id"] != -1
+
+
+def execute_grab(sim, prev_action):
+    if sim._prev_sim_obs["object_under_cross_hair"] !=  -1 and prev_action != HabitatSimActions.GRAB_RELEASE:
+        return True
+    return False
+
+
+def is_prev_action_look_down(action):
+    return action == HabitatSimActions.LOOK_DOWN
+
+
+def is_prev_action_turn_left(action):
+    return action == HabitatSimActions.TURN_LEFT
+
+
+def is_prev_action_turn_right(action):
+    return action == HabitatSimActions.TURN_RIGHT
+
+
+def get_next_action(prev_actions, num_steps, turn_stack):
+    if num_steps < 10:
+        return HabitatSimActions.LOOK_DOWN
+    else:
+        if prev_actions[-1] == HabitatSimActions.LOOK_DOWN:
+            return HabitatSimActions.TURN_LEFT
+        elif prev_actions[-2] == HabitatSimActions.LOOK_DOWN and np.sum(turn_stack) == -1:
+            return HabitatSimActions.TURN_LEFT
+        elif np.sum(turn_stack) < 0:
+            return HabitatSimActions.TURN_RIGHT
+        elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 0:
+            return HabitatSimActions.TURN_RIGHT
+        elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 2:
+            return HabitatSimActions.TURN_RIGHT
+        elif np.sum(turn_stack) > 0:
+            return HabitatSimActions.TURN_LEFT
+        return HabitatSimActions.LOOK_DOWN
+
+
 def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path"):
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
@@ -125,33 +167,72 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path"):
             obs = env.reset()
             goal_idx = 0
             prev_action = 0
+            num_steps = 0
+            turn_stack = []
             success = 0
-            grab_count = 0
+            near_object = False
+            near_receptacle = False
+            is_gripped = False
+            is_released = False
+            stack_cleared = False
             reference_replay = []
+            prev_actions = []
+            turn_step_indices = [-1, -1]
             while not env.episode_over:
                 best_action = follower.get_next_action(
                     env.current_episode.goals[goal_idx].position
                 )
 
-                if (best_action is None or best_action == 0) and goal_idx == 0:
-                    best_action = HabitatSimActions.LOOK_DOWN
+                if (best_action is None or best_action == 0):
+                    if goal_idx == 0:
+                        near_object = True
+                        stack_cleared = False
+                        best_action = get_next_action(prev_actions, num_steps, turn_stack)
+                        if best_action == HabitatSimActions.TURN_LEFT:
+                            turn_stack.append(-1)
+                        elif best_action == HabitatSimActions.TURN_RIGHT:
+                            turn_stack.append(1)
+                        elif best_action == HabitatSimActions.LOOK_DOWN:
+                            turn_stack = []
+                            turn_step_indices[1] = len(reference_replay) - 1
+                            stack_cleared = True
+                        if len(turn_stack) == 1:
+                            turn_step_indices[0] = len(reference_replay) 
+                        num_steps += 1
+                    else:
+                        near_receptacle = True
 
-                if env._sim._prev_sim_obs["object_under_cross_hair"] != -1 and prev_action != HabitatSimActions.GRAB_RELEASE and grab_count < 2:
+                if execute_grab(env._sim, prev_action) and not is_gripped and near_object:
                     best_action = HabitatSimActions.GRAB_RELEASE
-                    goal_idx = 1
-                    grab_count += 1
+                
+                if near_receptacle and is_gripped and not is_released and execute_grab(env._sim, prev_action):
+                    best_action = HabitatSimActions.GRAB_RELEASE
+                    is_released = True
 
                 if success:
                     best_action = HabitatSimActions.STOP
-                #print(best_action, env._sim._prev_sim_obs["object_under_cross_hair"])
 
                 observations = env.step(best_action)
+                # Switch to searching for receptacle
+                if is_object_gripped(env._sim):
+                    goal_idx = 1
+                    is_gripped = True
+                    num_steps = 0
+
+                if stack_cleared:
+                    if turn_step_indices[0] > 0:
+                        reference_replay = reference_replay[:turn_step_indices[0]]
+
                 info = env.get_metrics()
+                # Generate frames
                 frame = observations_to_image({"rgb": observations["rgb"], "depth": observations["depth"]}, {})
                 frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
                 observation_list.append(frame)
                 success += info["success"]
+
                 prev_action = best_action
+                prev_actions.append(best_action)
+
                 action_data = get_action_data(best_action, env._sim)
                 reference_replay.append(action_data)
 
@@ -166,8 +247,8 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path"):
                 dataset["episodes"].append(ep_data)
 
         print("\n\nEpisode success: {}".format(total_success / total_episodes))
-        write_json(data, "data/episodes/ep_{}.json".format(ep_id))
-        write_gzip("data/episodes/ep_{}.json".format(ep_id), "data/episodes/ep_{}.json".format(ep_id))
+        write_json(dataset, "data/episodes/s_path.json")
+        write_gzip("data/episodes/s_path.json", "data/episodes/s_path.json")
 
 
 def main():
@@ -184,8 +265,7 @@ def main():
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
-    #cfg.DATASET.CONTENT_SCENES = [args.scene]
-    cfg.DATASET.CONTENT_SCENES = ["S9hNv5qa7GM"]
+    cfg.DATASET.CONTENT_SCENES = [args.scene]
     cfg.DATASET.DATA_PATH = args.episodes
     cfg.freeze()
 

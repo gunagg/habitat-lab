@@ -171,7 +171,7 @@ def main():
     cfg = config
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
-    cfg.DATASET.CONTENT_SCENES = ["S9hNv5qa7GM"]
+    # cfg.DATASET.CONTENT_SCENES = ["S9hNv5qa7GM"]
     cfg.freeze()
 
     observations = run_reference_replay(

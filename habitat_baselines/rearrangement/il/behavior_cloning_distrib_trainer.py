@@ -36,8 +36,10 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, collate_fn
-from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
+from habitat_baselines.rearrangement.common.aux_losses import AuxLosses
+from habitat_baselines.rearrangement.dataset.dataset import RearrangementDataset
+from habitat_baselines.rearrangement.dataset.episode_dataset import RearrangementEpisodeDataset, collate_fn
+from habitat_baselines.rearrangement.models.seq_2_seq_model import Seq2SeqNet, Seq2SeqModel
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.utils.common import (
     batch_obs,
@@ -58,11 +60,12 @@ from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, get_dista
 from PIL import Image
 
 
-@baseline_registry.register_trainer(name="objectnav-behavior-cloning")
-class ObjectNavBCTrainer(BaseILTrainer):
-    r"""Trainer class for IL algorithm
+@baseline_registry.register_trainer(name="rearrangement-behavior-cloning")
+class RearrangementBCTrainer(BaseILTrainer):
+    r"""Trainer class for PPO algorithm
+    Paper: https://arxiv.org/abs/1707.06347.
     """
-    supported_tasks = ["ObjectNav-v1"]
+    supported_tasks = ["RearrangementTask-v0"]
 
     def __init__(self, config=None):
         super().__init__(config)
@@ -77,6 +80,9 @@ class ObjectNavBCTrainer(BaseILTrainer):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
+        # self.device = (
+        #     torch.device("cpu")
+        # )
 
     def _make_results_dir(self):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
@@ -222,7 +228,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
         for scene in content_scenes:
-            dataset = ObjectNavEpisodeDataset(
+            dataset = RearrangementEpisodeDataset(
                 config,
                 content_scenes=[scene],
                 use_iw=config.IL.USE_IW,
@@ -244,24 +250,59 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
         config = self.config
 
+        self.local_rank, tcp_store = init_distrib_slurm(
+            self.config.IL.distrib_backend
+        )
+
+        self.world_rank = distrib.get_rank()
+        self.world_size = distrib.get_world_size()
+
+        self.config.defrost()
+        self.config.TORCH_GPU_ID = self.local_rank
+        self.config.SIMULATOR_GPU_ID = self.local_rank
+        # Multiply by the number of simulators to make sure they also get unique seeds
+        self.config.TASK_CONFIG.SEED += (
+            self.world_rank * self.config.NUM_PROCESSES
+        )
+        self.config.freeze()
+
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda", self.local_rank)
+            torch.cuda.set_device(self.device)
+        else:
+            self.device = torch.device("cpu")
+
         random.seed(self.config.TASK_CONFIG.SEED)
         np.random.seed(self.config.TASK_CONFIG.SEED)
         torch.manual_seed(self.config.TASK_CONFIG.SEED)
 
-        self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
-        print(self.envs.scene_splits())
-        sys.exit(1)
+        self.envs = construct_envs(
+            config,
+            get_env_class(config.ENV_NAME),
+            workers_ignore_signals=True
+        )
 
         rearrangement_dataset = self._setup_dataset()
         batch_size = config.IL.BehaviorCloning.batch_size
+
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            rearrangement_dataset,
+            num_replicas=self.world_size,
+            rank=self.world_rank,
+            shuffle=True,
+            drop_last=True,
+        )
+        logger.info("Setup dataloader")
 
         train_loader = DataLoader(
             rearrangement_dataset,
             collate_fn=collate_fn,
             batch_size=batch_size,
+            shuffle=False,
+            sampler=train_sampler,
             num_workers=0,
-            shuffle=True,
         )
+        logger.info("Dataloader setup")
 
         logger.info(
             "[ train_loader has {} samples ]".format(
@@ -276,8 +317,15 @@ class ObjectNavBCTrainer(BaseILTrainer):
             action_space,
             config.MODEL
         )
-        self.model = torch.nn.DataParallel(self.model, dim=1)
+
         self.model.to(self.device)
+        # Distributed data parallel setup
+        if torch.cuda.is_available():
+            self.model = torch.nn.parallel.DistributedDataParallel(
+                self.model, device_ids=[self.device], output_device=self.device
+            )
+        else:
+            self.model = torch.nn.parallel.DistributedDataParallel(self.model)    
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -290,21 +338,19 @@ class ObjectNavBCTrainer(BaseILTrainer):
         )
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
 
-        rnn_hidden_states = torch.zeros(
-            config.MODEL.STATE_ENCODER.num_recurrent_layers,
-            batch_size,
-            config.MODEL.STATE_ENCODER.hidden_size,
-            device=self.device,
-        )
-
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
+        AuxLosses.activate()
+        logger.info("Starting training")
         with (
             TensorboardWriter(
-                config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+                self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
             )
+            if self.world_rank == 0
+            else contextlib.suppress()
         ) as writer:
             while epoch <= config.IL.BehaviorCloning.max_epochs:
+                train_loader.sampler.set_epoch(epoch)
                 start_time = time.time()
                 avg_loss = 0.0
                 avg_load_time = 0.0
@@ -327,7 +373,15 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                     avg_load_time += ((time.time() - batch_start_time) / 60)
 
+                    rnn_hidden_states = torch.zeros(
+                        config.MODEL.STATE_ENCODER.num_recurrent_layers,
+                        gt_prev_action.shape[1],
+                        config.MODEL.STATE_ENCODER.hidden_size,
+                        device=self.device,
+                    )
+
                     optim.zero_grad()
+                    AuxLosses.clear()
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size
@@ -368,30 +422,28 @@ class ObjectNavBCTrainer(BaseILTrainer):
                         action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
                         loss = (action_loss / num_steps)
                         loss.backward()
-                        batch_loss += loss.item()
+                        # Sync loss
+                        stats = torch.tensor(
+                            [loss.detach().item()],
+                            device=self.device,
+                        )
+                        distrib.all_reduce(stats)
+                        batch_loss += stats[0].item()
                         rnn_hidden_states = rnn_hidden_states.detach()
 
                         avg_train_time += ((time.time() - train_time) / 60)
 
-                    avg_loss += batch_loss
-
                     if t % config.LOG_INTERVAL == 0:
                         logger.info(
-                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f}; samples: {:.3f}]".format(
-                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t, t
+                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f};]".format(
+                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t,
                             )
                         )
-                        writer.add_scalar("train_loss", loss, t)
 
                     optim.step()
                     scheduler.step()
-                    rnn_hidden_states = torch.zeros(
-                        config.MODEL.STATE_ENCODER.num_recurrent_layers,
-                        batch_size,
-                        config.MODEL.STATE_ENCODER.hidden_size,
-                        device=self.device,
-                    )
                     batch_start_time = time.time()
+                    avg_loss += batch_loss
 
                 end_time = time.time()
                 time_taken = "{:.1f}".format((end_time - start_time) / 60)
@@ -399,23 +451,26 @@ class ObjectNavBCTrainer(BaseILTrainer):
                 avg_train_time = avg_train_time / len(train_loader)
                 avg_load_time = avg_load_time / len(train_loader)
 
-                logger.info(
-                    "[ Epoch {} completed. Time taken: {} minutes. Load time: {} mins. Train time: {} mins]".format(
-                        epoch, time_taken, avg_load_time, avg_train_time
+                if self.world_rank == 0:
+                    logger.info(
+                        "[ Epoch {} completed. Time taken: {} minutes. Load time: {} mins. Train time: {} mins]".format(
+                            epoch, time_taken, avg_load_time, avg_train_time
+                        )
                     )
-                )
-                logger.info("[ Average loss: {:.3f} ]".format(avg_loss))
-                writer.add_scalar("avg_train_loss", avg_loss, epoch)
+                    logger.info("[ Average loss: {:.3f} ]".format(avg_loss / self.world_size))
+                    writer.add_scalar("avg_train_loss", avg_loss / self.world_size, epoch)
 
-                print("-----------------------------------------")
+                    print("-----------------------------------------")
 
-                if epoch % config.CHECKPOINT_INTERVAL == 0:
-                    self.save_checkpoint(
-                        self.model.module.state_dict(), "model_{}.ckpt".format(epoch)
-                    )
+                    if epoch % config.CHECKPOINT_INTERVAL == 0:
+                        self.save_checkpoint(
+                            self.model.state_dict(), "model_{}.ckpt".format(epoch)
+                        )
 
                 epoch += 1
+        logger.info("Epochs ended")
         self.envs.close()
+        logger.info("Closing envs")
 
     def _eval_checkpoint(
         self,
@@ -607,7 +662,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
-                    frame = append_text_to_image(frame, "Action: {}".format(action_names[i]))
+                    frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))
                     rgb_frames[i].append(frame)
 
 
@@ -658,4 +713,3 @@ class ObjectNavBCTrainer(BaseILTrainer):
         self.envs.close()
 
         print ("environments closed")
-

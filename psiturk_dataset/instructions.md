@@ -1,8 +1,12 @@
 ## Habitat on web
 
+### Setup
+
+1. Follow the offical `habitat-lab` and `habitat-sim` installation instructions.
+
 ### Data
 
-1. Download the dataset from [this](https://drive.google.com/file/d/1lhyv4Xh4rmGeQauJBOOWpV3mJl2CbRdN/view?usp=sharing) URL
+1. Download the dataset from [this](https://habitat-on-web.s3.amazonaws.com/data/assets/data.zip) URL
 2. Unzip the the contents in `data/` folder
 
 ### Dataset Setup
@@ -40,5 +44,5 @@
 3. Run
     ```
     cd /path/to/habitat-lab
-    sbatch habitat_baselines/rearrangement/il/multi_node_slurm.sh
+    srun -p long --constraint rtx_6000 --gres gpu:8 -c 8 --job-name il bash /path/to/habitat-lab/scripts/run_training.sh
     ```

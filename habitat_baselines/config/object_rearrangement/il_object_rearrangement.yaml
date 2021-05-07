@@ -28,8 +28,6 @@ EVAL:
 
 IL:
   USE_IW: True
-  distrib_training: False
-  distrib_backend: NCCL
   BehaviorCloning:
     lr: 0.001
     max_epochs: 10

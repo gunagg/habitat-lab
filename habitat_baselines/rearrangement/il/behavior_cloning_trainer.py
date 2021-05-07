@@ -249,30 +249,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         """
 
         config = self.config
-        self.world_rank = 0
-        self.world_size = 1
-        if config.IL.distrib_training:
-            self.local_rank, tcp_store = init_distrib_slurm(
-                self.config.IL.distrib_backend
-            )
-
-            self.world_rank = distrib.get_rank()
-            self.world_size = distrib.get_world_size()
-
-            self.config.defrost()
-            self.config.TORCH_GPU_ID = self.local_rank
-            self.config.SIMULATOR_GPU_ID = self.local_rank
-            # Multiply by the number of simulators to make sure they also get unique seeds
-            self.config.TASK_CONFIG.SEED += (
-                self.world_rank * self.config.NUM_PROCESSES
-            )
-            self.config.freeze()
-
-            if torch.cuda.is_available():
-                self.device = torch.device("cuda", self.local_rank)
-                torch.cuda.set_device(self.device)
-            else:
-                self.device = torch.device("cpu")
 
         random.seed(self.config.TASK_CONFIG.SEED)
         np.random.seed(self.config.TASK_CONFIG.SEED)
@@ -287,22 +263,14 @@ class RearrangementBCTrainer(BaseILTrainer):
         rearrangement_dataset = self._setup_dataset()
         batch_size = config.IL.BehaviorCloning.batch_size
 
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
-            rearrangement_dataset,
-            num_replicas=self.world_size,
-            rank=self.world_rank,
-            shuffle=True,
-            drop_last=True,
-        )
         logger.info("Setup dataloader")
 
         train_loader = DataLoader(
             rearrangement_dataset,
             collate_fn=collate_fn,
             batch_size=batch_size,
-            shuffle=False,
-            sampler=train_sampler,
-            num_workers=0,
+            shuffle=True,
+            num_workers=8,
         )
         logger.info("Dataloader setup")
 
@@ -319,19 +287,8 @@ class RearrangementBCTrainer(BaseILTrainer):
             action_space,
             config.MODEL
         )
-
-        if config.IL.distrib_training:
-            self.model.to(self.device)
-            # Distributed data parallel setup
-            if torch.cuda.is_available():
-                self.model = torch.nn.parallel.DistributedDataParallel(
-                    self.model, device_ids=[self.device], output_device=self.device
-                )
-            else:
-                self.model = torch.nn.parallel.DistributedDataParallel(self.model)
-        else:
-            self.model = torch.nn.DataParallel(self.model, dim=1)
-            self.model.to(self.device)
+        self.model = torch.nn.DataParallel(self.model, dim=1)
+        self.model.to(self.device)
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -347,16 +304,14 @@ class RearrangementBCTrainer(BaseILTrainer):
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
         AuxLosses.activate()
-        logger.info("Starting training")
+        logger.info("Starting training: {}".format(self.device))
         with (
             TensorboardWriter(
                 self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
             )
-            if self.world_rank == 0
-            else contextlib.suppress()
         ) as writer:
             while epoch <= config.IL.BehaviorCloning.max_epochs:
-                train_sampler.set_epoch(epoch)
+                logger.info("Epoch: {}".format(epoch))
                 start_time = time.time()
                 avg_loss = 0.0
                 avg_load_time = 0.0
@@ -376,7 +331,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                      gt_next_action,
                      inflec_weights
                     ) = batch
-                    # logger.info("batch: {} -- {} -- {} -- {}".format(observations_batch["rgb"].shape, gt_next_action.shape, episode_not_done.shape, self.world_rank))
+
                     avg_load_time += ((time.time() - batch_start_time) / 60)
 
                     rnn_hidden_states = torch.zeros(
@@ -398,7 +353,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                         start_idx = i * timestep_batch_size
                         end_idx = start_idx + timestep_batch_size
                         observations_batch_sample = {
-                            k: v[start_idx:end_idx].to(device=self.device, non_blocking=True)
+                            k: v[start_idx:end_idx].to(device=self.device)
                             for k, v in observations_batch.items()
                         }
 
@@ -428,22 +383,15 @@ class RearrangementBCTrainer(BaseILTrainer):
                         action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
                         loss = (action_loss / num_steps)
                         loss.backward()
-                        # Sync loss
-                        stats = torch.tensor(
-                            [loss.detach().item()],
-                            device=self.device,
-                        )
-                        if config.IL.distrib_training:
-                            distrib.all_reduce(stats)
-                        batch_loss += stats[0].item()
+                        batch_loss += loss.item()
                         rnn_hidden_states = rnn_hidden_states.detach()
 
                         avg_train_time += ((time.time() - train_time) / 60)
 
-                    if t % config.LOG_INTERVAL == 0 and self.world_rank == 0:
+                    if t % config.LOG_INTERVAL == 0:
                         logger.info(
-                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f}; samples: {:.3f}]".format(
-                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t, t
+                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f};]".format(
+                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t,
                             )
                         )
 
@@ -458,21 +406,20 @@ class RearrangementBCTrainer(BaseILTrainer):
                 avg_train_time = avg_train_time / len(train_loader)
                 avg_load_time = avg_load_time / len(train_loader)
 
-                if self.world_rank == 0:
-                    logger.info(
-                        "[ Epoch {} completed. Time taken: {} minutes. Load time: {} mins. Train time: {} mins]".format(
-                            epoch, time_taken, avg_load_time, avg_train_time
-                        )
+                logger.info(
+                    "[ Epoch {} completed. Time taken: {} minutes. Load time: {} mins. Train time: {} mins]".format(
+                        epoch, time_taken, avg_load_time, avg_train_time
                     )
-                    logger.info("[ Average loss: {:.3f} ]".format(avg_loss / self.world_size))
-                    writer.add_scalar("avg_train_loss", avg_loss / self.world_size, epoch)
+                )
+                logger.info("[ Average loss: {:.3f} ]".format(avg_loss))
+                writer.add_scalar("avg_train_loss", avg_loss, epoch)
 
-                    print("-----------------------------------------")
+                print("-----------------------------------------")
 
-                    if epoch % config.CHECKPOINT_INTERVAL == 0:
-                        self.save_checkpoint(
-                            self.model.module.state_dict(), "model_{}.ckpt".format(epoch)
-                        )
+                if epoch % config.CHECKPOINT_INTERVAL == 0:
+                    self.save_checkpoint(
+                        self.model.module.state_dict(), "model_{}.ckpt".format(epoch)
+                    )
 
                 epoch += 1
         logger.info("Epochs ended")
