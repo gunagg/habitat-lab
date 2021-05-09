@@ -221,11 +221,11 @@ class ObjectNavBCTrainer(BaseILTrainer):
             )
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
-        for scene in content_scenes:
+        for scene in ["split_1", "split_2", "split_3", "split_4"]:
             dataset = ObjectNavEpisodeDataset(
                 config,
-                content_scenes=[scene],
                 use_iw=config.IL.USE_IW,
+                split_name=scene,
                 inflection_weight_coef=config.MODEL.inflection_weight_coef
             )
             datasets.append(dataset)
@@ -249,8 +249,6 @@ class ObjectNavBCTrainer(BaseILTrainer):
         torch.manual_seed(self.config.TASK_CONFIG.SEED)
 
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
-        print(self.envs.scene_splits())
-        sys.exit(1)
 
         rearrangement_dataset = self._setup_dataset()
         batch_size = config.IL.BehaviorCloning.batch_size
@@ -259,7 +257,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
             rearrangement_dataset,
             collate_fn=collate_fn,
             batch_size=batch_size,
-            num_workers=0,
+            num_workers=4,
             shuffle=True,
         )
 
@@ -305,6 +303,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
             )
         ) as writer:
             while epoch <= config.IL.BehaviorCloning.max_epochs:
+                logger.info("Epoch: {}".format(epoch))
                 start_time = time.time()
                 avg_loss = 0.0
                 avg_load_time = 0.0

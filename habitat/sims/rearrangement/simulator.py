@@ -277,7 +277,7 @@ class RearrangementSim(HabitatSim):
                 # find no collision point
                 count = 0
                 contact = self.is_collision(scene_object.object_handle, new_object_position)
-                while contact and count < 2:
+                while contact and count < 4:
                     new_object_position = mn.Vector3(
                         new_object_position.x,
                         new_object_position.y + 0.25,

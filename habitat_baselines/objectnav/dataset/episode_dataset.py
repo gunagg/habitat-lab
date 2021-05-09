@@ -19,7 +19,7 @@ from habitat.datasets.utils import VocabDict
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrangement.rearrangement import InstructionData, RearrangementEpisode
 from habitat.tasks.utils import get_habitat_sim_action
-from habitat.utils.visualizations.utils import observations_to_image, images_to_video
+from habitat.utils.visualizations.utils import observations_to_image, images_to_video, append_text_to_image
 from habitat_sim.utils import viz_utils as vut
 
 
@@ -93,20 +93,17 @@ def collate_fn(batch):
     )
 
 
-
 class ObjectNavEpisodeDataset(Dataset):
     """Pytorch dataset for object rearrangement task for each episode"""
 
-    def __init__(self, config, content_scenes=["*"], mode="train", use_iw=False, inflection_weight_coef=1.0):
+    def __init__(self, config, content_scenes=["*"], mode="train", use_iw=False, split_name="split_1", inflection_weight_coef=1.0):
         """
         Args:
             env (habitat.Env): Habitat environment
             config: Config
             mode: 'train'/'val'
         """
-        scene_split_name = "train"
-        if content_scenes[0] != "*":
-            scene_split_name = "_".join(content_scenes)
+        scene_split_name = split_name
 
         self.config = config.TASK_CONFIG
         self.dataset_path = config.DATASET_PATH.format(split=mode, scene_split=scene_split_name)
@@ -118,6 +115,8 @@ class ObjectNavEpisodeDataset(Dataset):
         self.resolution = [self.config.SIMULATOR.RGB_SENSOR.WIDTH, self.config.SIMULATOR.RGB_SENSOR.HEIGHT]
         self.possible_actions = config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
         self.count = 0
+        self.success_threshold = config.TASK_CONFIG.TASK.SUCCESS_DISTANCE
+        self.total_success = 0
 
         if use_iw:
             self.inflec_weight = torch.tensor([1.0, inflection_weight_coef])
@@ -145,7 +144,7 @@ class ObjectNavEpisodeDataset(Dataset):
                 writemap=True,
             )
 
-            for i, episode in enumerate(self.episodes):
+            for episode in tqdm(self.episodes):
                 observations = self.env.reset()
                 episode = self.env.current_episode
                 state_index_queue = []
@@ -155,6 +154,8 @@ class ObjectNavEpisodeDataset(Dataset):
                 except AttributeError as e:
                     logger.error(e)
                 self.save_frames(state_index_queue, episode, observations)
+
+            logger.info("Total success: {}".format(self.total_success / len(self.episodes)))
             logger.info("Objectnav dataset ready!")
             self.env.close()
         else:
@@ -179,8 +180,20 @@ class ObjectNavEpisodeDataset(Dataset):
         prev_actions = []
         obs_list = []
         observations = defaultdict(list)
+        observations["depth"].append(observation["depth"])
+        observations["rgb"].append(observation["rgb"])
+        observations["gps"].append(observation["gps"])
+        observations["compass"].append(observation["compass"])
+        observations["objectgoal"].append(observation["objectgoal"])
+
+        next_action = self.possible_actions.index(episode.reference_replay[1].action)
+        next_actions.append(next_action)
+        prev_action = self.possible_actions.index(episode.reference_replay[0].action)
+        prev_actions.append(prev_action)
         
         reference_replay = episode.reference_replay
+        success = 0
+        info = {}
         for state_index in state_index_queue:
             state = reference_replay[state_index]
             position = state.agent_state.position
@@ -190,6 +203,8 @@ class ObjectNavEpisodeDataset(Dataset):
             action = self.possible_actions.index(state.action)
             if state_index > 0:
                 observation = self.env.step(action=action)
+                info = self.env.get_metrics()
+                success = info["distance_to_goal"] < self.success_threshold
 
             next_state = reference_replay[state_index + 1]
             next_action = self.possible_actions.index(next_state.action)
@@ -205,16 +220,22 @@ class ObjectNavEpisodeDataset(Dataset):
             next_actions.append(next_action)
             prev_actions.append(prev_action)
 
-            frame = observations_to_image(
-                {"rgb": observation["rgb"]}, {}
-            )
-            obs_list.append(frame)
+            # frame = observations_to_image(
+            #     {"rgb": observation["rgb"]}, {}
+            # )
+            # frame = append_text_to_image(frame, "Find the {}".format(episode.object_category))
+            # obs_list.append(frame)
 
         oracle_actions = np.array(next_actions)
         inflection_weights = np.concatenate(([1], oracle_actions[1:] != oracle_actions[:-1]))
         inflection_weights = self.inflec_weight[torch.from_numpy(inflection_weights)].numpy()
 
+        if not success:
+            return
+
         sample_key = "{0:0=6d}".format(self.count)
+        logger.info("Episode: {}, Success: {}, Dist: {}, Len: {}".format(self.count, success, info["distance_to_goal"], len(next_actions)))
+        self.total_success += success
         with self.lmdb_env.begin(write=True) as txn:
             txn.put((sample_key + "_obs").encode(), msgpack_numpy.packb(observations, use_bin_type=True))
             txn.put((sample_key + "_next_action").encode(), np.array(next_actions).tobytes())
@@ -222,7 +243,7 @@ class ObjectNavEpisodeDataset(Dataset):
             txn.put((sample_key + "_weights").encode(), inflection_weights.tobytes())
         
         self.count += 1
-        images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
+        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
 
     def cache_exists(self) -> bool:
         if os.path.exists(self.dataset_path):

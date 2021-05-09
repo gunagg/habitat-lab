@@ -144,7 +144,26 @@ def get_next_action(prev_actions, num_steps, turn_stack):
         return HabitatSimActions.LOOK_DOWN
 
 
-def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path"):
+def get_next_action_after_pick_up(prev_actions, num_steps, turn_stack):
+    if num_steps < 10:
+        return HabitatSimActions.LOOK_DOWN
+    else:
+        if prev_actions[-1] == HabitatSimActions.LOOK_DOWN:
+            return HabitatSimActions.TURN_LEFT
+        elif prev_actions[-2] == HabitatSimActions.LOOK_DOWN and np.sum(turn_stack) == -1:
+            return HabitatSimActions.TURN_LEFT
+        elif np.sum(turn_stack) < 0:
+            return HabitatSimActions.TURN_RIGHT
+        elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 0:
+            return HabitatSimActions.TURN_RIGHT
+        elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 2:
+            return HabitatSimActions.TURN_RIGHT
+        elif np.sum(turn_stack) > 0:
+            return HabitatSimActions.TURN_LEFT
+        return HabitatSimActions.LOOK_DOWN
+
+
+def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id=""):
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
         goal_radius = 0.7
@@ -152,6 +171,12 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path"):
         total_episodes = 0.0
 
         dataset = {
+            "episodes": [],
+            "instruction_vocab": {
+                "sentences": []
+            }
+        }
+        failed_dataset = {
             "episodes": [],
             "instruction_vocab": {
                 "sentences": []
@@ -178,6 +203,9 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path"):
             reference_replay = []
             prev_actions = []
             turn_step_indices = [-1, -1]
+            turn_step_indices_after_grip = [-1, -1]
+            num_look_down = 0
+            after_release_steps = 0
             while not env.episode_over:
                 best_action = follower.get_next_action(
                     env.current_episode.goals[goal_idx].position
@@ -196,11 +224,33 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path"):
                             turn_stack = []
                             turn_step_indices[1] = len(reference_replay) - 1
                             stack_cleared = True
+                            num_look_down += 1
                         if len(turn_stack) == 1:
-                            turn_step_indices[0] = len(reference_replay) 
+                            turn_step_indices[0] = len(reference_replay)
                         num_steps += 1
-                    else:
+                    elif goal_idx == 1 and after_release_steps < 5:
                         near_receptacle = True
+                        stack_cleared = False
+                        best_action = get_next_action_after_pick_up(prev_actions, num_steps, turn_stack)
+                        if best_action == HabitatSimActions.TURN_LEFT:
+                            turn_stack.append(-1)
+                        elif best_action == HabitatSimActions.TURN_RIGHT:
+                            turn_stack.append(1)
+                        elif best_action == HabitatSimActions.LOOK_DOWN:
+                            turn_stack = []
+                            turn_step_indices[1] = len(reference_replay) - 1
+                            stack_cleared = True
+                        if len(turn_stack) == 1:
+                            turn_step_indices[0] = len(reference_replay)
+
+                        if is_released:
+                            after_release_steps += 1
+                        num_steps += 1
+                
+                if is_gripped and not is_released and num_look_down > 0 and goal_idx == 1:
+                    stack_cleared = False
+                    best_action = HabitatSimActions.LOOK_UP
+                    num_look_down -= 1
 
                 if execute_grab(env._sim, prev_action) and not is_gripped and near_object:
                     best_action = HabitatSimActions.GRAB_RELEASE
@@ -213,15 +263,19 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path"):
                     best_action = HabitatSimActions.STOP
 
                 observations = env.step(best_action)
+                if near_receptacle and is_gripped and not is_released and execute_grab(env._sim, prev_action) and not is_object_gripped(env._sim):
+                    is_released = True
                 # Switch to searching for receptacle
-                if is_object_gripped(env._sim):
+                if is_object_gripped(env._sim) and best_action == HabitatSimActions.GRAB_RELEASE:
                     goal_idx = 1
                     is_gripped = True
                     num_steps = 0
+                    turn_step_indices = [-1, -1]
 
                 if stack_cleared:
                     if turn_step_indices[0] > 0:
                         reference_replay = reference_replay[:turn_step_indices[0]]
+                    turn_step_indices = [-1, -1]
 
                 info = env.get_metrics()
                 # Generate frames
@@ -241,14 +295,21 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path"):
             print("Episode success: {}".format(success))
             total_success += success
             total_episodes += 1
-            make_videos([observation_list], output_prefix, ep_id)
+            if not success:
+                make_videos([observation_list], output_prefix, ep_id)
 
             if success:
                 dataset["episodes"].append(ep_data)
+            if not success:
+                failed_dataset["episodes"].append(ep_data)
 
         print("\n\nEpisode success: {}".format(total_success / total_episodes))
-        write_json(dataset, "data/episodes/s_path.json")
-        write_gzip("data/episodes/s_path.json", "data/episodes/s_path.json")
+        print("Total sample episodes: {}".format(len(dataset["episodes"])))
+        write_json(dataset, "data/episodes/s_path/{}.json".format(scene_id))
+        write_gzip("data/episodes/s_path/{}.json".format(scene_id), "data/episodes/s_path/{}.json".format(scene_id))
+
+        write_json(failed_dataset, "data/episodes/s_path/{}_failed.json".format(scene_id))
+        write_gzip("data/episodes/s_path/{}_failed.json".format(scene_id), "data/episodes/s_path/{}_failed.json".format(scene_id))
 
 
 def main():
@@ -269,7 +330,7 @@ def main():
     cfg.DATASET.DATA_PATH = args.episodes
     cfg.freeze()
 
-    observations = generate_trajectories(cfg, args.num_episodes)
+    observations = generate_trajectories(cfg, args.num_episodes, scene_id=args.scene)
 
 if __name__ == "__main__":
     main()

@@ -12,6 +12,9 @@ from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
     EpisodicGPSSensor,
 )
+from habitat.tasks.nav.object_nav_task import (
+    ObjectGoalSensor
+)
 from habitat_baselines.rearrangement.models.encoders.instruction import InstructionEncoder
 from habitat_baselines.rearrangement.models.encoders.resnet_encoders import (
     TorchVisionResNet50,
@@ -21,6 +24,7 @@ from habitat_baselines.rearrangement.models.encoders.resnet_encoders import (
 from habitat_baselines.rearrangement.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo.policy import Net
+from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetNet
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
 
 
@@ -111,6 +115,19 @@ class Seq2SeqNet(Net):
             rnn_input_size += 32
             logger.info("\n\nSetting up Compass sensor")
 
+        if ObjectGoalSensor.cls_uuid in observation_space.spaces:
+            self._n_object_categories = (
+                int(
+                    observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]
+                )
+                + 1
+            )
+            self.obj_categories_embedding = nn.Embedding(
+                self._n_object_categories, 32
+            )
+            rnn_input_size += 32
+            logger.info("\n\nSetting up Object Goal sensor")
+
         if model_config.SEQ2SEQ.use_prev_action:
             self.prev_action_embedding = nn.Embedding(num_actions + 1, 32)
             rnn_input_size += self.prev_action_embedding.embedding_dim
@@ -170,6 +187,11 @@ class Seq2SeqNet(Net):
             compass_embedding = self.compass_embedding(compass_observations.squeeze(dim=1))
             x.append(compass_embedding)
 
+        if ObjectGoalSensor.cls_uuid in observations:
+            object_goal = observations[ObjectGoalSensor.cls_uuid].long()
+            object_goal = object_goal.view(-1, object_goal.size(2))
+            x.append(self.obj_categories_embedding(object_goal).squeeze(dim=1))
+
         if self.model_config.SEQ2SEQ.use_prev_action:
             prev_actions_embedding = self.prev_action_embedding(
                 ((prev_actions.float() + 1) * masks).long().view(-1)
@@ -211,6 +233,37 @@ class Seq2SeqModel(nn.Module):
     def forward(
         self, observations, rnn_hidden_states, prev_actions, masks
     ) -> CustomFixedCategorical:
+
+        # obs_rgb = observations["rgb"]
+        # if len(obs_rgb.size()) == 5:
+        #     observations["rgb"] = obs_rgb.contiguous().view(
+        #         -1, obs_rgb.size(2), obs_rgb.size(3), obs_rgb.size(4)
+        #     )
+        
+        # obs_depth = observations["depth"]
+        # if len(obs_rgb.size()) == 5:
+        #     observations["depth"] = obs_depth.contiguous().view(
+        #         -1, obs_depth.size(2), obs_depth.size(3), obs_depth.size(4)
+        #     )
+        
+        # if EpisodicGPSSensor.cls_uuid in observations:
+        #     obs_gps = observations[EpisodicGPSSensor.cls_uuid]
+        #     observations[EpisodicGPSSensor.cls_uuid] = obs_gps.contiguous().view(
+        #         -1, obs_gps.size(2)
+        #     )
+        
+        # if EpisodicCompassSensor.cls_uuid in observations:
+        #     obs_compass = observations[EpisodicCompassSensor.cls_uuid]
+        #     observations[EpisodicCompassSensor.cls_uuid] = obs_compass.contiguous().view(
+        #         -1, obs_compass.size(2)
+        #     )
+
+        # if ObjectGoalSensor.cls_uuid in observations:
+        #     obs_goal = observations[ObjectGoalSensor.cls_uuid]
+        #     observations[ObjectGoalSensor.cls_uuid] = obs_goal.contiguous().view(
+        #         -1, obs_goal.size(2)
+        #     )
+
         features, rnn_hidden_states = self.net(
             observations, rnn_hidden_states, prev_actions, masks
         )

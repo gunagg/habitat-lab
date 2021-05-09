@@ -79,9 +79,8 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
         obs_list = []
-
-        if num_episodes is None:
-            num_episodes = len(env.episodes)
+        total_success = 0
+        num_episodes = len(env.episodes)
 
         print("Total episodes: {}".format(len(env.episodes)))
         for ep_id in range(len(env.episodes)):
@@ -103,13 +102,14 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 "episodeLength": len(env.current_episode.reference_replay)
             }
             instructions.append(data)
-            step_index = 1 # env.current_episode.start_index
+            step_index = 0
             grab_seen = False
             grab_count = 0
+            success = 0
             total_reward = 0.0
             episode = env.current_episode
+            
             for data in env.current_episode.reference_replay[step_index:]:
-            # for i in range(len(episode.actions)):
                 if log_action:
                     log_action_data(data, i)
                 action = possible_actions.index(data.action)
@@ -130,15 +130,19 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     observations = env._sim.get_observations_at(agent_state.position, agent_state.rotation, sensor_states, object_states)
 
                 info = env.get_metrics()
-                frame = observations_to_image({"rgb": observations["rgb"]}, {})
-                depth_frame = observations_to_image({"depth": observations["depth"]}, {})
+                frame = observations_to_image({"rgb": observations["rgb"], "depth": observations["depth"]}, {})
+                frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
                 total_reward += info["rearrangement_reward"]
+                success = info["success"]
 
                 observation_list.append(frame)
                 i+=1
+            
+            total_success += success
             make_videos([observation_list], output_prefix, ep_id)
-            print("Total reward for trajectory: {} - {}".format(total_reward, grab_count))
-            # break
+            print("Total reward for trajectory: {} - {}".format(total_reward, success))
+
+        print("Episode success: {}".format(total_success / num_episodes))
 
         if os.path.isfile("instructions.json"):
             inst_file = open("instructions.json", "r")

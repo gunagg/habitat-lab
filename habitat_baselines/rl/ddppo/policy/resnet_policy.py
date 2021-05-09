@@ -13,6 +13,7 @@ from gym import spaces
 from torch import nn as nn
 from torch.nn import functional as F
 
+from habitat import logger
 from habitat.config import Config
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
@@ -303,6 +304,7 @@ class PointNavResNetNet(Net):
         )
 
         if not self.visual_encoder.is_blind:
+            logger.info("\n\nVisual fc: {}".format(np.prod(self.visual_encoder.output_shape)))
             self.visual_fc = nn.Sequential(
                 Flatten(),
                 nn.Linear(
@@ -310,6 +312,8 @@ class PointNavResNetNet(Net):
                 ),
                 nn.ReLU(True),
             )
+        
+        logger.info("rnn input: {}".format((0 if self.is_blind else self._hidden_size) + rnn_input_size))
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self._hidden_size) + rnn_input_size,
@@ -345,6 +349,8 @@ class PointNavResNetNet(Net):
                 visual_feats = observations["visual_features"]
             else:
                 visual_feats = self.visual_encoder(observations)
+
+            logger.info("Vis featts: {}".format(visual_feats.shape))
 
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
@@ -415,6 +421,7 @@ class PointNavResNetNet(Net):
         x.append(prev_actions)
 
         out = torch.cat(x, dim=1)
+        print("out shape: {}: {}".format(out.shape, prev_actions.shape))
         out, rnn_hidden_states = self.state_encoder(
             out, rnn_hidden_states, masks
         )

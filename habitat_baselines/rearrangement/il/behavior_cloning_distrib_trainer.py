@@ -60,8 +60,8 @@ from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, get_dista
 from PIL import Image
 
 
-@baseline_registry.register_trainer(name="rearrangement-behavior-cloning")
-class RearrangementBCTrainer(BaseILTrainer):
+@baseline_registry.register_trainer(name="rearrangement-behavior-cloning-distrib")
+class RearrangementBCDistribTrainer(BaseILTrainer):
     r"""Trainer class for PPO algorithm
     Paper: https://arxiv.org/abs/1707.06347.
     """
@@ -80,9 +80,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        # self.device = (
-        #     torch.device("cpu")
-        # )
 
     def _make_results_dir(self):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
@@ -253,6 +250,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.local_rank, tcp_store = init_distrib_slurm(
             self.config.IL.distrib_backend
         )
+        add_signal_handlers()
 
         self.world_rank = distrib.get_rank()
         self.world_size = distrib.get_world_size()
@@ -309,6 +307,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                 len(rearrangement_dataset)
             )
         )
+        logger.info("Setting up distributed model...")
 
         action_space = self.envs.action_spaces[0]
 
@@ -340,7 +339,19 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
-        AuxLosses.activate()
+
+        interrupted_state = load_interrupted_state()
+        if interrupted_state is not None:
+            self.model.load_state_dict(interrupted_state["state_dict"])
+            optim.load_state_dict(
+                interrupted_state["optim_state"]
+            )
+            scheduler.load_state_dict(interrupted_state["lr_sched_state"])
+
+            requeue_stats = interrupted_state["requeue_stats"]
+            epoch = requeue_stats["epoch"]
+            t = requeue_stats["t"]
+
         logger.info("Starting training")
         with (
             TensorboardWriter(
@@ -350,6 +361,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             else contextlib.suppress()
         ) as writer:
             while epoch <= config.IL.BehaviorCloning.max_epochs:
+                logger.info("Epoch: {}".format(epoch))
                 train_loader.sampler.set_epoch(epoch)
                 start_time = time.time()
                 avg_loss = 0.0
@@ -358,6 +370,30 @@ class RearrangementBCTrainer(BaseILTrainer):
                 avg_train_time = 0.0
 
                 batch_start_time = time.time()
+
+                if EXIT.is_set():
+                    profiling_wrapper.range_pop()  # train update
+
+                    self.envs.close()
+
+                    if REQUEUE.is_set() and self.world_rank == 0:
+                        requeue_stats = dict(
+                            epoch=epoch,
+                            t=t,
+                        )
+                        save_interrupted_state(
+                            dict(
+                                state_dict=self.model.state_dict(),
+                                optim_state=optim.state_dict(),
+                                lr_sched_state=scheduler.state_dict(),
+                                config=self.config,
+                                requeue_stats=requeue_stats,
+                            ),
+                            config.INTERRUPTED_STATE_FILE_PATH
+                        )
+
+                    requeue_job()
+                    return
 
                 for batch in train_loader:
                     torch.cuda.empty_cache()
@@ -381,7 +417,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                     )
 
                     optim.zero_grad()
-                    AuxLosses.clear()
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size

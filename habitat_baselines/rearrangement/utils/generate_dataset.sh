@@ -8,6 +8,7 @@ echo "Generate IL episode dataset"
 echo "hab sim: ${PYTHONPATH}"
 
 scene=$1
-path=$2
+path=$3
+task=$2
 
-python habitat_baselines/rearrangement/utils/generate_dataset.py --episodes $path --mode train --scene $scene
+python habitat_baselines/rearrangement/utils/generate_dataset.py --episodes $path --mode train --scene $scene --task $task

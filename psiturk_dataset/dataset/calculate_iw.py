@@ -1,5 +1,6 @@
 import argparse
 import gzip
+import glob
 import json
 
 from tqdm import tqdm
@@ -40,6 +41,26 @@ def calculate_inflection_weight(path):
     write_json(list(set(instructions)), "data/hit_approvals/instructions.json")
 
 
+def calculate_inflection_weight_objectnav(path):
+    files = glob.glob(path + "*.json.gz")
+    inflections = 0
+    total_actions = 0
+    total_episodes = 0
+
+    for file_path in tqdm(files):
+        data = load_dataset(file_path)
+
+        episodes = data["episodes"]
+        for episode in episodes:
+            num_inflections, num_actions = caclulate_inflections(episode)
+            inflections += num_inflections
+            total_actions += num_actions
+            total_episodes += 1
+
+    print("Total episodes: {}".format(total_episodes))
+    print("Inflection weight: {}".format(total_actions / inflections))
+
+
 def convert_instruction_tokens(episodes):
     vocab = load_vocab()
     instruction_vocab = VocabFromText(
@@ -58,9 +79,15 @@ def main():
     parser.add_argument(
         "--path", type=str, default="data/hit_approvals/dataset/backup/train.json.gz"
     )
+    parser.add_argument(
+        "--task", type=str, default="rearrangement"
+    )
     args = parser.parse_args()
 
-    calculate_inflection_weight(args.path)
+    if args.task == "rearrangement":
+        calculate_inflection_weight(args.path)
+    else:
+        calculate_inflection_weight_objectnav(args.path)
 
 
 if __name__ == "__main__":

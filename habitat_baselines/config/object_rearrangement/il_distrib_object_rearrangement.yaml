@@ -2,24 +2,24 @@
 # for better hyperparameters for actual training
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/object_rearrangement.yaml"
-TRAINER_NAME: "rearrangement-behavior-cloning"
+TRAINER_NAME: "rearrangement-behavior-cloning-distrib"
 ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/resnet18_random_split_v5/seed_2/eval"
+TENSORBOARD_DIR: "tb/resnet18_random_split_v5/seed_2/"
 VIDEO_DIR: "video_dir/resnet18_random_split_v5/seed_2/eval"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints/resnet18_random_split_v5/seed_2/model_10.ckpt"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 5
+NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints/resnet18_random_split_v5/seed_2"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 1
-DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/v6/{split}/{scene_split}.db"
+DATASET_PATH: "data/datasets/object_rearrangement/v6/{split}/{scene_split}.db"
 RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
@@ -32,7 +32,7 @@ IL:
     lr: 0.001
     max_epochs: 10
     batch_size: 8
-    timestep_batch_size: 800
+    timestep_batch_size: 512
     freeze_encoder: False
 
 RL:
