@@ -30,8 +30,8 @@ IL:
   USE_IW: True
   BehaviorCloning:
     lr: 0.001
-    max_epochs: 20
-    batch_size: 1
+    max_epochs: 10
+    batch_size: 8
     timestep_batch_size: 512
     freeze_encoder: False
 

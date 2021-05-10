@@ -47,3 +47,36 @@
     cd /path/to/habitat-lab
     srun -p long --constraint rtx_6000 --gres gpu:8 -c 8 --job-name il bash /path/to/habitat-lab/scripts/run_training.sh
     ```
+
+5. To run distributed training use the following command:
+    ```
+    cd /path/to/habitat-lab
+    sbatch habitat_baselines/rearrangement/il/multi_node_slurm.sh
+    ```
+    You can set the Multi GPU configs in `habitat_baselines/rearrangement/il/multi_node_slurm.sh`
+
+
+### Evaluation setup
+
+1. Change the folder paths for the following configs in the file `habitat_baselines/config/object_rearrangement/il_object_rearrangement.yaml`:
+    ```
+    TENSORBOARD_DIR
+    VIDEO_DIR
+    ```
+
+2. Set the checkpoint path in the file `habitat_baselines/config/object_rearrangement/il_object_rearrangement.yaml`:
+    ```
+    EVAL_CKPT_PATH_DIR
+    ```
+
+3. Run
+    ```
+    cd /path/to/habitat-lab
+    srun -p short --constraint rtx_6000 --gres gpu:1 -c 6 --job-name eval bash /srv/share3/rramrakhya6/habitat-lab/scripts/run_eval.sh
+    ```
+    
+    If you used distributed training run the following
+    ```
+    cd /path/to/habitat-lab
+    srun -p short --constraint rtx_6000 --gres gpu:1 -c 6 --job-name eval bash /srv/share3/rramrakhya6/habitat-lab/scripts/run_eval.sh distrib
+    ```
