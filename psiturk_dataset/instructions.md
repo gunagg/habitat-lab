@@ -14,8 +14,9 @@
 
 2. Run
     ```
-    srun -p short --constraint 2080_ti --gres gpu:1 -c 6 --job-name gen bash /path/to/habitat-lab/habitat_baselines/rearrangement/utils/generate_dataset.sh <scene_id> <path_to_episodes_gzip>
+    srun -p short --constraint 2080_ti --gres gpu:1 -c 6 --job-name gen bash /path/to/habitat-lab/habitat_baselines/rearrangement/utils/generate_dataset.sh <scene_id> <task> <path_to_episodes_gzip>
     ```
+    Value of `task` can be `rearrangement` or `objectnav`
 
 3. Run the command on step 2 for all 9 scenes
     ```
