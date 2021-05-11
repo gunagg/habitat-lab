@@ -259,6 +259,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
             batch_size=batch_size,
             num_workers=4,
             shuffle=True,
+            drop_last=True,
         )
 
         logger.info(
@@ -287,13 +288,6 @@ class ObjectNavBCTrainer(BaseILTrainer):
             steps_per_epoch=len(train_loader), epochs=config.IL.BehaviorCloning.max_epochs
         )
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
-
-        rnn_hidden_states = torch.zeros(
-            config.MODEL.STATE_ENCODER.num_recurrent_layers,
-            batch_size,
-            config.MODEL.STATE_ENCODER.hidden_size,
-            device=self.device,
-        )
 
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
@@ -326,6 +320,13 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                     avg_load_time += ((time.time() - batch_start_time) / 60)
 
+                    rnn_hidden_states = torch.zeros(
+                        config.MODEL.STATE_ENCODER.num_recurrent_layers,
+                        gt_prev_action.shape[1],
+                        config.MODEL.STATE_ENCODER.hidden_size,
+                        device=self.device,
+                    )
+
                     optim.zero_grad()
 
                     num_samples = gt_prev_action.shape[0]
@@ -337,7 +338,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
                         start_idx = i * timestep_batch_size
                         end_idx = start_idx + timestep_batch_size
                         observations_batch_sample = {
-                            k: v[start_idx:end_idx].to(device=self.device)
+                            k: v[start_idx:end_idx].to(device=self.device, non_blocking=True)
                             for k, v in observations_batch.items()
                         }
 
@@ -606,6 +607,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
+                    frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
                     frame = append_text_to_image(frame, "Action: {}".format(action_names[i]))
                     rgb_frames[i].append(frame)
 

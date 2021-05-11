@@ -137,10 +137,11 @@ class ObjectNavEpisodeDataset(Dataset):
             logger.info(
                 "Number of {} episodes: {}".format(mode, len(self.episodes))
             )
+            logger.info("datasetpath: {}".format(self.dataset_path))
 
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(1e10),
+                map_size=int(1e12),
                 writemap=True,
             )
 
@@ -154,7 +155,7 @@ class ObjectNavEpisodeDataset(Dataset):
                 except AttributeError as e:
                     logger.error(e)
                 self.save_frames(state_index_queue, episode, observations)
-
+            
             logger.info("Total success: {}".format(self.total_success / len(self.episodes)))
             logger.info("Objectnav dataset ready!")
             self.env.close()
@@ -194,6 +195,8 @@ class ObjectNavEpisodeDataset(Dataset):
         reference_replay = episode.reference_replay
         success = 0
         info = {}
+        if len(reference_replay) > 1800:
+            return
         for state_index in state_index_queue:
             state = reference_replay[state_index]
             position = state.agent_state.position
@@ -272,7 +275,7 @@ class ObjectNavEpisodeDataset(Dataset):
         if self.lmdb_env is None:
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(1e10),
+                map_size=int(1e12),
                 writemap=True,
             )
             self.lmdb_txn = self.lmdb_env.begin()

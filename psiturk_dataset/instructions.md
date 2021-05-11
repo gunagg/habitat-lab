@@ -43,13 +43,15 @@
     ```
 3. Set the value of `MODEL.inflection_weight_coef` based on the split you are training. Find the values for each splits [here](https://www.notion.so/ab2173d31ce3425a97a4fad874920b5d?v=65c29317d4494122918b56e63e421dad)
 
-4. Run
+4. Change the `DATA_PATH` to dataset path in the file `configs/tasks/object_rearrangement.yaml` to point to `data/datasets/object_rearrangement/v4/{split}/{split}.json.gz`
+
+5. Run
     ```
     cd /path/to/habitat-lab
     srun -p long --constraint rtx_6000 --gres gpu:8 -c 8 --job-name il bash /path/to/habitat-lab/scripts/run_training.sh
     ```
 
-5. To run distributed training use the following command:
+6. To run distributed training use the following command:
     ```
     cd /path/to/habitat-lab
     sbatch habitat_baselines/rearrangement/il/multi_node_slurm.sh
@@ -70,7 +72,9 @@
     EVAL_CKPT_PATH_DIR
     ```
 
-3. Run
+3. Change the `DATA_PATH` to dataset path in the file `configs/tasks/object_rearrangement.yaml`:
+
+4. Run
     ```
     cd /path/to/habitat-lab
     srun -p short --constraint rtx_6000 --gres gpu:1 -c 6 --job-name eval bash /srv/share3/rramrakhya6/habitat-lab/scripts/run_eval.sh

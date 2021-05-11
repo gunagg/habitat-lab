@@ -111,6 +111,8 @@ def train_val_split_scene_holdout(data):
     vocab = load_vocab()
     # scenes = ["house.glb", "empty_house.glb", "bigger_house.glb", "big_house.glb", "big_house_2.glb"]
     scenes = get_unique_scenes(data["episodes"])
+    # train_scenes = ["JeFG25nYj2p.glb", "q9vSo1VnCiC.glb", "S9hNv5qa7GM.glb", "zsNo4HB9uLZ.glb", "jtcxE69GiFV.glb", "TbHJrupSAjP.glb", "JmbYfDe2QKZ.glb"]
+    # eval_scenes = ["i5noydFURQK.glb", "29hnd4uzFmX.glb"]
 
     rs_split = ShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
     train_idxs = []
@@ -124,10 +126,10 @@ def train_val_split_scene_holdout(data):
         train_episode_idx = get_episode_idx_by_scene_ids(data["episodes"], train_scenes)
         eval_episode_idx = get_episode_idx_by_scene_ids(data["episodes"], eval_scenes)
 
-        check_overlap(train_episode_idx, eval_episode_idx)
+    check_overlap(train_episode_idx, eval_episode_idx)
 
-        train_idxs.append(train_episode_idx)
-        eval_idxs.append(eval_episode_idx)
+    train_idxs.append(train_episode_idx)
+    eval_idxs.append(eval_episode_idx)
 
     return train_idxs, eval_idxs
 

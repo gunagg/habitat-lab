@@ -552,7 +552,7 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
             action_space,
             config.MODEL
         )
-
+        
         # Map location CPU is almost always better than mapping to a CUDA device.
         ckpt_dict = torch.load(checkpoint_path, map_location=self.device)
         self.model.load_state_dict(

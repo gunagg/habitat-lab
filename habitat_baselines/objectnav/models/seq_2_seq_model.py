@@ -171,12 +171,14 @@ class Seq2SeqNet(Net):
 
         if EpisodicGPSSensor.cls_uuid in observations:
             obs_gps = observations[EpisodicGPSSensor.cls_uuid]
-            obs_gps = obs_gps.view(-1, obs_gps.size(2))
+            if len(obs_gps.size()) == 3:
+                obs_gps = obs_gps.contiguous().view(-1, obs_gps.size(2))
             x.append(self.gps_embedding(obs_gps))
         
         if EpisodicCompassSensor.cls_uuid in observations:
             obs_compass = observations["compass"]
-            obs_compass = obs_compass.contiguous().view(-1, obs_compass.size(2))
+            if len(obs_compass.size()) == 3:
+                obs_compass = obs_compass.contiguous().view(-1, obs_compass.size(2))
             compass_observations = torch.stack(
                 [
                     torch.cos(obs_compass),
@@ -189,7 +191,8 @@ class Seq2SeqNet(Net):
 
         if ObjectGoalSensor.cls_uuid in observations:
             object_goal = observations[ObjectGoalSensor.cls_uuid].long()
-            object_goal = object_goal.view(-1, object_goal.size(2))
+            if len(object_goal.size()) == 3:
+                object_goal = object_goal.contiguous().view(-1, object_goal.size(2))
             x.append(self.obj_categories_embedding(object_goal).squeeze(dim=1))
 
         if self.model_config.SEQ2SEQ.use_prev_action:
