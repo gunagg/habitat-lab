@@ -290,16 +290,16 @@ class RearrangementEpisodeDataset(Dataset):
         next_action_idx = "{0:0=6d}_next_action".format(idx)
         next_action_binary = self.lmdb_cursor.get(next_action_idx.encode())
         next_action = np.frombuffer(next_action_binary, dtype="int")
-        next_action = torch.from_numpy(next_action)
+        next_action = torch.from_numpy(np.copy(next_action))
 
         prev_action_idx = "{0:0=6d}_prev_action".format(idx)
         prev_action_binary = self.lmdb_cursor.get(prev_action_idx.encode())
         prev_action = np.frombuffer(prev_action_binary, dtype="int")
-        prev_action = torch.from_numpy(prev_action)
+        prev_action = torch.from_numpy(np.copy(prev_action))
 
         weight_idx = "{0:0=6d}_weights".format(idx)
         weight_binary = self.lmdb_cursor.get(weight_idx.encode())
         weight = np.frombuffer(weight_binary, dtype="float32")
-        weight = torch.from_numpy(weight)
+        weight = torch.from_numpy(np.copy(weight))
 
         return idx, observations, next_action, prev_action, weight

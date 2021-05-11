@@ -45,13 +45,17 @@
 
 4. Change the `DATA_PATH` to dataset path in the file `configs/tasks/object_rearrangement.yaml` to point to `data/datasets/object_rearrangement/v4/{split}/{split}.json.gz`
 
-5. Run
+5. Make sure `CHECKPOINT_INTERVAL` is set to `1` in `habitat_baselines/config/object_rearrangement/il_object_rearrangement.yaml`
+
+6. Set `NUM_PROCESSES` to the `1` in the file `habitat_baselines/config/object_rearrangement/il_object_rearrangement.yaml`.
+
+7. Run
     ```
     cd /path/to/habitat-lab
     srun -p long --constraint rtx_6000 --gres gpu:8 -c 8 --job-name il bash /path/to/habitat-lab/scripts/run_training.sh
     ```
 
-6. To run distributed training use the following command:
+9. To run distributed training use the following command:
     ```
     cd /path/to/habitat-lab
     sbatch habitat_baselines/rearrangement/il/multi_node_slurm.sh
@@ -74,7 +78,9 @@
 
 3. Change the `DATA_PATH` to dataset path in the file `configs/tasks/object_rearrangement.yaml`:
 
-4. Run
+4. Set `NUM_PROCESSES` to the number of scenes in the dataset in the file `habitat_baselines/config/object_rearrangement/il_object_rearrangement.yaml`.
+
+5. Run
     ```
     cd /path/to/habitat-lab
     srun -p short --constraint rtx_6000 --gres gpu:1 -c 6 --job-name eval bash /srv/share3/rramrakhya6/habitat-lab/scripts/run_eval.sh

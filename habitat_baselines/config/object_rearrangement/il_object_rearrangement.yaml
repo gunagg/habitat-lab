@@ -13,12 +13,12 @@ VIDEO_DIR: "video_dir/resnet18_random_split_v5/seed_1/eval"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints/resnet18_random_split_v5/seed_2/model_10.ckpt"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 5
+NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints/resnet18_random_split_v5/seed_1"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
-CHECKPOINT_INTERVAL: 100
+CHECKPOINT_INTERVAL: 1
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/unseen_scenes/{split}/{scene_split}.db"
 RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_SAVE_RESULTS: True

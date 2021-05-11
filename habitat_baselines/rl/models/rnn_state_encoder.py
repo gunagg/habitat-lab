@@ -94,7 +94,6 @@ class RNNStateEncoder(nn.Module):
         # x is a (T, N, -1) tensor flattened to (T * N, -1)
         n = hidden_states.size(1)
         t = int(x.size(0) / n)
-        print("rnn steps: {} {} {}".format(t, n, hidden_states.shape))
 
         # unflatten
         x = x.view(t, n, x.size(1))
