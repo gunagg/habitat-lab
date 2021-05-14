@@ -29,7 +29,7 @@ EVAL:
 
 IL:
   USE_IW: True
-  distrib_backend: NCCL
+  distrib_backend: GLOO
   BehaviorCloning:
     lr: 0.001
     max_epochs: 10

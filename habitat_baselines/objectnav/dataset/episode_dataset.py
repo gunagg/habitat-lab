@@ -141,7 +141,7 @@ class ObjectNavEpisodeDataset(Dataset):
 
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(1e12),
+                map_size=int(1e11),
                 writemap=True,
             )
 
@@ -199,9 +199,6 @@ class ObjectNavEpisodeDataset(Dataset):
             return
         for state_index in state_index_queue:
             state = reference_replay[state_index]
-            position = state.agent_state.position
-            rotation = state.agent_state.rotation
-            sensor_states = state.agent_state.sensor_data
 
             action = self.possible_actions.index(state.action)
             if state_index > 0:
@@ -275,7 +272,7 @@ class ObjectNavEpisodeDataset(Dataset):
         if self.lmdb_env is None:
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(1e12),
+                map_size=int(1e11),
                 writemap=True,
             )
             self.lmdb_txn = self.lmdb_env.begin()

@@ -74,6 +74,7 @@ def main():
 
     task_config.DATASET.CONTENT_SCENES = [args.scene]
     if args.task == "objectnav":
+        task_config.DATASET.TYPE = "ObjectNav-v2"
         task_config.DATASET.CONTENT_SCENES = objectnav_scene_splits[args.scene]
     task_config.freeze()
     cfg.TASK_CONFIG = task_config

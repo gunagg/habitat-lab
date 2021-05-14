@@ -2,11 +2,13 @@ import math
 import sys
 from typing import Dict, Iterable, Tuple
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from gym import Space
+from gym.spaces import Discrete, Dict, Box
 from habitat import Config, logger
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
@@ -17,18 +19,18 @@ from habitat.tasks.nav.object_nav_task import (
 )
 from habitat_baselines.rearrangement.models.encoders.instruction import InstructionEncoder
 from habitat_baselines.rearrangement.models.encoders.resnet_encoders import (
-    TorchVisionResNet50,
-    VlnResnetDepthEncoder,
-    ResnetRGBEncoder,
+    ResnetEncoder
 )
 from habitat_baselines.rearrangement.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo.policy import Net
 from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetNet
+from habitat_baselines.objectnav.models.rednet import load_rednet
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
 
 
-class Seq2SeqNet(Net):
+SEMANTIC_EMBEDDING_SIZE = 4
+class SingleResnetSeqNet(Net):
     r"""A baseline sequence to sequence network that concatenates instruction,
     RGB, and depth encodings before decoding an action distribution with an RNN.
     Modules:
@@ -38,60 +40,45 @@ class Seq2SeqNet(Net):
         RNN state encoder
     """
 
-    def __init__(self, observation_space: Space, model_config: Config, num_actions):
+    def __init__(self, observation_space: Space, model_config: Config, num_actions, device):
         super().__init__()
         self.model_config = model_config
 
-        # Init the depth encoder
-        assert model_config.DEPTH_ENCODER.cnn_type in [
-            "SimpleDepthCNN",
-            "VlnResnetDepthEncoder",
-        ], "DEPTH_ENCODER.cnn_type must be SimpleDepthCNN or VlnResnetDepthEncoder"
-        if model_config.DEPTH_ENCODER.cnn_type == "SimpleDepthCNN":
-            self.depth_encoder = SimpleDepthCNN(
-                observation_space, model_config.DEPTH_ENCODER.output_size
+        # Init the visual encoder        
+        sem_seg_output_size = 0
+        self.semantic_predictor = None
+        if model_config.USE_SEMANTICS:
+            self.semantic_predictor = load_rednet(
+                device,
+                ckpt=model_config.VISUAL_ENCODER.rednet_ckpt,
+                resize=True # since we train on half-vision
             )
-        elif model_config.DEPTH_ENCODER.cnn_type == "VlnResnetDepthEncoder":
-            self.depth_encoder = VlnResnetDepthEncoder(
-                observation_space,
-                output_size=model_config.DEPTH_ENCODER.output_size,
-                checkpoint=model_config.DEPTH_ENCODER.ddppo_checkpoint,
-                backbone=model_config.DEPTH_ENCODER.backbone,
-                trainable=model_config.DEPTH_ENCODER.trainable,
-            )
+            # Disable gradients
+            for param in self.semantic_predictor.parameters():
+                param.requires_grad_(False)
+            self.semantic_predictor.eval()
 
-        # Init the RGB visual encoder
-        assert model_config.RGB_ENCODER.cnn_type in [
-            "SimpleRGBCNN",
-            "TorchVisionResNet50",
-            "ResnetRGBEncoder",
-        ], "RGB_ENCODER.cnn_type must be either 'SimpleRGBCNN' or 'TorchVisionResNet50'."
+            rgb_shape = observation_space.spaces["rgb"].shape
+            sem_embedding_size = model_config.VISUAL_ENCODER.embedding_size
+            observation_space.spaces["semantic"] = Box(
+                    low=0,
+                    high=255,
+                    shape=(rgb_shape[0], rgb_shape[1], sem_embedding_size),
+                    dtype=np.uint8,
+            )
+            self.semantic_embedder = nn.Embedding(40 + 2, sem_embedding_size)
 
-        if model_config.RGB_ENCODER.cnn_type == "SimpleRGBCNN":
-            self.rgb_encoder = SimpleRGBCNN(
-                observation_space, model_config.RGB_ENCODER.output_size
-            )
-        elif model_config.RGB_ENCODER.cnn_type == "TorchVisionResNet50":
-            device = (
-                torch.device("cuda", model_config.TORCH_GPU_ID)
-                if torch.cuda.is_available()
-                else torch.device("cpu")
-            )
-            self.rgb_encoder = TorchVisionResNet50(
-                observation_space, model_config.RGB_ENCODER.output_size, device
-            )
-        elif model_config.RGB_ENCODER.cnn_type == "ResnetRGBEncoder":
-            self.rgb_encoder = ResnetRGBEncoder(
-                observation_space,
-                output_size=model_config.RGB_ENCODER.output_size,
-                backbone=model_config.RGB_ENCODER.backbone,
-                trainable=model_config.RGB_ENCODER.train_encoder,
-            )
+        self.visual_encoder = ResnetEncoder(
+            observation_space,
+            output_size=model_config.VISUAL_ENCODER.output_size,
+            backbone=model_config.VISUAL_ENCODER.backbone,
+            trainable=model_config.VISUAL_ENCODER.train_encoder,
+        )
+        logger.info("Setting up visual encoder")
 
         # Init the RNN state decoder
         rnn_input_size = (
-            model_config.DEPTH_ENCODER.output_size
-            + model_config.RGB_ENCODER.output_size
+            model_config.VISUAL_ENCODER.output_size
         )
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
@@ -153,21 +140,26 @@ class Seq2SeqNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
+    def get_semantic_observations(self, observations_batch):
+        with torch.no_grad():
+            semantic_observations = self.semantic_predictor(observations_batch["rgb"], observations_batch["depth"])
+            return semantic_observations
+
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         r"""
         instruction_embedding: [batch_size x INSTRUCTION_ENCODER.output_size]
         depth_embedding: [batch_size x DEPTH_ENCODER.output_size]
         rgb_embedding: [batch_size x RGB_ENCODER.output_size]
         """
-        depth_embedding = self.depth_encoder(observations)
-        rgb_embedding = self.rgb_encoder(observations)
+        if self.model_config.USE_SEMANTICS:
+            observations["semantic"] = self.get_semantic_observations(observations)
+            print(observations["semantic"].shape)
+            observations["semantic"] = self.semantic_embedder(observations["semantic"])
+            print(observations["semantic"].shape)
 
-        if self.model_config.ablate_depth:
-            depth_embedding = depth_embedding * 0
-        if self.model_config.ablate_rgb:
-            rgb_embedding = rgb_embedding * 0
+        visual_embedding = self.visual_encoder(observations)
 
-        x = [depth_embedding, rgb_embedding]
+        x = [visual_embedding]
 
         if EpisodicGPSSensor.cls_uuid in observations:
             obs_gps = observations[EpisodicGPSSensor.cls_uuid]
@@ -207,27 +199,17 @@ class Seq2SeqNet(Net):
         return x, rnn_hidden_states
 
 
-class Seq2SeqModel(nn.Module):
+class SingleResNetSeqModel(nn.Module):
     def __init__(
-        self, observation_space: Space, action_space: Space, model_config: Config
+        self, observation_space: Space, action_space: Space, model_config: Config, device
     ):
         super().__init__()
-        self.net = Seq2SeqNet(
+        self.net = SingleResnetSeqNet(
             observation_space=observation_space,
             model_config=model_config,
             num_actions=action_space.n,
+            device=device,
         )
-        # self.net = PointNavResNetNet(
-        #     observation_space=observation_space,
-        #     action_space=action_space,
-        #     hidden_size=model_config.hidden_size,
-        #     num_recurrent_layers=model_config.num_recurrent_layers,
-        #     rnn_type=model_config.rnn_type,
-        #     backbone=model_config.backbone,
-        #     resnet_baseplanes=model_config.resnet_baseplanes,
-        #     normalize_visual_inputs=model_config.normalize_visual_inputs,
-        #     force_blind_policy=model_config.force_blind_policy,
-        # )
         self.action_distribution = CategoricalNet(
             self.net.output_size, action_space.n
         )

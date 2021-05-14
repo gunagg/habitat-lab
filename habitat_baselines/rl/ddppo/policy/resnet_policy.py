@@ -110,6 +110,12 @@ class ResNetEncoder(nn.Module):
         else:
             self._n_input_depth = 0
         
+        if "semantic" in observation_space.spaces:
+            self._frame_size = tuple(observation_space.spaces["semantic"].shape[:2])
+            self._n_input_semantics = observation_space.spaces["semantic"].shape[2]
+        else:
+            self._n_input_semantics = 0
+        
         if self._frame_size == (256, 256):
             spatial_size = (128, 128)
         elif self._frame_size == (240, 320):
@@ -125,7 +131,7 @@ class ResNetEncoder(nn.Module):
             self.running_mean_and_var = nn.Sequential()
 
         if not self.is_blind:
-            input_channels = self._n_input_depth + self._n_input_rgb
+            input_channels = self._n_input_depth + self._n_input_rgb + self._n_input_semantics
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
             # final_spatial = int(
@@ -161,7 +167,7 @@ class ResNetEncoder(nn.Module):
 
     @property
     def is_blind(self):
-        return self._n_input_rgb + self._n_input_depth == 0
+        return self._n_input_rgb + self._n_input_depth + self._n_input_semantics == 0
 
     def layer_init(self):
         for layer in self.modules():
@@ -191,6 +197,14 @@ class ResNetEncoder(nn.Module):
             depth_observations = depth_observations.permute(0, 3, 1, 2)
 
             cnn_input.append(depth_observations)
+
+        if self._n_input_semantics > 0:
+            semantic_observations = observations["semantic"]
+
+            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            semantic_observations = semantic_observations.permute(0, 3, 1, 2)
+
+            cnn_input.append(semantic_observations)
 
         x = torch.cat(cnn_input, dim=1)
         if self._frame_size == (256, 256):

@@ -28,6 +28,7 @@ def calculate_inflection_weight(path):
     episodes = data["episodes"]
     inflections = 0
     total_actions = 0
+    total_episodes = len(episodes)
     for episode in tqdm(episodes):
         num_inflections, num_actions = caclulate_inflections(episode)
         inflections += num_inflections
@@ -35,6 +36,7 @@ def calculate_inflection_weight(path):
 
     print("Total episodes: {}".format(len(episodes)))
     print("Inflection weight: {}".format(total_actions / inflections))
+    print("Average episode length: {}".format(total_actions / total_episodes))
 
     instructions = convert_instruction_tokens(episodes)
     print("Num of distinct instructions: {}".format(len(set(instructions))))
@@ -59,6 +61,8 @@ def calculate_inflection_weight_objectnav(path):
 
     print("Total episodes: {}".format(total_episodes))
     print("Inflection weight: {}".format(total_actions / inflections))
+    print("Average episode length: {}".format(total_actions / total_episodes))
+    print("Total actions: {}".format(total_actions))
 
 
 def convert_instruction_tokens(episodes):

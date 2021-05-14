@@ -3,10 +3,12 @@ import attr
 import cv2
 import habitat
 import json
+import math
 import sys
 import time
 import os
 import numpy as np
+import magnum as mn
 
 from habitat import Config, get_config as get_task_config
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
@@ -14,9 +16,10 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.utils.visualizations.utils import make_video_cv2, observations_to_image, images_to_video, append_text_to_image
 
 from habitat_sim.utils import viz_utils as vut
-from habitat_sim.utils.common import quat_to_coeffs
+from habitat_sim.utils.common import quat_to_coeffs, quat_from_magnum, quat_from_angle_axis
 
 from psiturk_dataset.utils.utils import write_json, write_gzip
+from scipy.spatial.transform import Rotation
 
 from PIL import Image
 
@@ -133,11 +136,13 @@ def get_next_action(prev_actions, num_steps, turn_stack):
             return HabitatSimActions.TURN_LEFT
         elif prev_actions[-2] == HabitatSimActions.LOOK_DOWN and np.sum(turn_stack) == -1:
             return HabitatSimActions.TURN_LEFT
+        elif prev_actions[-1] == HabitatSimActions.TURN_LEFT and np.sum(turn_stack) >= -3 and np.sum(turn_stack) < 0:
+            return HabitatSimActions.TURN_LEFT
         elif np.sum(turn_stack) < 0:
             return HabitatSimActions.TURN_RIGHT
         elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 0:
             return HabitatSimActions.TURN_RIGHT
-        elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 2:
+        elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 4:
             return HabitatSimActions.TURN_RIGHT
         elif np.sum(turn_stack) > 0:
             return HabitatSimActions.TURN_LEFT
@@ -152,21 +157,83 @@ def get_next_action_after_pick_up(prev_actions, num_steps, turn_stack):
             return HabitatSimActions.TURN_LEFT
         elif prev_actions[-2] == HabitatSimActions.LOOK_DOWN and np.sum(turn_stack) == -1:
             return HabitatSimActions.TURN_LEFT
+        elif prev_actions[-1] == HabitatSimActions.TURN_LEFT and np.sum(turn_stack) >= -3 and np.sum(turn_stack) < 0:
+            return HabitatSimActions.TURN_LEFT
         elif np.sum(turn_stack) < 0:
             return HabitatSimActions.TURN_RIGHT
         elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 0:
             return HabitatSimActions.TURN_RIGHT
-        elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 2:
+        elif prev_actions[-1] == HabitatSimActions.TURN_RIGHT and np.sum(turn_stack) <= 4:
             return HabitatSimActions.TURN_RIGHT
         elif np.sum(turn_stack) > 0:
             return HabitatSimActions.TURN_LEFT
         return HabitatSimActions.LOOK_DOWN
 
 
-def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id=""):
+def calculate_turn_angle(agent, target, fwd, fwd_2):    
+    # qd = agent.conjugated() * target
+
+    # theta = math.asin( 2 * (qd.scalar * qd.vector.y - qd.vector.z * qd.vector.x) )
+    fw_agent = agent.transform_vector(mn.Vector3(0, 0, -1))
+    fw_target = target.transform_vector(mn.Vector3(0, 0, -1))
+
+    angle_a = math.atan2(fw_agent.x, fw_agent.z)
+    angle_b = math.atan2(fw_target.x, fw_target.z)
+    angle_a = np.rad2deg(angle_a)
+    angle_b = np.rad2deg(angle_b)
+    theta = angle_b - angle_a
+    # theta = (theta + 180) % 360 - 180
+
+    # rot = Rotation.from_quat(quat_to_coeffs(quat_from_magnum(qd)))
+    # theta = rot.as_euler('xyz', degrees=True)[1]
+    # if flg == 0 or flg is None:
+    #     print(rot.as_euler('xyz', degrees=True), math.degrees(theta), theta)
+    
+    return theta
+
+
+def calculate_turnn_angle(env, goal_idx, best_action):
+    agent_state = env._sim.get_agent(0).get_state()
+    object_position = env._sim.get_translation(goal_idx)
+    agent_to_obj = object_position - agent_state.position
+    #agent_local_forward = np.array([0, 0, -1.0])
+    # print(env._sim._default_agent.body.object.absolute_transformation())
+    agent_local_forward = env._sim._default_agent.body.object.absolute_transformation().transform_vector(mn.Vector3(0, 0, -1))
+    flat_to_obj = np.array([agent_to_obj[0], 0.0, agent_to_obj[2]])
+    flat_dist_to_obj = np.linalg.norm(flat_to_obj)
+    flat_to_obj /= flat_dist_to_obj
+    # move the agent closer to the objects if too far (this will be projected back to floor in set)
+    was_gt = False
+    if flat_dist_to_obj > 3.0:
+        was_gt = True
+        agent_state.position = object_position - flat_to_obj * 3.0
+    # unit y normal plane for rotation
+    det = (
+        flat_to_obj[0] * agent_local_forward[2]
+        - agent_local_forward[0] * flat_to_obj[2]
+    )
+    turn_angle = math.atan2(det, np.dot(agent_local_forward, flat_to_obj))
+    stop = "no_stop"
+    # if goal_idx == 1 and (best_action == 0 or best_action is None):
+    #     agent_state.rotation = quat_from_angle_axis(turn_angle, np.array([0, 1.0, 0]))
+    #     # need to move the sensors too
+    #     for sensor in agent_state.sensor_states:
+    #         agent_state.sensor_states[sensor].rotation = agent_state.rotation
+    #         agent_state.sensor_states[
+    #             sensor
+    #         ].position = agent_state.position + np.array([0, 1.5, 0])
+    #     env._sim.get_agent(0).set_state(agent_state)
+    #     stop = "stop"
+    #     print("was gt: {}".format(was_gt))
+    return np.rad2deg(turn_angle), stop, turn_angle
+
+
+
+def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id="", output_path=""):
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
         goal_radius = 0.7
+
         total_success = 0.0
         total_episodes = 0.0
 
@@ -203,13 +270,30 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id=
             reference_replay = []
             prev_actions = []
             turn_step_indices = [-1, -1]
-            turn_step_indices_after_grip = [-1, -1]
             num_look_down = 0
             after_release_steps = 0
+
+            turns_done = False
+            turns_count = 0
             while not env.episode_over:
                 best_action = follower.get_next_action(
                     env.current_episode.goals[goal_idx].position
                 )
+
+                angle, stop, rad_agle = calculate_turnn_angle(env, goal_idx, best_action)
+
+                if (best_action is None or best_action == 0) and not turns_done and turns_count == 0:
+                    turns_count = abs(angle) / 5 + 1
+
+                if turns_count == 0 and (best_action is None or best_action == 0) and not turns_done:
+                    turns_done = True
+
+                if (best_action is None or best_action == 0) and turns_count > 0 and not turns_done:
+                    if angle > 0:
+                        best_action = HabitatSimActions.TURN_LEFT
+                    else:
+                        best_action = HabitatSimActions.TURN_RIGHT
+                    turns_count -= 1
 
                 if (best_action is None or best_action == 0):
                     if goal_idx == 0:
@@ -271,6 +355,8 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id=
                     is_gripped = True
                     num_steps = 0
                     turn_step_indices = [-1, -1]
+                    turns_done = False
+                    turns_count = 0
 
                 if stack_cleared:
                     if turn_step_indices[0] > 0:
@@ -305,11 +391,11 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id=
 
         print("\n\nEpisode success: {}".format(total_success / total_episodes))
         print("Total sample episodes: {}".format(len(dataset["episodes"])))
-        write_json(dataset, "data/episodes/s_path/{}.json".format(scene_id))
-        write_gzip("data/episodes/s_path/{}.json".format(scene_id), "data/episodes/s_path/{}.json".format(scene_id))
+        write_json(dataset, "{}/{}.json".format(output_path, scene_id))
+        write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
 
-        write_json(failed_dataset, "data/episodes/s_path/{}_failed.json".format(scene_id))
-        write_gzip("data/episodes/s_path/{}_failed.json".format(scene_id), "data/episodes/s_path/{}_failed.json".format(scene_id))
+        write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
+        write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
 
 
 def main():
@@ -323,6 +409,9 @@ def main():
     parser.add_argument(
         "--episodes", type=str, default="data/episodes/sampled.json.gz"
     )
+    parser.add_argument(
+        "--output-path", type=str, default="data/episodes/sampled.json.gz"
+    )
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
@@ -330,7 +419,7 @@ def main():
     cfg.DATASET.DATA_PATH = args.episodes
     cfg.freeze()
 
-    observations = generate_trajectories(cfg, args.num_episodes, scene_id=args.scene)
+    observations = generate_trajectories(cfg, args.num_episodes, scene_id=args.scene, output_path=args.output_path)
 
 if __name__ == "__main__":
     main()

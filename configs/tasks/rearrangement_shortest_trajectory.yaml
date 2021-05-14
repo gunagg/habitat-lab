@@ -1,5 +1,5 @@
 ENVIRONMENT:
-  MAX_EPISODE_STEPS: 2000
+  MAX_EPISODE_STEPS: 500
 SIMULATOR:
   FORWARD_STEP_SIZE: 0.15
   TURN_ANGLE: 5
@@ -94,7 +94,7 @@ TASK:
     DRAW_SHORTEST_PATH: False
 
 DATASET:
-  TYPE: RearrangementDataset-v1
+  TYPE: RearrangementDataset-v0
   SPLIT: "train"
   DATA_PATH: "data/datasets/object_rearrangement/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/habitat-test-scenes/"

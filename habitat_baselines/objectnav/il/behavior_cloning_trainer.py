@@ -38,6 +38,8 @@ from habitat_baselines.common.obs_transformers import (
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, collate_fn
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
+from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
+from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.utils.common import (
     batch_obs,
@@ -52,9 +54,6 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     requeue_job,
     save_interrupted_state,
 )
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
-from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, get_distance
 from PIL import Image
 
 
@@ -202,14 +201,19 @@ class ObjectNavBCTrainer(BaseILTrainer):
         )
     
 
-    def _setup_model(self, observation_space, action_space, model_config):
+    def _setup_model(self, observation_space, action_space, model_config, device):
         model_config.defrost()
         model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
         model_config.freeze()
 
-        model = Seq2SeqModel(observation_space, action_space, model_config)
-        return model
-
+        model = None
+        if hasattr(model_config, "VISUAL_ENCODER"):
+            model = SingleResNetSeqModel(observation_space, action_space, model_config, device)
+        elif model_config.USE_SEMANTICS:
+            model = SemSegSeqModel(observation_space, action_space, model_config, device)
+        else:
+            model = Seq2SeqModel(observation_space, action_space, model_config)
+        return model   
 
     def _setup_dataset(self):
         config = self.config
@@ -221,7 +225,8 @@ class ObjectNavBCTrainer(BaseILTrainer):
             )
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
-        for scene in ["split_1", "split_2", "split_3", "split_4"]:
+        # for scene in ["split_1", "split_2", "split_3", "split_4"]:
+        for scene in ["split_2"]:
             dataset = ObjectNavEpisodeDataset(
                 config,
                 use_iw=config.IL.USE_IW,
@@ -273,10 +278,20 @@ class ObjectNavBCTrainer(BaseILTrainer):
         self.model = self._setup_model(
             self.envs.observation_spaces[0],
             action_space,
-            config.MODEL
+            config.MODEL,
+            self.device
         )
         self.model = torch.nn.DataParallel(self.model, dim=1)
         self.model.to(self.device)
+
+        total_params = 0
+        for param in self.model.parameters():
+            if param.requires_grad:
+                total_params += param.numel()
+
+        logger.info("Model parameters: {}".format(
+            total_params
+        ))
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -338,7 +353,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
                         start_idx = i * timestep_batch_size
                         end_idx = start_idx + timestep_batch_size
                         observations_batch_sample = {
-                            k: v[start_idx:end_idx].to(device=self.device, non_blocking=True)
+                            k: v[start_idx:end_idx].to(device=self.device)
                             for k, v in observations_batch.items()
                         }
 
