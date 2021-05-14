@@ -225,8 +225,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
             )
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
-        # for scene in ["split_1", "split_2", "split_3", "split_4"]:
-        for scene in ["split_2"]:
+        for scene in ["split_1", "split_2", "split_3", "split_4"]:
             dataset = ObjectNavEpisodeDataset(
                 config,
                 use_iw=config.IL.USE_IW,
