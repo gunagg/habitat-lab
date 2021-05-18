@@ -127,7 +127,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
 
         for i, episode in enumerate(deserialized["episodes"]):
             episode = ObjectGoalNavEpisode(**episode)
-            episode.episode_id = str(i)
+            # episode.episode_id = str(i)
 
             if scenes_dir is not None:
                 if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):

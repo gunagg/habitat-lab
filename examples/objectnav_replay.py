@@ -53,7 +53,7 @@ def log_action_data(data, i):
         print("Action {} - {}".format(data.action, i))
 
 
-def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=False, num_episodes=None, output_prefix=None):
+def run_reference_replay(cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None):
     instructions = []
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
@@ -68,8 +68,9 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
         fails = []
         for ep_id in range(len(env.episodes)):
             observation_list = []
-
+            print("before reset")
             obs = env.reset()
+            print("after reset")
 
             print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
@@ -86,7 +87,6 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             }
             instructions.append(data)
             step_index = 1
-            grab_seen = False
             grab_count = 0
             total_reward = 0.0
             episode = env.current_episode
@@ -103,10 +103,10 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     observations = env.step(action=action)
 
                 info = env.get_metrics()
-                frame = observations_to_image({"rgb": observations["rgb"]}, {})
+                frame = observations_to_image({"rgb": observations["rgb"]}, info)
                 depth_frame = observations_to_image({"depth": observations["depth"]}, {})
 
-                frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
+                # frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
 
                 if info["success"]:
                     ep_success = 1
@@ -124,13 +124,6 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     "distanceToGoal": info["distance_to_goal"]
                 })
 
-        if os.path.isfile("instructions.json"):
-            inst_file = open("instructions.json", "r")
-            existing_instructions = json.loads(inst_file.read())
-            instructions.extend(existing_instructions)
-
-        inst_file = open("instructions.json", "w")
-        inst_file.write(json.dumps(instructions))
         print("Total episode success: {}".format(success))
         print("SPL: {}, {}, {}".format(spl/num_episodes, spl, num_episodes))
         print("Failed episodes: {}".format(fails))
@@ -146,9 +139,6 @@ def main():
         "--output-prefix", type=str, default="demo"
     )
     parser.add_argument(
-        "--restore-state", dest='restore_state', action='store_true'
-    )
-    parser.add_argument(
         "--step-env", dest='step_env', action='store_true'
     )
     parser.add_argument(
@@ -156,12 +146,12 @@ def main():
     )
     args = parser.parse_args()
     cfg = config
-    # cfg.defrost()
-    # cfg.DATASET.DATA_PATH = args.replay_episode
-    # cfg.freeze()
+    cfg.defrost()
+    cfg.DATASET.DATA_PATH = args.replay_episode
+    cfg.freeze()
 
     observations = run_reference_replay(
-        cfg, args.restore_state, args.step_env, args.log_action,
+        cfg, args.step_env, args.log_action,
         num_episodes=1, output_prefix=args.output_prefix
     )
 

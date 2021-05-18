@@ -19,6 +19,8 @@ try:
 except ImportError:
     d3_40_colors_rgb = None
 
+from PIL import Image
+
 
 def save_rgb_results(
     gt_rgb: torch.Tensor, pred_rgb: torch.Tensor, path: str
@@ -77,6 +79,20 @@ def save_depth_results(
 
     cv2.imwrite(path + "_gt.jpg", gt_depth)
     cv2.imwrite(path + "_pred.jpg", pred_depth)
+
+
+def save_frame(
+    frame, path: str
+) -> None:
+    r"""For saving RGB reconstruction results during EQA-CNN-Pretrain eval.
+
+    Args:
+        gt_rgb: RGB ground truth tensor
+        pred_rgb: RGB reconstruction tensor
+        path: to save images
+    """
+    im = Image.fromarray(frame)
+    im.save(path + ".png")
 
 
 def put_vqa_text_on_image(

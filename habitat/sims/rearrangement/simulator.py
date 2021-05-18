@@ -325,10 +325,10 @@ class RearrangementSim(HabitatSim):
         # step world physics
         super().step_world(dt)
 
-        self.draw_bb_around_nearest_object(object_under_cross_hair)
+        # self.draw_bb_around_nearest_object(object_under_cross_hair)
 
         # obtain observations
-        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=True)
+        self._prev_sim_obs = self.get_sensor_observations(agent_ids=self.default_agent_id, draw_crosshair=False)
         self._prev_sim_obs["collided"] = collided
         self._prev_sim_obs["gripped_object_id"] = self.gripped_object_id
         self._prev_sim_obs["object_under_cross_hair"] = object_under_cross_hair

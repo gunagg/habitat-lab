@@ -15,7 +15,8 @@ from habitat.tasks.nav.nav import (
     EpisodicGPSSensor,
 )
 from habitat.tasks.nav.object_nav_task import (
-    ObjectGoalSensor
+    ObjectGoalSensor,
+    task_cat2mpcat40
 )
 from habitat_baselines.rearrangement.models.encoders.instruction import InstructionEncoder
 from habitat_baselines.rearrangement.models.encoders.resnet_encoders import (
@@ -30,6 +31,8 @@ from habitat_baselines.rl.ppo.policy import Net
 from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetNet
 from habitat_baselines.objectnav.models.rednet import load_rednet
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
+
+from habitat.utils.visualizations.utils import observations_to_image, images_to_video
 
 
 SEMANTIC_EMBEDDING_SIZE = 4
@@ -106,8 +109,10 @@ class SemSegSeqNet(Net):
                 param.requires_grad_(False)
             self.semantic_predictor.eval()
 
-            rgb_shape = observation_space.spaces["rgb"].shape
             sem_embedding_size = model_config.SEMANTIC_ENCODER.embedding_size
+            self.semantic_embedder = nn.Embedding(40 + 2, sem_embedding_size)
+
+            rgb_shape = observation_space.spaces["rgb"].shape
             spaces = {
                 "semantic": Box(
                     low=0,
@@ -172,6 +177,11 @@ class SemSegSeqNet(Net):
             self.prev_action_embedding = nn.Embedding(num_actions + 1, 32)
             rnn_input_size += self.prev_action_embedding.embedding_dim
 
+        self.embed_sge = model_config.embed_sge
+        if self.embed_sge:
+            self.task_cat2mpcat40 = torch.tensor(task_cat2mpcat40, device=device)
+            rnn_input_size += 1
+
         self.state_encoder = RNNStateEncoder(
             input_size=rnn_input_size,
             hidden_size=model_config.STATE_ENCODER.hidden_size,
@@ -198,15 +208,39 @@ class SemSegSeqNet(Net):
             semantic_observations = self.semantic_predictor(observations_batch["rgb"], observations_batch["depth"])
             return semantic_observations
 
+    def _extract_sge(self, observations):
+        # recalculating to keep this self-contained instead of depending on training infra
+        if "semantic" in observations and "objectgoal" in observations:
+            obj_semantic = observations["semantic"].flatten(start_dim=1)
+            idx = self.task_cat2mpcat40[
+                observations["objectgoal"].long()
+            ]
+            idx = idx.to(obj_semantic.device)
+
+            goal_visible_pixels = (obj_semantic == idx.squeeze(1)).sum(dim=1) # Sum over all since we're not batched
+            goal_visible_area = torch.true_divide(goal_visible_pixels, obj_semantic.size(-1))
+
+            return goal_visible_area.unsqueeze(-1)
+
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         r"""
         instruction_embedding: [batch_size x INSTRUCTION_ENCODER.output_size]
         depth_embedding: [batch_size x DEPTH_ENCODER.output_size]
         rgb_embedding: [batch_size x RGB_ENCODER.output_size]
         """
-        if self.model_config.USE_SEMANTICS:
-            observations["semantic"] = self.get_semantic_observations(observations)
-            print(observations["semantic"].shape)
+
+        rgb_obs = observations["rgb"]
+        depth_obs = observations["depth"]
+
+        if len(rgb_obs.size()) == 5:
+            observations["rgb"] = rgb_obs.contiguous().view(
+                -1, rgb_obs.size(2), rgb_obs.size(3), rgb_obs.size(4)
+            )
+        
+        if len(depth_obs.size()) == 5:
+            observations["depth"] = depth_obs.contiguous().view(
+                -1, depth_obs.size(2), depth_obs.size(3), depth_obs.size(4)
+            )
 
         depth_embedding = self.depth_encoder(observations)
         rgb_embedding = self.rgb_encoder(observations)
@@ -220,7 +254,10 @@ class SemSegSeqNet(Net):
 
         if self.model_config.USE_SEMANTICS:
             observations["semantic"] = self.get_semantic_observations(observations)
-            print(observations["semantic"].shape)
+
+            if self.model_config.embed_sge:
+                sge_embedding = self._extract_sge(observations)
+                x.append(sge_embedding)
             sem_seg_embedding = self.sem_seg_encoder(observations)
             x.append(sem_seg_embedding)
 

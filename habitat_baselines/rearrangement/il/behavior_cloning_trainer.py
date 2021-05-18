@@ -57,6 +57,9 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
 from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, get_distance
+from habitat_baselines.utils.visualizations.utils import (
+    save_frame,
+)
 from PIL import Image
 
 
@@ -84,22 +87,21 @@ class RearrangementBCTrainer(BaseILTrainer):
         #     torch.device("cpu")
         # )
 
-    def _make_results_dir(self):
+    def _make_results_dir(self, split="val"):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
-        for s_type in ["rgb", "seg", "depth"]:
-            dir_name = self.config.RESULTS_DIR.format(split="val", type=s_type)
+        for s_type in ["rgb", "seg", "depth", "top_down_map"]:
+            dir_name = self.config.RESULTS_DIR.format(split=split, type=s_type)
             if not os.path.isdir(dir_name):
                 os.makedirs(dir_name)
 
     def _save_results(
         self,
-        gt_rgb: torch.Tensor,
-        pred_rgb: torch.Tensor,
-        gt_seg: torch.Tensor,
-        pred_seg: torch.Tensor,
-        gt_depth: torch.Tensor,
-        pred_depth: torch.Tensor,
+        observations,
+        infos,
         path: str,
+        env_idx: int,
+        split: str,
+        episode_id: int
     ) -> None:
         r"""For saving EQA-CNN-Pretrain reconstruction results.
 
@@ -112,10 +114,17 @@ class RearrangementBCTrainer(BaseILTrainer):
             pred_depth: depth map output
             path: to write file
         """
+        rgb_frame = observations_to_image(
+                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
+                    )
+        depth_frame = observations_to_image(
+                        {"depth": observations["depth"][env_idx]}, {}
+                    )
+        rgb_path = os.path.join(path.format(split=split, type="rgb"), "frame_{}".format(episode_id))
+        save_frame(rgb_frame, rgb_path)
 
-        save_rgb_results(gt_rgb[0], pred_rgb[0], path)
-        save_seg_results(gt_seg[0], pred_seg[0], path)
-        save_depth_results(gt_depth[0], pred_depth[0], path)
+        depth_path = os.path.join(path.format(split=split, type="depth"), "frame_{}".format(episode_id))
+        save_frame(depth_frame, depth_path)
 
     METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward", "coverage"}
 
@@ -506,6 +515,8 @@ class RearrangementBCTrainer(BaseILTrainer):
         ]  # type: List[List[np.ndarray]]
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
+        
+        self._make_results_dir(config.EVAL.SPLIT + "_rerun")
 
         number_of_eval_episodes = self.config.TEST_EPISODE_COUNT
         if number_of_eval_episodes == -1:
@@ -530,6 +541,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
+            torch.cuda.empty_cache()
 
             with torch.no_grad():
                 (
@@ -572,6 +584,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             next_episodes = self.envs.current_episodes()
             envs_to_pause = []
             n_envs = self.envs.num_envs
+            success_episode_data = []
             for i in range(n_envs):
                 if (
                     next_episodes[i].scene_id,
@@ -598,15 +611,32 @@ class RearrangementBCTrainer(BaseILTrainer):
                     next_episodes = self.envs.current_episodes()
                     episode_count += 1
 
+                    metrics = self._extract_scalars_from_info(infos[i])
+                    if episode_stats["success"]:
+                        success_episode_data.append({
+                            "episode_id": current_episodes[i].episode_id,
+                            "metrics": metrics
+                        })
+                    
+
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
-                            episode_id=episode_count,
+                            episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            metrics=self._extract_scalars_from_info(infos[i]),
+                            metrics={"success": metrics["success"], "grab_success": metrics["grab_success"]},
                             tb_writer=writer,
+                        )
+
+                        self._save_results(
+                            batch,
+                            infos,
+                            config.RESULTS_DIR,
+                            i,
+                            config.EVAL.SPLIT + "_rerun",
+                            episode_count,
                         )
 
                         rgb_frames[i] = []
@@ -663,6 +693,11 @@ class RearrangementBCTrainer(BaseILTrainer):
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
         if len(metrics) > 0:
             writer.add_scalars("eval_metrics", metrics, step_id)
+        
+        output_dir = config.EVAL_RESUTLS_DIR
+        with open(os.path.join(output_dir, "{}_success_episodes.json".format(config.EVAL.SPLIT)), "w") as f:
+            f.write(json.dumps(success_episode_data))
+
 
         self.envs.close()
 

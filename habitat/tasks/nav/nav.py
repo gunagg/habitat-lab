@@ -747,9 +747,14 @@ class TopDownMap(Measure):
 
             for goal in episode.goals:
                 try:
-                    self._draw_point(
-                        goal.position, maps.MAP_TARGET_POINT_INDICATOR
-                    )
+                    if len(episode.goals) == 2 and goal.info["is_receptacle"] == True:
+                        self._draw_point(
+                            goal.position, maps.MAP_RECEPTACLE_COLOR
+                        )
+                    else:
+                        self._draw_point(
+                            goal.position, maps.MAP_TARGET_POINT_INDICATOR
+                        )
                 except AttributeError:
                     pass
 

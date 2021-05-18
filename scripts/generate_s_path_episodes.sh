@@ -5,7 +5,13 @@ conda activate habitat
 echo "Starting episode generation!"
 echo "Episodes v6"
 
-sceneId=$1
-path=$2
+task=$1
+sceneId=$2
+path=$3
 
-python psiturk_dataset/generator/shortest_path_trajectories.py --scene $sceneId --episodes $path
+if [[ $task == "objectnav" ]]; then
+    echo "ObjectNav generator"
+    python psiturk_dataset/generator/objectnav_shortest_path_generator.py --episodes data/datasets/objectnav_mp3d_v2/train/train.json.gz --output-path data/episodes/s_path_objectnav
+else
+    python psiturk_dataset/generator/shortest_path_trajectories.py --scene $sceneId --episodes $path
+fi

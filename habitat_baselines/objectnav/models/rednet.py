@@ -349,9 +349,11 @@ class BatchNormalize(nn.Module):
     def forward(self, x):
         # mean = torch.tensor(self.mean, device=x.device)
         # std = torch.tensor(self.std, device=x.device)
+        mean = self.mean.to(x.device)
+        std = self.std.to(x.device)
         # mean = self.mean[None, :, None, None]
         # std = self.std[None, :, None, None]
-        return (x - self.mean) / self.std
+        return (x - mean) / std
         # x.sub_(self.mean).div_(self.std)
         # return x
 
@@ -383,14 +385,6 @@ class RedNetResizeWrapper(nn.Module):
                 semantic: drop-in replacement for default semantic sensor. B x H x W  (no channel, for some reason)
         """
         # Not quite sure what depth is produced here. Let's just check
-        if len(rgb.size()) == 5:
-            rgb = rgb.contiguous().view(
-                -1, rgb.size(2), rgb.size(3), rgb.size(4)
-            )
-        if len(depth.size()) == 5:
-            depth = depth.contiguous().view(
-                -1, depth.size(2), depth.size(3), depth.size(4)
-            )
         if self.resize:
             _, og_h, og_w, _ = rgb.size() # b h w c
         rgb = rgb.permute(0, 3, 1, 2)

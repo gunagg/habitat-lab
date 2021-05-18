@@ -389,7 +389,8 @@ class ResnetSemSeqEncoder(nn.Module):
         if "semantic_features" in observations:
             x = observations["semantic_features"]
         else:
-            observations["semantic"] = self.semantic_embedder(observations["semantic"])
+            categories = observations["semantic"].long() + 1
+            observations["semantic"] = self.semantic_embedder(categories)
             x = self.visual_encoder(observations)
 
         if self.spatial_output:
