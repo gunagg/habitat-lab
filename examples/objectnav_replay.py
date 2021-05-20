@@ -5,6 +5,8 @@ import json
 import sys
 import time
 import os
+import torch
+import numpy as np
 
 from habitat import Config
 from habitat_sim.utils import viz_utils as vut
@@ -17,7 +19,41 @@ from time import sleep
 
 from PIL import Image
 
+from habitat_baselines.objectnav.models.rednet import load_rednet
+from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
+
 config = habitat.get_config("configs/tasks/objectnav_mp3d_video.yaml")
+
+task_cat2mpcat40 = [
+    3,  # ('chair', 2, 0)
+    5,  # ('table', 4, 1)
+    6,  # ('picture', 5, 2)
+    7,  # ('cabinet', 6, 3)
+    8,  # ('cushion', 7, 4)
+    10,  # ('sofa', 9, 5),
+    11,  # ('bed', 10, 6)
+    13,  # ('chest_of_drawers', 12, 7),
+    14,  # ('plant', 13, 8)
+    15,  # ('sink', 14, 9)
+    18,  # ('toilet', 17, 10),
+    19,  # ('stool', 18, 11),
+    20,  # ('towel', 19, 12)
+    22,  # ('tv_monitor', 21, 13)
+    23,  # ('shower', 22, 14)
+    25,  # ('bathtub', 24, 15)
+    26,  # ('counter', 25, 16),
+    27,  # ('fireplace', 26, 17),
+    33,  # ('gym_equipment', 32, 18),
+    34,  # ('seating', 33, 19),
+    38,  # ('clothes', 37, 20),
+    43,  # ('foodstuff', 42, 21),
+    44,  # ('stationery', 43, 22),
+    45,  # ('fruit', 44, 23),
+    46,  # ('plaything', 45, 24),
+    47,  # ('hand_tool', 46, 25),
+    48,  # ('game_equipment', 47, 26),
+    49,  # ('kitchenware', 48, 27)
+]
 
 
 def save_image(img, file_name):
@@ -53,9 +89,66 @@ def log_action_data(data, i):
         print("Action {} - {}".format(data.action, i))
 
 
-def run_reference_replay(cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None):
+def get_goal_visible_area(observations, task_cat2mpcat40, episode):
+    obj_semantic = observations["predicted_sem_obs"].flatten(start_dim=1)
+    task_cat2mpcat40 = torch.tensor(task_cat2mpcat40)
+    idx = task_cat2mpcat40[
+        torch.Tensor(observations["objectgoal"]).long()
+    ]
+    print(obj_semantic.shape, idx.shape)
+    idx = idx.to(obj_semantic.device)
+
+    goal_visible_pixels = (obj_semantic == idx).sum(dim=1) # Sum over all since we're not batched
+    print(goal_visible_pixels.shape)
+    print("\n\n")
+    goal_visible_area = torch.true_divide(goal_visible_pixels, obj_semantic.size(-1))
+
+    #obj_semantic = torch.Tensor(observations["semantic"].astype(np.uint8)).unsqueeze(0).flatten(start_dim=1)
+    obj_semantic = observations["semantic"].flatten(start_dim=1)
+    idx = task_cat2mpcat40[
+        torch.Tensor(observations["objectgoal"]).long()
+    ]
+    # obj_goal = episode.goals[0]
+    # idx = np.array([obj_goal.object_id], dtype=np.int64)
+    # idx = torch.tensor(idx).long()
+    idx = idx.to(obj_semantic.device)
+    print(obj_semantic.shape, idx.shape)
+
+    goal_visible_pixels = (obj_semantic == idx).sum(dim=1) # Sum over all since we're not batched
+    print(goal_visible_pixels.shape)
+    goal_visible_area_gt = torch.true_divide(goal_visible_pixels, obj_semantic.size(-1))
+    print(obj_semantic)
+    print(idx, task_cat2mpcat40[
+        torch.Tensor(observations["objectgoal"]).long()
+    ])
+    return goal_visible_area, goal_visible_area_gt
+
+def setup_model(observation_space, action_space, device):
+    model_config = habitat.get_config("habitat_baselines/config/objectnav/il_objectnav_sem_seg.yaml").MODEL
+    model = SemSegSeqModel(observation_space, action_space, model_config, device)
+    state_dict = torch.load("data/new_checkpoints/objectnav/sem_resnet18_challenge/seed_1/model_10.ckpt", map_location="cpu")
+    model.load_state_dict(state_dict, strict=True)
+    model.to(device)
+    return model
+
+def run_reference_replay(
+    cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None, task_cat2mpcat40=None, sem_seg=False
+):
     instructions = []
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
+    device = (
+            torch.device("cuda", 0)
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+    semantic_predictor = None
+    if sem_seg:
+        semantic_predictor = load_rednet(
+                device,
+                ckpt="data/rednet-models/rednet_semmap_mp3d_tuned.pth",
+                resize=True # since we train on half-vision
+            )
+    
     with habitat.Env(cfg) as env:
         obs_list = []
         success = 0
@@ -63,9 +156,17 @@ def run_reference_replay(cfg, step_env=False, log_action=False, num_episodes=Non
 
         if num_episodes is None:
             num_episodes = len(env.episodes)
+        
+        # observation_space = env.observation_space
+        # action_space = env.action_space
+
+        # model = setup_model(observation_space, action_space, device)
+        # semantic_predictor_2 = model.net.semantic_predictor
+        # del model
 
         print("Total episodes: {}".format(len(env.episodes)))
         fails = []
+        ep_idd = 0
         for ep_id in range(len(env.episodes)):
             observation_list = []
             print("before reset")
@@ -91,6 +192,7 @@ def run_reference_replay(cfg, step_env=False, log_action=False, num_episodes=Non
             total_reward = 0.0
             episode = env.current_episode
             ep_success = 0
+            ep_idd += 1
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
                     log_action_data(data, i)
@@ -104,20 +206,29 @@ def run_reference_replay(cfg, step_env=False, log_action=False, num_episodes=Non
 
                 info = env.get_metrics()
                 frame = observations_to_image({"rgb": observations["rgb"]}, info)
-                depth_frame = observations_to_image({"depth": observations["depth"]}, {})
+                if semantic_predictor is not None:
+                    sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
+                    # sem_obs_2 = semantic_predictor_2(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
+                    frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs, "gt_semantic": sem_obs_2}, info)
+                    observations["predicted_sem_obs"] = sem_obs
+                    # observations["semantic"] = sem_obs_2
 
-                # frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
+                frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
 
                 if info["success"]:
                     ep_success = 1
 
                 observation_list.append(frame)
-
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, grab_count))
             success += ep_success
             spl += info["spl"]
+
+            if sem_seg:
+                goal_visible_area, goal_visible_area_gt = get_goal_visible_area(observations, task_cat2mpcat40, episode)
+
+            print("Goal visible area: {}, GT: {}".format(goal_visible_area, goal_visible_area_gt))
             if ep_success == 0:
                 fails.append({
                     "episodeId": instructions[-1]["episodeId"],
@@ -147,12 +258,13 @@ def main():
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
-    cfg.DATASET.DATA_PATH = args.replay_episode
+    # cfg.DATASET.DATA_PATH = args.replay_episode
+    # cfg.DATASET.CONTENT_SCENES = ["D7G3Y4RVNrH"]
     cfg.freeze()
 
     observations = run_reference_replay(
         cfg, args.step_env, args.log_action,
-        num_episodes=1, output_prefix=args.output_prefix
+        num_episodes=1, output_prefix=args.output_prefix, task_cat2mpcat40=task_cat2mpcat40
     )
 
 if __name__ == "__main__":

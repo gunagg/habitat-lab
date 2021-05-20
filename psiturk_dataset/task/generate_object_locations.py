@@ -393,8 +393,8 @@ def generate_points(
 
     google_object_to_receptacle_list = get_object_receptacle_list(config["TASK"]["GOOGLE_OBJECT_RECEPTACLE_MAP"])
     if use_google_objects:
-        # object_to_receptacle_list.extend(google_object_to_receptacle_list)
-        object_to_receptacle_list = google_object_to_receptacle_list
+        object_to_receptacle_list.extend(google_object_to_receptacle_list)
+        # object_to_receptacle_list = google_object_to_receptacle_list
 
     object_name_map = dict(config["TASK"]["OBJECT_NAME_MAP"])
     y_limit = config["TASK"].get("Y_LIMIT")
@@ -486,7 +486,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--task-config",
-        default="psiturk_dataset/rearrangement.yaml",
+        default="psiturk_dataset/task/rearrangement.yaml",
         help="Task configuration file for initializing a Habitat environment",
     )
     parser.add_argument(

@@ -167,12 +167,12 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id=""
 
             ep_data = get_episode_json(env.current_episode, reference_replay)
             del ep_data["_shortest_path_cache"]
-            print("Episode success: {}".format(success))
+            print("Episode success: {}, Total: {}".format(success, total_episodes))
             total_success += success
             total_episodes += 1
-            if not success:
-                make_videos([observation_list], output_prefix, ep_id)
-            save_image(frame, "{}_s_path.png".format(ep_data["episode_id"]))
+            # if not success:
+            #     make_videos([observation_list], output_prefix, ep_id)
+            # save_image(frame, "{}_s_path.png".format(ep_data["episode_id"]))
 
             if success:
                 dataset["episodes"].append(ep_data)
@@ -183,12 +183,12 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id=""
 
         print("\n\nEpisode success: {}".format(total_success / total_episodes))
         print("Total sample episodes: {}/{}".format(len(dataset["episodes"]), total_episodes))
-        # write_json(dataset, "{}/{}.json".format(output_path, scene_id))
-        # write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
+        write_json(dataset, "{}/{}.json".format(output_path, scene_id))
+        write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
 
-        # if len(failed_dataset["episodes"]) > 0:
-        #     write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
-        #     write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
+        if len(failed_dataset["episodes"]) > 0:
+            write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
+            write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
 
 
 def main():

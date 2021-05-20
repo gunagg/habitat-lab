@@ -23,7 +23,6 @@ from torch import Tensor
 from torch import distributed as distrib
 from numpy import ndarray
 from torch.utils.data import DataLoader, ConcatDataset
-from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger, make_dataset
 from habitat.core.env import Env, RLEnv
@@ -37,15 +36,14 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.rearrangement.common.aux_losses import AuxLosses
-from habitat_baselines.rearrangement.dataset.dataset import RearrangementDataset
-from habitat_baselines.rearrangement.dataset.episode_dataset import RearrangementEpisodeDataset, collate_fn
-from habitat_baselines.rearrangement.models.seq_2_seq_model import Seq2SeqNet, Seq2SeqModel
+from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, collate_fn
+from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
+from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
+from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
-    linear_decay
 )
 from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     EXIT,
@@ -56,21 +54,17 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     requeue_job,
     save_interrupted_state,
 )
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
-from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, get_distance
 from habitat_baselines.utils.visualizations.utils import (
     save_frame,
 )
 from PIL import Image
 
 
-@baseline_registry.register_trainer(name="rearrangement-behavior-cloning")
-class RearrangementBCTrainer(BaseILTrainer):
-    r"""Trainer class for PPO algorithm
-    Paper: https://arxiv.org/abs/1707.06347.
+@baseline_registry.register_trainer(name="objectnav-distrib-behavior-cloning")
+class ObjectNavDistribBCTrainer(BaseILTrainer):
+    r"""Trainer class for IL algorithm
     """
-    supported_tasks = ["RearrangementTask-v0"]
+    supported_tasks = ["ObjectNav-v1"]
 
     def __init__(self, config=None):
         super().__init__(config)
@@ -85,9 +79,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        # self.device = (
-        #     torch.device("cpu")
-        # )
 
     def _make_results_dir(self, split="val"):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
@@ -103,7 +94,7 @@ class RearrangementBCTrainer(BaseILTrainer):
         path: str,
         env_idx: int,
         split: str,
-        episode_id: int
+        episode_id: str
     ) -> None:
         r"""For saving EQA-CNN-Pretrain reconstruction results.
 
@@ -127,6 +118,7 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         depth_path = os.path.join(path.format(split=split, type="depth"), "frame_{}".format(episode_id))
         save_frame(depth_frame, depth_path)
+
 
     METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward", "coverage"}
 
@@ -219,14 +211,19 @@ class RearrangementBCTrainer(BaseILTrainer):
         )
     
 
-    def _setup_model(self, observation_space, action_space, model_config):
+    def _setup_model(self, observation_space, action_space, model_config, device):
         model_config.defrost()
         model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
         model_config.freeze()
 
-        model = Seq2SeqModel(observation_space, action_space, model_config)
-        return model
-
+        model = None
+        if hasattr(model_config, "VISUAL_ENCODER"):
+            model = SingleResNetSeqModel(observation_space, action_space, model_config, device)
+        elif model_config.USE_SEMANTICS:
+            model = SemSegSeqModel(observation_space, action_space, model_config, device)
+        else:
+            model = Seq2SeqModel(observation_space, action_space, model_config)
+        return model   
 
     def _setup_dataset(self):
         config = self.config
@@ -238,11 +235,11 @@ class RearrangementBCTrainer(BaseILTrainer):
             )
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
-        for scene in content_scenes:
-            dataset = RearrangementEpisodeDataset(
+        for scene in ["split_1", "split_2", "split_3", "split_4"]:
+            dataset = ObjectNavEpisodeDataset(
                 config,
-                content_scenes=[scene],
                 use_iw=config.IL.USE_IW,
+                split_name=scene,
                 inflection_weight_coef=config.MODEL.inflection_weight_coef
             )
             datasets.append(dataset)
@@ -260,6 +257,28 @@ class RearrangementBCTrainer(BaseILTrainer):
         """
 
         config = self.config
+        self.local_rank, tcp_store = init_distrib_slurm(
+            self.config.IL.distrib_backend
+        )
+        add_signal_handlers()
+
+        self.world_rank = distrib.get_rank()
+        self.world_size = distrib.get_world_size()
+
+        self.config.defrost()
+        self.config.TORCH_GPU_ID = self.local_rank
+        self.config.SIMULATOR_GPU_ID = self.local_rank
+        # Multiply by the number of simulators to make sure they also get unique seeds
+        self.config.TASK_CONFIG.SEED += (
+            self.world_rank * self.config.NUM_PROCESSES
+        )
+        self.config.freeze()
+
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda", self.local_rank)
+            torch.cuda.set_device(self.device)
+        else:
+            self.device = torch.device("cpu")
 
         random.seed(self.config.TASK_CONFIG.SEED)
         np.random.seed(self.config.TASK_CONFIG.SEED)
@@ -271,35 +290,50 @@ class RearrangementBCTrainer(BaseILTrainer):
             workers_ignore_signals=True
         )
 
-        rearrangement_dataset = self._setup_dataset()
+        objectnav_dataset = self._setup_dataset()
         batch_size = config.IL.BehaviorCloning.batch_size
 
-        logger.info("Setup dataloader")
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            objectnav_dataset,
+            num_replicas=self.world_size,
+            rank=self.world_rank,
+            shuffle=True,
+            drop_last=True,
+        )
+        logger.info("Setting up dataloader...")
 
         train_loader = DataLoader(
-            rearrangement_dataset,
+            objectnav_dataset,
             collate_fn=collate_fn,
             batch_size=batch_size,
-            shuffle=True,
-            num_workers=8,
+            shuffle=False,
+            sampler=train_sampler,
+            num_workers=0,
         )
-        logger.info("Dataloader setup")
+        logger.info("Dataloader setup done")
 
         logger.info(
             "[ train_loader has {} samples ]".format(
-                len(rearrangement_dataset)
+                len(objectnav_dataset)
             )
         )
-
+        logger.info("Setting up distributed model...")
         action_space = self.envs.action_spaces[0]
 
         self.model = self._setup_model(
             self.envs.observation_spaces[0],
             action_space,
-            config.MODEL
+            config.MODEL,
+            self.device
         )
-        self.model = torch.nn.DataParallel(self.model, dim=1)
         self.model.to(self.device)
+        # Distributed data parallel setup
+        if torch.cuda.is_available():
+            self.model = torch.nn.parallel.DistributedDataParallel(
+                self.model, device_ids=[self.device], output_device=self.device
+            )
+        else:
+            self.model = torch.nn.parallel.DistributedDataParallel(self.model)
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -310,17 +344,29 @@ class RearrangementBCTrainer(BaseILTrainer):
             optim, max_lr=config.IL.BehaviorCloning.lr,
             steps_per_epoch=len(train_loader), epochs=config.IL.BehaviorCloning.max_epochs
         )
-
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
 
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
-        AuxLosses.activate()
-        logger.info("Starting training: {}".format(self.device))
+        interrupted_state = load_interrupted_state()
+        if interrupted_state is not None:
+            self.model.load_state_dict(interrupted_state["state_dict"])
+            optim.load_state_dict(
+                interrupted_state["optim_state"]
+            )
+            scheduler.load_state_dict(interrupted_state["lr_sched_state"])
+
+            requeue_stats = interrupted_state["requeue_stats"]
+            epoch = requeue_stats["epoch"]
+            t = requeue_stats["t"]
+
+        logger.info("Starting training")
         with (
             TensorboardWriter(
                 self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
             )
+            if self.world_rank == 0
+            else contextlib.suppress()
         ) as writer:
             while epoch <= config.IL.BehaviorCloning.max_epochs:
                 logger.info("Epoch: {}".format(epoch))
@@ -331,6 +377,30 @@ class RearrangementBCTrainer(BaseILTrainer):
                 avg_train_time = 0.0
 
                 batch_start_time = time.time()
+
+                if EXIT.is_set():
+                    profiling_wrapper.range_pop()  # train update
+
+                    self.envs.close()
+
+                    if REQUEUE.is_set() and self.world_rank == 0:
+                        requeue_stats = dict(
+                            epoch=epoch,
+                            t=t,
+                        )
+                        save_interrupted_state(
+                            dict(
+                                state_dict=self.model.state_dict(),
+                                optim_state=optim.state_dict(),
+                                lr_sched_state=scheduler.state_dict(),
+                                config=self.config,
+                                requeue_stats=requeue_stats,
+                            ),
+                            config.INTERRUPTED_STATE_FILE_PATH
+                        )
+
+                    requeue_job()
+                    return
 
                 for batch in train_loader:
                     torch.cuda.empty_cache()
@@ -354,7 +424,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                     )
 
                     optim.zero_grad()
-                    AuxLosses.clear()
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size
@@ -395,22 +464,30 @@ class RearrangementBCTrainer(BaseILTrainer):
                         action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
                         loss = (action_loss / num_steps)
                         loss.backward()
-                        batch_loss += loss.item()
+                        # Sync loss
+                        stats = torch.tensor(
+                            [loss.detach().item()],
+                            device=self.device,
+                        )
+                        distrib.all_reduce(stats)
+                        batch_loss += stats[0].item()
                         rnn_hidden_states = rnn_hidden_states.detach()
 
                         avg_train_time += ((time.time() - train_time) / 60)
 
+                    avg_loss += batch_loss
+
                     if t % config.LOG_INTERVAL == 0:
                         logger.info(
-                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f};]".format(
-                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t,
+                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f}; samples: {:.3f}]".format(
+                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t, t
                             )
                         )
+                        writer.add_scalar("train_loss", loss, t)
 
                     optim.step()
                     scheduler.step()
                     batch_start_time = time.time()
-                    avg_loss += batch_loss
 
                 end_time = time.time()
                 time_taken = "{:.1f}".format((end_time - start_time) / 60)
@@ -418,25 +495,24 @@ class RearrangementBCTrainer(BaseILTrainer):
                 avg_train_time = avg_train_time / len(train_loader)
                 avg_load_time = avg_load_time / len(train_loader)
 
-                logger.info(
-                    "[ Epoch {} completed. Time taken: {} minutes. Load time: {} mins. Train time: {} mins]".format(
-                        epoch, time_taken, avg_load_time, avg_train_time
+                if self.world_rank == 0:
+                    logger.info(
+                        "[ Epoch {} completed. Time taken: {} minutes. Load time: {} mins. Train time: {} mins]".format(
+                            epoch, time_taken, avg_load_time, avg_train_time
+                        )
                     )
-                )
-                logger.info("[ Average loss: {:.3f} ]".format(avg_loss))
-                writer.add_scalar("avg_train_loss", avg_loss, epoch)
+                    logger.info("[ Average loss: {:.3f} ]".format(avg_loss / self.world_size))
+                    writer.add_scalar("avg_train_loss", avg_loss / self.world_size, epoch)
 
-                print("-----------------------------------------")
+                    print("-----------------------------------------")
 
-                if epoch % config.CHECKPOINT_INTERVAL == 0:
-                    self.save_checkpoint(
-                        self.model.module.state_dict(), "model_{}.ckpt".format(epoch)
-                    )
+                    if epoch % config.CHECKPOINT_INTERVAL == 0:
+                        self.save_checkpoint(
+                            self.model.state_dict(), "model_{}.ckpt".format(epoch)
+                        )
 
                 epoch += 1
-        logger.info("Epochs ended")
         self.envs.close()
-        logger.info("Closing envs")
 
     def _eval_checkpoint(
         self,
@@ -481,7 +557,8 @@ class RearrangementBCTrainer(BaseILTrainer):
         self.model = self._setup_model(
             self.envs.observation_spaces[0],
             action_space,
-            config.MODEL
+            config.MODEL,
+            self.device
         )
 
         # Map location CPU is almost always better than mapping to a CUDA device.
@@ -518,8 +595,8 @@ class RearrangementBCTrainer(BaseILTrainer):
         ]  # type: List[List[np.ndarray]]
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
-        
-        self._make_results_dir(config.EVAL.SPLIT + "_rerun")
+
+        self._make_results_dir(config.EVAL.SPLIT)
 
         number_of_eval_episodes = self.config.TEST_EPISODE_COUNT
         if number_of_eval_episodes == -1:
@@ -535,16 +612,14 @@ class RearrangementBCTrainer(BaseILTrainer):
                 number_of_eval_episodes = total_num_eps
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
-        action_indices = [1] * self.envs.num_envs
-        action_match_count = [(0, 0)] * self.envs.num_envs
         possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
         episode_count = 0
+        success_episode_data = []
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
-            torch.cuda.empty_cache()
 
             with torch.no_grad():
                 (
@@ -587,7 +662,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             next_episodes = self.envs.current_episodes()
             envs_to_pause = []
             n_envs = self.envs.num_envs
-            success_episode_data = []
             for i in range(n_envs):
                 if (
                     next_episodes[i].scene_id,
@@ -614,13 +688,12 @@ class RearrangementBCTrainer(BaseILTrainer):
                     next_episodes = self.envs.current_episodes()
                     episode_count += 1
 
-                    metrics = self._extract_scalars_from_info(infos[i])
                     if episode_stats["success"]:
                         success_episode_data.append({
                             "episode_id": current_episodes[i].episode_id,
-                            "metrics": metrics
+                            "episode_count": episode_count,
+                            "metrics": self._extract_scalars_from_info(infos[i])
                         })
-                    
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
@@ -629,7 +702,7 @@ class RearrangementBCTrainer(BaseILTrainer):
                             images=rgb_frames[i],
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            metrics={"success": metrics["success"], "grab_success": metrics["grab_success"]},
+                            metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
                         )
 
@@ -638,8 +711,8 @@ class RearrangementBCTrainer(BaseILTrainer):
                             infos,
                             config.RESULTS_DIR,
                             i,
-                            config.EVAL.SPLIT + "_rerun",
-                            episode_count,
+                            config.EVAL.SPLIT,
+                            current_episodes[i].episode_id,
                         )
 
                         rgb_frames[i] = []
@@ -649,7 +722,8 @@ class RearrangementBCTrainer(BaseILTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
-                    frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))
+                    frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
+                    frame = append_text_to_image(frame, "Action: {}".format(action_names[i]))
                     rgb_frames[i].append(frame)
 
 
@@ -696,12 +770,12 @@ class RearrangementBCTrainer(BaseILTrainer):
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
         if len(metrics) > 0:
             writer.add_scalars("eval_metrics", metrics, step_id)
-        
+
         output_dir = config.EVAL_RESUTLS_DIR
         with open(os.path.join(output_dir, "{}_success_episodes.json".format(config.EVAL.SPLIT)), "w") as f:
             f.write(json.dumps(success_episode_data))
 
-
         self.envs.close()
 
         print ("environments closed")
+

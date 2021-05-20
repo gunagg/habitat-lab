@@ -22,32 +22,55 @@ def caclulate_inflections(episode):
     return inflections, len(reference_replay)
 
 
-def calculate_inflection_weight(path):
+def save_meta_for_analysis(meta, path):
+    write_json(meta, path)
+
+def calculate_inflection_weight(path, stats_path):
     data = load_dataset(path)
 
     episodes = data["episodes"]
     inflections = 0
     total_actions = 0
     total_episodes = len(episodes)
+    data = {
+        "episode_length": [],
+        "action_frequency": {},
+    }
     for episode in tqdm(episodes):
         num_inflections, num_actions = caclulate_inflections(episode)
+        data["episode_length"].append(num_actions)
+        reference_replay = episode["reference_replay"]
+        for i in range(len(reference_replay)):
+            action = reference_replay[i]["action"]
+            if action not in data["action_frequency"]:
+                data["action_frequency"][action] = 0
+            data["action_frequency"][action] += 1
+
         inflections += num_inflections
         total_actions += num_actions
+    
+    save_meta_for_analysis(data, stats_path)
 
     print("Total episodes: {}".format(len(episodes)))
     print("Inflection weight: {}".format(total_actions / inflections))
     print("Average episode length: {}".format(total_actions / total_episodes))
+    print("Total actions: {}".format(total_actions))
 
     instructions = convert_instruction_tokens(episodes)
     print("Num of distinct instructions: {}".format(len(set(instructions))))
     write_json(list(set(instructions)), "data/hit_approvals/instructions.json")
 
 
-def calculate_inflection_weight_objectnav(path):
+def calculate_inflection_weight_objectnav(path, stats_path):
     files = glob.glob(path + "*.json.gz")
     inflections = 0
     total_actions = 0
     total_episodes = 0
+
+    data_stats = {
+        "episode_length": [],
+        "action_frequency": {},
+    }
 
     for file_path in tqdm(files):
         data = load_dataset(file_path)
@@ -55,9 +78,20 @@ def calculate_inflection_weight_objectnav(path):
         episodes = data["episodes"]
         for episode in episodes:
             num_inflections, num_actions = caclulate_inflections(episode)
+
+            data_stats["episode_length"].append(num_actions)
+            reference_replay = episode["reference_replay"]
+            for i in range(len(reference_replay)):
+                action = reference_replay[i]["action"]
+                if action not in data_stats["action_frequency"]:
+                    data_stats["action_frequency"][action] = 0
+                data_stats["action_frequency"][action] += 1
+
             inflections += num_inflections
             total_actions += num_actions
             total_episodes += 1
+
+    save_meta_for_analysis(data_stats, stats_path)
 
     print("Total episodes: {}".format(total_episodes))
     print("Inflection weight: {}".format(total_actions / inflections))
@@ -86,12 +120,15 @@ def main():
     parser.add_argument(
         "--task", type=str, default="rearrangement"
     )
+    parser.add_argument(
+        "--stats", type=str, default="data/episodes/objectnav_sample/stats.json"
+    )
     args = parser.parse_args()
 
     if args.task == "rearrangement":
-        calculate_inflection_weight(args.path)
+        calculate_inflection_weight(args.path, args.stats)
     else:
-        calculate_inflection_weight_objectnav(args.path)
+        calculate_inflection_weight_objectnav(args.path, args.stats)
 
 
 if __name__ == "__main__":

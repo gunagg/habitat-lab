@@ -1,4 +1,5 @@
 import argparse
+import json
 import lmdb
 import torch
 import msgpack_numpy
@@ -20,6 +21,26 @@ def read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, idx=0):
         frame = observations_to_image({"rgb": observations["rgb"][i]}, {})
         obs_list.append(frame)
     
+
+    next_action_idx = "{0:0=6d}_next_action".format(idx)
+    next_action_binary = lmdb_cursor.get(next_action_idx.encode())
+    next_action = np.frombuffer(next_action_binary, dtype="int")
+    next_action = torch.from_numpy(np.copy(next_action))
+
+    prev_action_idx = "{0:0=6d}_prev_action".format(idx)
+    prev_action_binary = lmdb_cursor.get(prev_action_idx.encode())
+    prev_action = np.frombuffer(prev_action_binary, dtype="int")
+    prev_action = torch.from_numpy(np.copy(prev_action))
+
+    next_action = next_action.numpy().tolist()
+    prev_action = prev_action.numpy().tolist()
+
+    with open("data/hit_data/actions.json", "w") as f:
+        f.write(json.dumps({
+            "next": next_action,
+            "prev_action": prev_action
+        }))
+
     images_to_video(obs_list, output_dir="demos", video_name="re_create_{}".format(idx))
 
 

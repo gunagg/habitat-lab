@@ -378,11 +378,11 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id=
 
             ep_data = get_episode_json(env.current_episode, reference_replay)
             del ep_data["_shortest_path_cache"]
-            print("Episode success: {}".format(success))
+            print("Episode success: {}, Total episodes: {}".format(success, total_episodes))
             total_success += success
             total_episodes += 1
-            if not success:
-                make_videos([observation_list], output_prefix, ep_id)
+            # if not success:
+            #     make_videos([observation_list], output_prefix, ep_id)
 
             if success:
                 dataset["episodes"].append(ep_data)
@@ -394,8 +394,9 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id=
         write_json(dataset, "{}/{}.json".format(output_path, scene_id))
         write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
 
-        write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
-        write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
+        if len(failed_dataset["episodes"]) > 0:
+            write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
+            write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
 
 
 def main():

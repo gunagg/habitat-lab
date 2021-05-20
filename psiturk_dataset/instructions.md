@@ -18,7 +18,7 @@
     ```
     Value of `task` can be `rearrangement` or `objectnav`
 
-3. Run the command on step 2 for all 9 scenes
+3. Run the command on step 2 for all 9 scenes for pick and place task. Pass `rearrangement` as `<task>` param to the script
     ```
     JeFG25nYj2p
     q9vSo1VnCiC
@@ -29,6 +29,14 @@
     JmbYfDe2QKZ
     TbHJrupSAjP
     zsNo4HB9uLZ
+    ```
+
+4. Run the command on step 2 for all 4 splits for objectnav task. Pass `objectnav` as `<task>` param to the script
+    ```
+    split_1
+    split_2
+    split_4
+    split_5
     ```
 
 ### Training setup

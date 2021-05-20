@@ -5,13 +5,15 @@ from tqdm import tqdm
 from psiturk_dataset.utils.utils import write_json, write_gzip, load_dataset
 
 
-def append_start_step(path, output_path):
+def append_start_step(path, output_path, task):
     data = load_dataset(path)
     prev_trajectory_length = 0
     new_trajectory_length = 0
 
     for episode in tqdm(data["episodes"]):
         prev_trajectory_length += len(episode["reference_replay"])
+        if episode["reference_replay"][0]["action"] == "STOP":
+            continue
         start_step = copy.deepcopy(episode["reference_replay"][0])
         start_step["action"] = "STOP"
 
@@ -47,7 +49,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output-path", type=str, default=""
     )
+    parser.add_argument(
+        "--task", type=str, default="objectnav"
+    )
     args = parser.parse_args()
 
-    append_start_step(args.input_path, args.output_path)
+    append_start_step(args.input_path, args.output_path, args.task)
 

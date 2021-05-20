@@ -18,7 +18,7 @@ def create_stage_config(path):
         scene_file = file_path.split("/")[-1].split(".")[0]
         print(file_path)
         dir_path = "/".join(file_path.split("/")[:-1])
-        stage_config_path = os.path.join(file_path, scene_file + ".stage_config.json")
+        stage_config_path = os.path.join(dir_path, scene_file + ".stage_config.json")
 
         config = {
             "render_asset": "{}.glb".format(scene_file),
@@ -36,9 +36,9 @@ def create_stage_config(path):
             "units_to_meters":1.0,
             "requires_lighting": True,
             "rigid object paths": [
-                "/data/objects/",
-                "../test_assets/objects/",
-                "../../test_assets/objects/"
+                # "/data/objects/",
+                # "../test_assets/objects/",
+                # "../../test_assets/objects/"
             ]
         }
         write_json(config, stage_config_path)

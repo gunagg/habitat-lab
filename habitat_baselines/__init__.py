@@ -20,6 +20,8 @@ from habitat_baselines.rearrangement.rl.ddppo_trainer import RearrangementDDPPOT
 from habitat_baselines.rearrangement.reward_modeling.ppo_agile_trainer import RearrangementPPOAgileTrainer
 from habitat_baselines.rearrangement.reward_modeling.ddppo_agile_trainer import RearrangementDDPPOAgileTrainer
 from habitat_baselines.objectnav.il.behavior_cloning_trainer import ObjectNavBCTrainer
+from habitat_baselines.objectnav.il.behavior_cloning_distrib_trainer import ObjectNavDistribBCTrainer
+
 
 __all__ = [
     "BaseTrainer",
@@ -37,4 +39,5 @@ __all__ = [
     "RearrangementDDPPOAgileTrainer",
     "RearrangementBCEnvTrainer",
     "ObjectNavBCTrainer",
+    "ObjectNavDistribBCTrainer",
 ]
