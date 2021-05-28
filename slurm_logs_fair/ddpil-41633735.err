@@ -1,0 +1,1673 @@
+/bin/bash: /public/apps/anaconda3/2020.11/lib/libtinfo.so.6: no version information available (required by /bin/bash)
++ srun /private/home/abhshkdz/.conda/envs/habitat-on-web/bin/python -u -m habitat_baselines.run --exp-config habitat_baselines/config/object_rearrangement/il_distrib_object_rearrangement.yaml --run-type train
+srun: Job 41633735 step creation temporarily disabled, retrying (Requested nodes are busy)
+srun: Step created for job 41633735
+2021-05-21 11:41:46,720 config: BASE_TASK_CONFIG_PATH: configs/tasks/object_rearrangement.yaml
+CHECKPOINT_FOLDER: results/checkpoints/resnet18_s_path_v4/seed_1
+CHECKPOINT_INTERVAL: 1
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/object_rearrangement/s_path_v4/{split}/{scene_split}.db
+ENV_NAME: RearrangementRLEnv
+EVAL:
+  SPLIT: eval
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/resnet18_random_split_s_path_v4/seed_1/model_10.ckpt
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    batch_size: 8
+    freeze_encoder: False
+    lr: 0.001
+    max_epochs: 10
+    timestep_batch_size: 512
+  USE_IW: True
+  distrib_backend: GLOO
+INTERRUPTED_STATE_FILE_PATH: data/new_checkpoints/resnet18_random_split_s_path_v4/seed_1/state.pth
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  INSTRUCTION_ENCODER:
+    bidirectional: False
+    embedding_size: 64
+    final_state_only: True
+    hidden_size: 128
+    rnn_type: LSTM
+    use_pretrained_embeddings: False
+    vocab_size: 128
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 512
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  ablate_depth: False
+  ablate_instruction: False
+  ablate_rgb: False
+  inflection_weight_coef: 6.945533535762423
+NUM_PROCESSES: 1
+NUM_UPDATES: 10000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/object_rearrangement
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/object_rearrangement/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  GRAB_SUCCESS_REWARD: 1.5
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: agent_receptacle_distance
+  REWARD_MEASURE_2: agent_object_distance
+  SLACK_REWARD: -0.01
+  SUCCESS_MEASURE: success
+  SUCCESS_REWARD: 2.5
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/object_rearrangement/s_path_v4/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/habitat-test-scenes/
+    SPLIT: sample
+    TYPE: RearrangementDataset-v0
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 2002
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: RearrangementActions-v0
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 1.5
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      MAX_CLIMB: 0.5
+      RADIUS: 0.1
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    CROSSHAIR_POS: [128, 128]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 256
+      HFOV: 90
+      MAX_DEPTH: 10.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 1.5, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 256
+    FORWARD_STEP_SIZE: 0.15
+    GRAB_DISTANCE: 2.0
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: True
+      ENABLE_PHYSICS: True
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 256
+      HFOV: 90
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 1.5, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 256
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      CHANNELS: 1
+      HEIGHT: 256
+      HFOV: 90
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 1.5, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 256
+    TILT_ANGLE: 5
+    TURN_ANGLE: 5
+    TYPE: RearrangementSim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      GRAB_RELEASE:
+        TYPE: GrabOrReleaseAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_BACKWARD:
+        TYPE: MoveBackwardAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      NO_OP:
+        TYPE: NoOpAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    AGENT_TO_OBJECT_DISTANCE:
+      TYPE: AgentToObjectDistance
+    AGENT_TO_RECEPTACLE_DISTANCE:
+      TYPE: AgentToReceptacleDistance
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    COVERAGE:
+      EGOCENTRIC: False
+      GRID_DELTA: 0.25
+      TYPE: Coverage
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: POINT
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_OBJECT_VISIBLE:
+      TYPE: GoalObjectVisible
+    GOAL_SENSOR_UUID: pointgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    GRAB_SUCCESS:
+      TYPE: GrabSuccess
+    GRIPPED_OBJECT_SENSOR:
+      TYPE: GrippedObjectSensor
+    GRIPPED_OBJECT_SENSOR_UUID: gripped_object_id
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INFLECTION_WEIGHT_SENSOR:
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['AGENT_TO_OBJECT_DISTANCE', 'OBJECT_TO_RECEPTACLE_DISTANCE', 'AGENT_TO_RECEPTACLE_DISTANCE', 'REARRANGEMENT_SUCCESS', 'DISTANCE_TO_GOAL', 'REARRANGEMENT_SPL', 'GRAB_SUCCESS', 'GOAL_OBJECT_VISIBLE', 'COVERAGE', 'REARRANGEMENT_REWARD', 'RELEASE_FAILED']
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJECT_TO_RECEPTACLE_DISTANCE:
+      TYPE: ObjectToReceptacleDistance
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN', 'GRAB_RELEASE', 'MOVE_BACKWARD', 'NO_OP']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    REARRANGEMENT_REWARD:
+      ATTENUATION: 0.995
+      COVERAGE_REWARD: 0.25
+      DROP_PENALTY: -0.5
+      DROP_PENALTY_DIST_THRESHOLD: 3.0
+      ENABLE_PENALTY: True
+      EXP_REWARD_COEF: 1.0
+      GRAB_SUCCESS_REWARD: 2.5
+      MODE: DISTANCE_TO_GOAL_PLUS_VISIBLE
+      OBJECT_SEEN_REWARD: 1.5
+      OBJECT_SEEN_REWARD_THRESHOLD: 0.001
+      RECEPTACLE_SEEN_REWARD_THRESHOLD: 0.001
+      SLACK_REWARD: -0.01
+      SUCCESS_DISTANCE: 1.5
+      SUCCESS_REWARD: 3.5
+      TYPE: RearrangementReward
+      USE_NORMALIZED_REWARD: True
+      VISIT_EXP: 1
+    REARRANGEMENT_SPL:
+      TYPE: RearrangementSPL
+    REARRANGEMENT_SUCCESS:
+      SUCCESS_DISTANCE: 0.7
+      TYPE: RearrangementSuccess
+    RELEASE_FAILED:
+      TYPE: ReleaseFailed
+    SENSORS: ['INSTRUCTION_SENSOR', 'GRIPPED_OBJECT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.2
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.2
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: True
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: RearrangementTask-v0
+TENSORBOARD_DIR: results/tb/resnet18_s_path_v4/seed_1/train
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: rearrangement-behavior-cloning-distrib
+VIDEO_DIR: results/videos/resnet18_s_path_v4/seed_1/train
+VIDEO_OPTION: ['disk']
+2021-05-21 11:41:47,144 config: BASE_TASK_CONFIG_PATH: configs/tasks/object_rearrangement.yaml
+CHECKPOINT_FOLDER: results/checkpoints/resnet18_s_path_v4/seed_1
+CHECKPOINT_INTERVAL: 1
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/object_rearrangement/s_path_v4/{split}/{scene_split}.db
+ENV_NAME: RearrangementRLEnv
+EVAL:
+  SPLIT: eval
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/resnet18_random_split_s_path_v4/seed_1/model_10.ckpt
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    batch_size: 8
+    freeze_encoder: False
+    lr: 0.001
+    max_epochs: 10
+    timestep_batch_size: 512
+  USE_IW: True
+  distrib_backend: GLOO
+INTERRUPTED_STATE_FILE_PATH: data/new_checkpoints/resnet18_random_split_s_path_v4/seed_1/state.pth
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  INSTRUCTION_ENCODER:
+    bidirectional: False
+    embedding_size: 64
+    final_state_only: True
+    hidden_size: 128
+    rnn_type: LSTM
+    use_pretrained_embeddings: False
+    vocab_size: 128
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 512
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  ablate_depth: False
+  ablate_instruction: False
+  ablate_rgb: False
+  inflection_weight_coef: 6.945533535762423
+NUM_PROCESSES: 1
+NUM_UPDATES: 10000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/object_rearrangement
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/object_rearrangement/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  GRAB_SUCCESS_REWARD: 1.5
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: agent_receptacle_distance
+  REWARD_MEASURE_2: agent_object_distance
+  SLACK_REWARD: -0.01
+  SUCCESS_MEASURE: success
+  SUCCESS_REWARD: 2.5
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/object_rearrangement/s_path_v4/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/habitat-test-scenes/
+    SPLIT: sample
+    TYPE: RearrangementDataset-v0
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 2002
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: RearrangementActions-v0
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 1.5
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      MAX_CLIMB: 0.5
+      RADIUS: 0.1
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    CROSSHAIR_POS: [128, 128]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 256
+      HFOV: 90
+      MAX_DEPTH: 10.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 1.5, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 256
+    FORWARD_STEP_SIZE: 0.15
+    GRAB_DISTANCE: 2.0
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: True
+      ENABLE_PHYSICS: True
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 256
+      HFOV: 90
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 1.5, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 256
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      CHANNELS: 1
+      HEIGHT: 256
+      HFOV: 90
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 1.5, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 256
+    TILT_ANGLE: 5
+    TURN_ANGLE: 5
+    TYPE: RearrangementSim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      GRAB_RELEASE:
+        TYPE: GrabOrReleaseAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_BACKWARD:
+        TYPE: MoveBackwardAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      NO_OP:
+        TYPE: NoOpAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    AGENT_TO_OBJECT_DISTANCE:
+      TYPE: AgentToObjectDistance
+    AGENT_TO_RECEPTACLE_DISTANCE:
+      TYPE: AgentToReceptacleDistance
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    COVERAGE:
+      EGOCENTRIC: False
+      GRID_DELTA: 0.25
+      TYPE: Coverage
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: POINT
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_OBJECT_VISIBLE:
+      TYPE: GoalObjectVisible
+    GOAL_SENSOR_UUID: pointgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    GRAB_SUCCESS:
+      TYPE: GrabSuccess
+    GRIPPED_OBJECT_SENSOR:
+      TYPE: GrippedObjectSensor
+    GRIPPED_OBJECT_SENSOR_UUID: gripped_object_id
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INFLECTION_WEIGHT_SENSOR:
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['AGENT_TO_OBJECT_DISTANCE', 'OBJECT_TO_RECEPTACLE_DISTANCE', 'AGENT_TO_RECEPTACLE_DISTANCE', 'REARRANGEMENT_SUCCESS', 'DISTANCE_TO_GOAL', 'REARRANGEMENT_SPL', 'GRAB_SUCCESS', 'GOAL_OBJECT_VISIBLE', 'COVERAGE', 'REARRANGEMENT_REWARD', 'RELEASE_FAILED']
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJECT_TO_RECEPTACLE_DISTANCE:
+      TYPE: ObjectToReceptacleDistance
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN', 'GRAB_RELEASE', 'MOVE_BACKWARD', 'NO_OP']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    REARRANGEMENT_REWARD:
+      ATTENUATION: 0.995
+      COVERAGE_REWARD: 0.25
+      DROP_PENALTY: -0.5
+      DROP_PENALTY_DIST_THRESHOLD: 3.0
+      ENABLE_PENALTY: True
+      EXP_REWARD_COEF: 1.0
+      GRAB_SUCCESS_REWARD: 2.5
+      MODE: DISTANCE_TO_GOAL_PLUS_VISIBLE
+      OBJECT_SEEN_REWARD: 1.5
+      OBJECT_SEEN_REWARD_THRESHOLD: 0.001
+      RECEPTACLE_SEEN_REWARD_THRESHOLD: 0.001
+      SLACK_REWARD: -0.01
+      SUCCESS_DISTANCE: 1.5
+      SUCCESS_REWARD: 3.5
+      TYPE: RearrangementReward
+      USE_NORMALIZED_REWARD: True
+      VISIT_EXP: 1
+    REARRANGEMENT_SPL:
+      TYPE: RearrangementSPL
+    REARRANGEMENT_SUCCESS:
+      SUCCESS_DISTANCE: 0.7
+      TYPE: RearrangementSuccess
+    RELEASE_FAILED:
+      TYPE: ReleaseFailed
+    SENSORS: ['INSTRUCTION_SENSOR', 'GRIPPED_OBJECT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.2
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.2
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: True
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: RearrangementTask-v0
+TENSORBOARD_DIR: results/tb/resnet18_s_path_v4/seed_1/train
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: rearrangement-behavior-cloning-distrib
+VIDEO_DIR: results/videos/resnet18_s_path_v4/seed_1/train
+VIDEO_OPTION: ['disk']
+2021-05-21 11:41:47,717 Initializing dataset RearrangementDataset-v0
+2021-05-21 11:41:47,718 Initializing dataset RearrangementDataset-v0
+2021-05-21 11:41:51,743 Initializing dataset RearrangementDataset-v0
+2021-05-21 11:41:52,069 initializing sim RearrangementSim-v0
+2021-05-21 11:41:52,373 Initializing dataset RearrangementDataset-v0
+2021-05-21 11:41:52,706 initializing sim RearrangementSim-v0
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+E0521 11:41:54.345227 685535 ResourceManager.cpp:598] Reloading asset data/scene_datasets/habitat-test-scenes/zsNo4HB9uLZ.glb with different configuration not currently supported. Asset may not be rendered correctly.
+2021-05-21 11:41:54,729 Initializing task RearrangementTask-v0
+2021-05-21 11:41:55,168 Initializing dataset RearrangementDataset-v0
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+E0521 11:41:55.622576 2165081 ResourceManager.cpp:598] Reloading asset data/scene_datasets/habitat-test-scenes/S9hNv5qa7GM.glb with different configuration not currently supported. Asset may not be rendered correctly.
+2021-05-21 11:41:55,749 Dataset cache found.
+2021-05-21 11:41:55,770 Dataset cache found.
+2021-05-21 11:41:55,777 Dataset cache found.
+2021-05-21 11:41:55,784 Dataset cache found.
+2021-05-21 11:41:55,789 Dataset cache found.
+2021-05-21 11:41:55,798 Dataset cache found.
+2021-05-21 11:41:55,804 Dataset cache found.
+2021-05-21 11:41:55,807 Setup dataloader
+2021-05-21 11:41:55,807 Dataloader setup
+2021-05-21 11:41:55,807 [ train_loader has 6099 samples ]
+2021-05-21 11:41:55,807 Setting up distributed model...
+2021-05-21 11:41:56,116 Initializing task RearrangementTask-v0
+2021-05-21 11:41:56,542 Initializing dataset RearrangementDataset-v0
+2021-05-21 11:41:57,156 Dataset cache found.
+2021-05-21 11:41:57,163 Dataset cache found.
+2021-05-21 11:41:57,169 Dataset cache found.
+2021-05-21 11:41:57,174 Dataset cache found.
+2021-05-21 11:41:57,178 Dataset cache found.
+2021-05-21 11:41:57,184 Dataset cache found.
+2021-05-21 11:41:57,189 Dataset cache found.
+2021-05-21 11:41:57,192 Setup dataloader
+2021-05-21 11:41:57,192 Dataloader setup
+2021-05-21 11:41:57,192 [ train_loader has 6099 samples ]
+2021-05-21 11:41:57,192 Setting up distributed model...
+2021-05-21 11:42:07,080 Starting training
+2021-05-21 11:42:07,081 Starting training
+2021-05-21 11:42:07,081 Epoch: 1
+/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/tensorflow-1.13.1-py3.6-linux-x86_64.egg/tensorflow/python/framework/dtypes.py:526: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  _np_qint8 = np.dtype([("qint8", np.int8, 1)])
+/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/tensorflow-1.13.1-py3.6-linux-x86_64.egg/tensorflow/python/framework/dtypes.py:527: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  _np_quint8 = np.dtype([("quint8", np.uint8, 1)])
+/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/tensorflow-1.13.1-py3.6-linux-x86_64.egg/tensorflow/python/framework/dtypes.py:528: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  _np_qint16 = np.dtype([("qint16", np.int16, 1)])
+/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/tensorflow-1.13.1-py3.6-linux-x86_64.egg/tensorflow/python/framework/dtypes.py:529: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  _np_quint16 = np.dtype([("quint16", np.uint16, 1)])
+/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/tensorflow-1.13.1-py3.6-linux-x86_64.egg/tensorflow/python/framework/dtypes.py:530: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  _np_qint32 = np.dtype([("qint32", np.int32, 1)])
+/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/tensorflow-1.13.1-py3.6-linux-x86_64.egg/tensorflow/python/framework/dtypes.py:535: FutureWarning: Passing (type, 1) or '1type' as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / '(1,)type'.
+  np_resource = np.dtype([("resource", np.ubyte, 1)])
+2021-05-21 11:42:14,387 Epoch: 1
+2021-05-21 11:44:35,373 [ Epoch: 1; iter: 10; loss: 4.295; load time: 0.184; train time: 0.040; slice time: 0.011;]
+2021-05-21 11:44:35,373 [ Epoch: 1; iter: 10; loss: 4.295; load time: 0.163; train time: 0.073; slice time: 0.010;]
+2021-05-21 11:47:22,569 [ Epoch: 1; iter: 20; loss: 2.273; load time: 0.180; train time: 0.065; slice time: 0.012;]
+2021-05-21 11:47:22,570 [ Epoch: 1; iter: 20; loss: 2.273; load time: 0.168; train time: 0.084; slice time: 0.011;]
+2021-05-21 11:50:09,789 [ Epoch: 1; iter: 30; loss: 1.942; load time: 0.170; train time: 0.086; slice time: 0.011;]
+2021-05-21 11:50:35,104 [ Epoch: 1; iter: 30; loss: 1.960; load time: 0.180; train time: 0.085; slice time: 0.012;]
+2021-05-21 11:53:15,703 [ Epoch: 1; iter: 40; loss: 2.467; load time: 0.180; train time: 0.082; slice time: 0.013;]
+2021-05-21 11:53:28,501 [ Epoch: 1; iter: 40; loss: 4.217; load time: 0.174; train time: 0.098; slice time: 0.012;]
+2021-05-21 11:56:12,609 [ Epoch: 1; iter: 50; loss: 2.263; load time: 0.183; train time: 0.084; slice time: 0.012;]
+2021-05-21 11:56:25,776 [ Epoch: 1; iter: 50; loss: 3.891; load time: 0.174; train time: 0.100; slice time: 0.012;]
+2021-05-21 11:59:05,084 [ Epoch: 1; iter: 60; loss: 2.960; load time: 0.183; train time: 0.085; slice time: 0.012;]
+2021-05-21 11:59:05,084 [ Epoch: 1; iter: 60; loss: 2.960; load time: 0.175; train time: 0.096; slice time: 0.012;]
+2021-05-21 12:01:42,571 [ Epoch: 1; iter: 70; loss: 3.719; load time: 0.182; train time: 0.084; slice time: 0.012;]
+2021-05-21 12:02:09,640 [ Epoch: 1; iter: 70; loss: 1.675; load time: 0.176; train time: 0.098; slice time: 0.012;]
+2021-05-21 12:04:44,527 [ Epoch: 1; iter: 80; loss: 1.556; load time: 0.183; train time: 0.086; slice time: 0.012;]
+2021-05-21 12:05:23,884 [ Epoch: 1; iter: 80; loss: 2.795; load time: 0.176; train time: 0.103; slice time: 0.012;]
+2021-05-21 12:07:56,358 [ Epoch: 1; iter: 90; loss: 2.449; load time: 0.184; train time: 0.090; slice time: 0.012;]
+2021-05-21 12:08:22,629 [ Epoch: 1; iter: 90; loss: 3.679; load time: 0.176; train time: 0.103; slice time: 0.012;]
+2021-05-21 12:11:02,016 [ Epoch: 1; iter: 100; loss: 1.644; load time: 0.183; train time: 0.093; slice time: 0.012;]
+2021-05-21 12:11:27,127 [ Epoch: 1; iter: 100; loss: 2.817; load time: 0.177; train time: 0.105; slice time: 0.012;]
+2021-05-21 12:13:41,840 [ Epoch: 1; iter: 110; loss: 2.928; load time: 0.183; train time: 0.091; slice time: 0.012;]
+2021-05-21 12:14:43,839 [ Epoch: 1; iter: 110; loss: 3.568; load time: 0.178; train time: 0.107; slice time: 0.012;]
+2021-05-21 12:16:12,693 [ Epoch: 1; iter: 120; loss: 3.554; load time: 0.182; train time: 0.089; slice time: 0.012;]
+2021-05-21 12:16:55,573 [ Epoch: 1; iter: 120; loss: 2.046; load time: 0.177; train time: 0.101; slice time: 0.012;]
+2021-05-21 12:19:13,646 [ Epoch: 1; iter: 130; loss: 2.118; load time: 0.183; train time: 0.089; slice time: 0.012;]
+2021-05-21 12:20:10,999 [ Epoch: 1; iter: 130; loss: 2.815; load time: 0.178; train time: 0.102; slice time: 0.012;]
+2021-05-21 12:22:27,100 [ Epoch: 1; iter: 140; loss: 2.070; load time: 0.184; train time: 0.091; slice time: 0.012;]
+2021-05-21 12:23:07,545 [ Epoch: 1; iter: 140; loss: 2.765; load time: 0.179; train time: 0.102; slice time: 0.012;]
+2021-05-21 12:25:24,512 [ Epoch: 1; iter: 150; loss: 2.924; load time: 0.184; train time: 0.092; slice time: 0.012;]
+2021-05-21 12:26:16,887 [ Epoch: 1; iter: 150; loss: 1.657; load time: 0.180; train time: 0.103; slice time: 0.012;]
+2021-05-21 12:28:03,318 [ Epoch: 1; iter: 160; loss: 2.761; load time: 0.184; train time: 0.090; slice time: 0.012;]
+2021-05-21 12:28:57,864 [ Epoch: 1; iter: 160; loss: 2.067; load time: 0.180; train time: 0.101; slice time: 0.012;]
+2021-05-21 12:30:55,747 [ Epoch: 1; iter: 170; loss: 2.745; load time: 0.184; train time: 0.090; slice time: 0.012;]
+2021-05-21 12:32:04,963 [ Epoch: 1; iter: 170; loss: 1.641; load time: 0.181; train time: 0.101; slice time: 0.012;]
+2021-05-21 12:33:33,856 [ Epoch: 1; iter: 180; loss: 1.616; load time: 0.184; train time: 0.089; slice time: 0.012;]
+2021-05-21 12:35:09,119 [ Epoch: 1; iter: 180; loss: 1.476; load time: 0.181; train time: 0.102; slice time: 0.012;]
+2021-05-21 12:37:00,401 [ Epoch: 1; iter: 190; loss: 1.668; load time: 0.184; train time: 0.093; slice time: 0.012;]
+2021-05-21 12:38:47,257 [ Epoch: 1; iter: 190; loss: 2.025; load time: 0.181; train time: 0.105; slice time: 0.012;]
+2021-05-21 12:39:35,608 [ Epoch: 1; iter: 200; loss: 1.673; load time: 0.183; train time: 0.092; slice time: 0.012;]
+2021-05-21 12:41:08,680 [ Epoch: 1; iter: 200; loss: 2.040; load time: 0.181; train time: 0.102; slice time: 0.012;]
+2021-05-21 12:42:35,982 [ Epoch: 1; iter: 210; loss: 3.584; load time: 0.183; train time: 0.092; slice time: 0.012;]
+2021-05-21 12:43:59,833 [ Epoch: 1; iter: 210; loss: 2.875; load time: 0.180; train time: 0.102; slice time: 0.012;]
+2021-05-21 12:45:48,867 [ Epoch: 1; iter: 220; loss: 1.989; load time: 0.184; train time: 0.093; slice time: 0.012;]
+2021-05-21 12:47:27,412 [ Epoch: 1; iter: 220; loss: 1.700; load time: 0.180; train time: 0.104; slice time: 0.012;]
+2021-05-21 12:48:30,457 [ Epoch: 1; iter: 230; loss: 3.207; load time: 0.183; train time: 0.093; slice time: 0.012;]
+2021-05-21 12:50:41,958 [ Epoch: 1; iter: 230; loss: 2.053; load time: 0.180; train time: 0.106; slice time: 0.012;]
+2021-05-21 12:51:19,341 [ Epoch: 1; iter: 240; loss: 2.763; load time: 0.183; train time: 0.093; slice time: 0.012;]
+2021-05-21 12:53:12,192 [ Epoch: 1; iter: 240; loss: 2.363; load time: 0.180; train time: 0.104; slice time: 0.012;]
+2021-05-21 12:54:17,152 [ Epoch: 1; iter: 250; loss: 1.471; load time: 0.182; train time: 0.094; slice time: 0.012;]
+2021-05-21 12:56:03,109 [ Epoch: 1; iter: 250; loss: 2.755; load time: 0.180; train time: 0.104; slice time: 0.012;]
+2021-05-21 12:56:41,760 [ Epoch: 1; iter: 260; loss: 1.533; load time: 0.182; train time: 0.092; slice time: 0.012;]
+2021-05-21 12:58:39,628 [ Epoch: 1; iter: 260; loss: 1.891; load time: 0.179; train time: 0.103; slice time: 0.012;]
+2021-05-21 12:59:17,253 [ Epoch: 1; iter: 270; loss: 1.768; load time: 0.183; train time: 0.091; slice time: 0.012;]
+2021-05-21 13:01:29,579 [ Epoch: 1; iter: 270; loss: 2.237; load time: 0.179; train time: 0.103; slice time: 0.012;]
+2021-05-21 13:02:20,234 [ Epoch: 1; iter: 280; loss: 3.526; load time: 0.182; train time: 0.092; slice time: 0.012;]
+2021-05-21 13:04:05,189 [ Epoch: 1; iter: 280; loss: 2.058; load time: 0.179; train time: 0.101; slice time: 0.012;]
+2021-05-21 13:05:10,190 [ Epoch: 1; iter: 290; loss: 2.088; load time: 0.182; train time: 0.091; slice time: 0.012;]
+2021-05-21 13:07:40,540 [ Epoch: 1; iter: 290; loss: 1.548; load time: 0.179; train time: 0.103; slice time: 0.012;]
+2021-05-21 13:08:40,432 [ Epoch: 1; iter: 300; loss: 2.296; load time: 0.182; train time: 0.094; slice time: 0.012;]
+2021-05-21 13:10:29,791 [ Epoch: 1; iter: 300; loss: 2.542; load time: 0.179; train time: 0.103; slice time: 0.012;]
+2021-05-21 13:11:20,216 [ Epoch: 1; iter: 310; loss: 1.449; load time: 0.183; train time: 0.093; slice time: 0.012;]
+2021-05-21 13:13:28,008 [ Epoch: 1; iter: 310; loss: 3.233; load time: 0.179; train time: 0.103; slice time: 0.012;]
+2021-05-21 13:14:08,084 [ Epoch: 1; iter: 320; loss: 2.409; load time: 0.183; train time: 0.092; slice time: 0.012;]
+2021-05-21 13:16:07,314 [ Epoch: 1; iter: 320; loss: 2.379; load time: 0.179; train time: 0.102; slice time: 0.012;]
+2021-05-21 13:16:58,884 [ Epoch: 1; iter: 330; loss: 2.330; load time: 0.183; train time: 0.092; slice time: 0.012;]
+2021-05-21 13:19:07,916 [ Epoch: 1; iter: 330; loss: 2.303; load time: 0.180; train time: 0.102; slice time: 0.012;]
+2021-05-21 13:19:46,870 [ Epoch: 1; iter: 340; loss: 2.119; load time: 0.183; train time: 0.092; slice time: 0.012;]
+2021-05-21 13:22:34,245 [ Epoch: 1; iter: 350; loss: 1.158; load time: 0.183; train time: 0.092; slice time: 0.012;]
+2021-05-21 13:22:34,245 [ Epoch: 1; iter: 340; loss: 2.838; load time: 0.180; train time: 0.104; slice time: 0.012;]
+2021-05-21 13:24:38,837 [ Epoch: 1; iter: 360; loss: 1.123; load time: 0.182; train time: 0.090; slice time: 0.012;]
+2021-05-21 13:25:52,571 [ Epoch: 1; iter: 350; loss: 2.091; load time: 0.180; train time: 0.105; slice time: 0.012;]
+2021-05-21 13:27:14,517 [ Epoch: 1; iter: 370; loss: 1.447; load time: 0.183; train time: 0.089; slice time: 0.012;]
+2021-05-21 13:29:40,821 [ Epoch: 1; iter: 360; loss: 1.115; load time: 0.180; train time: 0.106; slice time: 0.012;]
+2021-05-21 13:29:54,442 [ Epoch: 1; iter: 380; loss: 1.911; load time: 0.183; train time: 0.088; slice time: 0.012;]
+2021-05-21 13:30:21,413 [ Epoch 1 completed. Time taken: 108.1 minutes. Load time: 0.18281831158809433 mins. Train time: 0.08807568589638243 mins]
+2021-05-21 13:30:21,413 [ Average loss: 1.150 ]
+2021-05-21 13:30:21,683 Epoch: 2
+2021-05-21 13:32:19,239 [ Epoch: 1; iter: 370; loss: 1.187; load time: 0.181; train time: 0.105; slice time: 0.012;]
+2021-05-21 13:32:49,936 [ Epoch: 2; iter: 390; loss: 2.430; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-21 13:35:10,850 [ Epoch: 1; iter: 380; loss: 1.826; load time: 0.181; train time: 0.104; slice time: 0.012;]
+2021-05-21 13:35:26,421 Epoch: 2
+2021-05-21 13:35:39,267 [ Epoch: 2; iter: 400; loss: 1.295; load time: 0.009; train time: 0.003; slice time: 0.001;]
+2021-05-21 13:38:05,386 [ Epoch: 2; iter: 390; loss: 2.338; load time: 0.004; train time: 0.003; slice time: 0.000;]
+2021-05-21 13:38:32,467 [ Epoch: 2; iter: 410; loss: 2.342; load time: 0.014; train time: 0.005; slice time: 0.001;]
+2021-05-21 13:41:19,077 [ Epoch: 2; iter: 400; loss: 1.435; load time: 0.008; train time: 0.007; slice time: 0.001;]
+2021-05-21 13:41:30,923 [ Epoch: 2; iter: 420; loss: 1.726; load time: 0.018; train time: 0.008; slice time: 0.001;]
+2021-05-21 13:44:10,833 [ Epoch: 2; iter: 410; loss: 1.130; load time: 0.012; train time: 0.009; slice time: 0.001;]
+2021-05-21 13:44:32,923 [ Epoch: 2; iter: 430; loss: 1.651; load time: 0.022; train time: 0.010; slice time: 0.001;]
+2021-05-21 13:46:11,373 [ Epoch: 2; iter: 420; loss: 1.579; load time: 0.015; train time: 0.009; slice time: 0.001;]
+2021-05-21 13:47:02,201 [ Epoch: 2; iter: 440; loss: 1.525; load time: 0.025; train time: 0.011; slice time: 0.002;]
+2021-05-21 13:49:09,043 [ Epoch: 2; iter: 430; loss: 0.819; load time: 0.019; train time: 0.012; slice time: 0.001;]
+2021-05-21 13:49:43,829 [ Epoch: 2; iter: 450; loss: 1.369; load time: 0.028; train time: 0.013; slice time: 0.002;]
+2021-05-21 13:51:56,825 [ Epoch: 2; iter: 440; loss: 1.362; load time: 0.022; train time: 0.014; slice time: 0.002;]
+2021-05-21 13:52:38,107 [ Epoch: 2; iter: 460; loss: 0.798; load time: 0.032; train time: 0.015; slice time: 0.002;]
+2021-05-21 13:55:20,221 [ Epoch: 2; iter: 450; loss: 1.688; load time: 0.025; train time: 0.017; slice time: 0.002;]
+2021-05-21 13:55:50,856 [ Epoch: 2; iter: 470; loss: 0.741; load time: 0.035; train time: 0.017; slice time: 0.002;]
+2021-05-21 13:57:56,554 [ Epoch: 2; iter: 460; loss: 1.284; load time: 0.029; train time: 0.018; slice time: 0.002;]
+2021-05-21 13:58:23,352 [ Epoch: 2; iter: 480; loss: 1.204; load time: 0.038; train time: 0.018; slice time: 0.002;]
+2021-05-21 14:00:25,742 [ Epoch: 2; iter: 470; loss: 0.989; load time: 0.032; train time: 0.019; slice time: 0.002;]
+2021-05-21 14:01:22,045 [ Epoch: 2; iter: 490; loss: 1.569; load time: 0.040; train time: 0.020; slice time: 0.003;]
+2021-05-21 14:03:04,733 [ Epoch: 2; iter: 480; loss: 0.652; load time: 0.035; train time: 0.020; slice time: 0.002;]
+2021-05-21 14:04:38,058 [ Epoch: 2; iter: 500; loss: 0.835; load time: 0.043; train time: 0.022; slice time: 0.003;]
+2021-05-21 14:06:08,080 [ Epoch: 2; iter: 490; loss: 0.780; load time: 0.038; train time: 0.022; slice time: 0.003;]
+2021-05-21 14:06:58,473 [ Epoch: 2; iter: 510; loss: 0.819; load time: 0.046; train time: 0.023; slice time: 0.003;]
+2021-05-21 14:09:05,410 [ Epoch: 2; iter: 500; loss: 1.130; load time: 0.040; train time: 0.024; slice time: 0.003;]
+2021-05-21 14:09:31,653 [ Epoch: 2; iter: 520; loss: 0.584; load time: 0.048; train time: 0.024; slice time: 0.003;]
+2021-05-21 14:11:18,063 [ Epoch: 2; iter: 510; loss: 0.586; load time: 0.043; train time: 0.024; slice time: 0.003;]
+2021-05-21 14:11:57,694 [ Epoch: 2; iter: 530; loss: 1.098; load time: 0.051; train time: 0.024; slice time: 0.003;]
+2021-05-21 14:13:57,444 [ Epoch: 2; iter: 520; loss: 0.791; load time: 0.046; train time: 0.025; slice time: 0.003;]
+2021-05-21 14:14:33,163 [ Epoch: 2; iter: 540; loss: 0.728; load time: 0.053; train time: 0.025; slice time: 0.003;]
+2021-05-21 14:16:38,827 [ Epoch: 2; iter: 530; loss: 0.785; load time: 0.048; train time: 0.026; slice time: 0.003;]
+2021-05-21 14:17:55,784 [ Epoch: 2; iter: 550; loss: 0.526; load time: 0.055; train time: 0.028; slice time: 0.004;]
+2021-05-21 14:19:53,746 [ Epoch: 2; iter: 540; loss: 0.866; load time: 0.051; train time: 0.028; slice time: 0.003;]
+2021-05-21 14:20:45,652 [ Epoch: 2; iter: 560; loss: 0.574; load time: 0.057; train time: 0.029; slice time: 0.004;]
+2021-05-21 14:22:50,081 [ Epoch: 2; iter: 550; loss: 1.158; load time: 0.053; train time: 0.030; slice time: 0.004;]
+2021-05-21 14:23:40,826 [ Epoch: 2; iter: 570; loss: 0.643; load time: 0.060; train time: 0.030; slice time: 0.004;]
+2021-05-21 14:24:51,403 [ Epoch: 2; iter: 560; loss: 0.549; load time: 0.054; train time: 0.030; slice time: 0.004;]
+2021-05-21 14:26:07,562 [ Epoch: 2; iter: 580; loss: 1.096; load time: 0.062; train time: 0.030; slice time: 0.004;]
+2021-05-21 14:27:52,005 [ Epoch: 2; iter: 570; loss: 0.541; load time: 0.057; train time: 0.031; slice time: 0.004;]
+2021-05-21 14:28:46,832 [ Epoch: 2; iter: 590; loss: 1.012; load time: 0.064; train time: 0.031; slice time: 0.004;]
+2021-05-21 14:30:03,676 [ Epoch: 2; iter: 580; loss: 0.982; load time: 0.059; train time: 0.031; slice time: 0.004;]
+2021-05-21 14:31:19,337 [ Epoch: 2; iter: 600; loss: 0.958; load time: 0.066; train time: 0.032; slice time: 0.004;]
+2021-05-21 14:32:23,740 [ Epoch: 2; iter: 590; loss: 0.504; load time: 0.061; train time: 0.032; slice time: 0.004;]
+2021-05-21 14:34:21,587 [ Epoch: 2; iter: 610; loss: 0.678; load time: 0.068; train time: 0.033; slice time: 0.004;]
+2021-05-21 14:35:34,000 [ Epoch: 2; iter: 600; loss: 0.970; load time: 0.063; train time: 0.033; slice time: 0.004;]
+2021-05-21 14:36:54,704 [ Epoch: 2; iter: 620; loss: 0.998; load time: 0.070; train time: 0.033; slice time: 0.005;]
+2021-05-21 14:38:03,070 [ Epoch: 2; iter: 610; loss: 0.908; load time: 0.065; train time: 0.033; slice time: 0.004;]
+2021-05-21 14:39:41,690 [ Epoch: 2; iter: 630; loss: 0.502; load time: 0.072; train time: 0.034; slice time: 0.005;]
+2021-05-21 14:41:31,223 [ Epoch: 2; iter: 620; loss: 0.988; load time: 0.067; train time: 0.035; slice time: 0.005;]
+2021-05-21 14:42:29,466 [ Epoch: 2; iter: 640; loss: 0.955; load time: 0.073; train time: 0.034; slice time: 0.005;]
+2021-05-21 14:44:40,229 [ Epoch: 2; iter: 630; loss: 0.721; load time: 0.069; train time: 0.036; slice time: 0.005;]
+2021-05-21 14:45:05,881 [ Epoch: 2; iter: 650; loss: 0.479; load time: 0.075; train time: 0.035; slice time: 0.005;]
+2021-05-21 14:47:52,889 [ Epoch: 2; iter: 640; loss: 0.619; load time: 0.070; train time: 0.038; slice time: 0.005;]
+2021-05-21 14:48:18,401 [ Epoch: 2; iter: 660; loss: 0.495; load time: 0.077; train time: 0.036; slice time: 0.005;]
+2021-05-21 14:50:28,277 [ Epoch: 2; iter: 650; loss: 0.505; load time: 0.072; train time: 0.039; slice time: 0.005;]
+2021-05-21 14:51:08,167 [ Epoch: 2; iter: 670; loss: 0.547; load time: 0.078; train time: 0.037; slice time: 0.005;]
+2021-05-21 14:53:12,162 [ Epoch: 2; iter: 660; loss: 0.973; load time: 0.073; train time: 0.039; slice time: 0.005;]
+2021-05-21 14:53:24,081 [ Epoch: 2; iter: 680; loss: 0.902; load time: 0.079; train time: 0.037; slice time: 0.005;]
+2021-05-21 14:56:14,351 [ Epoch: 2; iter: 670; loss: 0.889; load time: 0.075; train time: 0.040; slice time: 0.005;]
+2021-05-21 14:56:14,351 [ Epoch: 2; iter: 690; loss: 0.889; load time: 0.081; train time: 0.038; slice time: 0.005;]
+2021-05-21 14:59:15,833 [ Epoch: 2; iter: 700; loss: 0.669; load time: 0.082; train time: 0.039; slice time: 0.005;]
+2021-05-21 14:59:26,701 [ Epoch: 2; iter: 680; loss: 1.146; load time: 0.076; train time: 0.042; slice time: 0.005;]
+2021-05-21 15:01:49,153 [ Epoch: 2; iter: 710; loss: 0.884; load time: 0.084; train time: 0.040; slice time: 0.006;]
+2021-05-21 15:02:16,142 [ Epoch: 2; iter: 690; loss: 0.918; load time: 0.078; train time: 0.043; slice time: 0.005;]
+2021-05-21 15:04:00,090 [ Epoch: 2; iter: 720; loss: 0.649; load time: 0.085; train time: 0.040; slice time: 0.006;]
+2021-05-21 15:04:59,172 [ Epoch: 2; iter: 700; loss: 0.656; load time: 0.079; train time: 0.043; slice time: 0.005;]
+2021-05-21 15:07:08,333 [ Epoch: 2; iter: 730; loss: 0.531; load time: 0.086; train time: 0.041; slice time: 0.006;]
+2021-05-21 15:07:45,571 [ Epoch: 2; iter: 710; loss: 0.663; load time: 0.081; train time: 0.044; slice time: 0.006;]
+2021-05-21 15:10:07,267 [ Epoch: 2; iter: 740; loss: 0.659; load time: 0.087; train time: 0.042; slice time: 0.006;]
+2021-05-21 15:10:23,685 [ Epoch: 2; iter: 720; loss: 1.146; load time: 0.082; train time: 0.044; slice time: 0.006;]
+2021-05-21 15:12:34,556 [ Epoch: 2; iter: 750; loss: 0.482; load time: 0.088; train time: 0.042; slice time: 0.006;]
+2021-05-21 15:13:00,875 [ Epoch: 2; iter: 730; loss: 0.454; load time: 0.083; train time: 0.045; slice time: 0.006;]
+2021-05-21 15:15:33,853 [ Epoch: 2; iter: 760; loss: 1.126; load time: 0.089; train time: 0.043; slice time: 0.006;]
+2021-05-21 15:16:01,769 [ Epoch: 2; iter: 740; loss: 0.959; load time: 0.084; train time: 0.046; slice time: 0.006;]
+2021-05-21 15:16:36,997 [ Epoch 2 completed. Time taken: 106.3 minutes. Load time: 0.17933914761268654 mins. Train time: 0.08665256575140035 mins]
+2021-05-21 15:16:36,998 [ Average loss: 0.472 ]
+2021-05-21 15:16:37,197 Epoch: 3
+2021-05-21 15:18:05,163 [ Epoch: 3; iter: 770; loss: 0.640; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-21 15:18:54,397 [ Epoch: 2; iter: 750; loss: 0.847; load time: 0.086; train time: 0.046; slice time: 0.006;]
+2021-05-21 15:20:17,331 [ Epoch: 3; iter: 780; loss: 0.426; load time: 0.004; train time: 0.001; slice time: 0.000;]
+2021-05-21 15:21:58,070 [ Epoch: 2; iter: 760; loss: 0.804; load time: 0.087; train time: 0.047; slice time: 0.006;]
+2021-05-21 15:22:57,453 [ Epoch: 3; iter: 790; loss: 0.457; load time: 0.006; train time: 0.002; slice time: 0.000;]
+2021-05-21 15:23:09,747 Epoch: 3
+2021-05-21 15:25:03,274 [ Epoch: 3; iter: 770; loss: 0.476; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-21 15:26:02,360 [ Epoch: 3; iter: 800; loss: 0.877; load time: 0.008; train time: 0.003; slice time: 0.001;]
+2021-05-21 15:28:03,752 [ Epoch: 3; iter: 780; loss: 1.126; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-21 15:29:22,175 [ Epoch: 3; iter: 810; loss: 0.857; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-21 15:31:05,844 [ Epoch: 3; iter: 790; loss: 1.056; load time: 0.006; train time: 0.004; slice time: 0.000;]
+2021-05-21 15:32:11,430 [ Epoch: 3; iter: 820; loss: 0.662; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-21 15:34:00,969 [ Epoch: 3; iter: 800; loss: 1.071; load time: 0.008; train time: 0.005; slice time: 0.001;]
+2021-05-21 15:34:40,609 [ Epoch: 3; iter: 830; loss: 0.743; load time: 0.014; train time: 0.006; slice time: 0.001;]
+2021-05-21 15:36:36,414 [ Epoch: 3; iter: 810; loss: 0.864; load time: 0.010; train time: 0.006; slice time: 0.001;]
+2021-05-21 15:37:43,132 [ Epoch: 3; iter: 840; loss: 0.797; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-21 15:38:51,972 [ Epoch: 3; iter: 820; loss: 0.766; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-21 15:40:09,880 [ Epoch: 3; iter: 850; loss: 0.605; load time: 0.018; train time: 0.008; slice time: 0.001;]
+2021-05-21 15:42:22,832 [ Epoch: 3; iter: 830; loss: 0.807; load time: 0.014; train time: 0.008; slice time: 0.001;]
+2021-05-21 15:42:36,901 [ Epoch: 3; iter: 860; loss: 0.460; load time: 0.020; train time: 0.009; slice time: 0.001;]
+2021-05-21 15:44:59,786 [ Epoch: 3; iter: 840; loss: 0.791; load time: 0.016; train time: 0.009; slice time: 0.001;]
+2021-05-21 15:45:13,466 [ Epoch: 3; iter: 870; loss: 0.769; load time: 0.022; train time: 0.009; slice time: 0.001;]
+2021-05-21 15:48:07,904 [ Epoch: 3; iter: 850; loss: 0.635; load time: 0.018; train time: 0.010; slice time: 0.001;]
+2021-05-21 15:48:20,207 [ Epoch: 3; iter: 880; loss: 1.017; load time: 0.024; train time: 0.011; slice time: 0.002;]
+2021-05-21 15:50:52,745 [ Epoch: 3; iter: 890; loss: 0.818; load time: 0.026; train time: 0.011; slice time: 0.002;]
+2021-05-21 15:51:50,030 [ Epoch: 3; iter: 860; loss: 0.460; load time: 0.020; train time: 0.012; slice time: 0.001;]
+2021-05-21 15:54:16,336 [ Epoch: 3; iter: 900; loss: 0.646; load time: 0.027; train time: 0.013; slice time: 0.002;]
+2021-05-21 15:54:28,600 [ Epoch: 3; iter: 870; loss: 0.615; load time: 0.022; train time: 0.012; slice time: 0.001;]
+2021-05-21 15:56:56,574 [ Epoch: 3; iter: 880; loss: 0.427; load time: 0.024; train time: 0.013; slice time: 0.002;]
+2021-05-21 15:57:08,863 [ Epoch: 3; iter: 910; loss: 0.861; load time: 0.029; train time: 0.014; slice time: 0.002;]
+2021-05-21 15:59:28,179 [ Epoch: 3; iter: 890; loss: 0.604; load time: 0.025; train time: 0.014; slice time: 0.002;]
+2021-05-21 15:59:55,300 [ Epoch: 3; iter: 920; loss: 0.457; load time: 0.030; train time: 0.015; slice time: 0.002;]
+2021-05-21 16:02:05,109 [ Epoch: 3; iter: 900; loss: 1.008; load time: 0.027; train time: 0.014; slice time: 0.002;]
+2021-05-21 16:02:30,533 [ Epoch: 3; iter: 930; loss: 0.609; load time: 0.032; train time: 0.015; slice time: 0.002;]
+2021-05-21 16:04:49,020 [ Epoch: 3; iter: 910; loss: 0.413; load time: 0.029; train time: 0.015; slice time: 0.002;]
+2021-05-21 16:05:00,682 [ Epoch: 3; iter: 940; loss: 0.804; load time: 0.034; train time: 0.016; slice time: 0.002;]
+2021-05-21 16:07:32,558 [ Epoch: 3; iter: 950; loss: 0.458; load time: 0.035; train time: 0.016; slice time: 0.002;]
+2021-05-21 16:07:56,941 [ Epoch: 3; iter: 920; loss: 0.838; load time: 0.030; train time: 0.016; slice time: 0.002;]
+2021-05-21 16:10:14,648 [ Epoch: 3; iter: 930; loss: 0.418; load time: 0.032; train time: 0.017; slice time: 0.002;]
+2021-05-21 16:10:42,978 [ Epoch: 3; iter: 960; loss: 1.037; load time: 0.036; train time: 0.017; slice time: 0.002;]
+2021-05-21 16:12:25,004 [ Epoch: 3; iter: 940; loss: 0.381; load time: 0.033; train time: 0.017; slice time: 0.002;]
+2021-05-21 16:12:51,176 [ Epoch: 3; iter: 970; loss: 0.516; load time: 0.038; train time: 0.018; slice time: 0.003;]
+2021-05-21 16:15:04,791 [ Epoch: 3; iter: 950; loss: 0.403; load time: 0.035; train time: 0.018; slice time: 0.002;]
+2021-05-21 16:15:44,900 [ Epoch: 3; iter: 980; loss: 0.811; load time: 0.039; train time: 0.019; slice time: 0.003;]
+2021-05-21 16:17:47,819 [ Epoch: 3; iter: 960; loss: 0.397; load time: 0.036; train time: 0.018; slice time: 0.002;]
+2021-05-21 16:18:51,551 [ Epoch: 3; iter: 990; loss: 0.356; load time: 0.040; train time: 0.020; slice time: 0.003;]
+2021-05-21 16:20:32,071 [ Epoch: 3; iter: 970; loss: 0.356; load time: 0.037; train time: 0.019; slice time: 0.003;]
+2021-05-21 16:21:32,597 [ Epoch: 3; iter: 1000; loss: 0.417; load time: 0.042; train time: 0.020; slice time: 0.003;]
+2021-05-21 16:23:11,815 [ Epoch: 3; iter: 980; loss: 0.805; load time: 0.039; train time: 0.020; slice time: 0.003;]
+2021-05-21 16:24:10,905 [ Epoch: 3; iter: 1010; loss: 0.776; load time: 0.043; train time: 0.021; slice time: 0.003;]
+2021-05-21 16:25:36,684 [ Epoch: 3; iter: 990; loss: 0.363; load time: 0.040; train time: 0.020; slice time: 0.003;]
+2021-05-21 16:27:30,408 [ Epoch: 3; iter: 1020; loss: 1.029; load time: 0.045; train time: 0.022; slice time: 0.003;]
+2021-05-21 16:28:11,595 [ Epoch: 3; iter: 1000; loss: 0.973; load time: 0.041; train time: 0.021; slice time: 0.003;]
+2021-05-21 16:29:43,114 [ Epoch: 3; iter: 1030; loss: 0.779; load time: 0.046; train time: 0.022; slice time: 0.003;]
+2021-05-21 16:30:48,682 [ Epoch: 3; iter: 1010; loss: 0.440; load time: 0.043; train time: 0.021; slice time: 0.003;]
+2021-05-21 16:32:44,708 [ Epoch: 3; iter: 1040; loss: 0.762; load time: 0.047; train time: 0.023; slice time: 0.003;]
+2021-05-21 16:33:25,854 [ Epoch: 3; iter: 1020; loss: 0.573; load time: 0.044; train time: 0.022; slice time: 0.003;]
+2021-05-21 16:35:36,358 [ Epoch: 3; iter: 1050; loss: 0.732; load time: 0.048; train time: 0.024; slice time: 0.003;]
+2021-05-21 16:36:13,524 [ Epoch: 3; iter: 1030; loss: 0.794; load time: 0.045; train time: 0.022; slice time: 0.003;]
+2021-05-21 16:38:10,036 [ Epoch: 3; iter: 1060; loss: 0.551; load time: 0.050; train time: 0.024; slice time: 0.003;]
+2021-05-21 16:38:57,880 [ Epoch: 3; iter: 1040; loss: 0.528; load time: 0.047; train time: 0.023; slice time: 0.003;]
+2021-05-21 16:41:36,782 [ Epoch: 3; iter: 1070; loss: 0.491; load time: 0.051; train time: 0.025; slice time: 0.003;]
+2021-05-21 16:42:16,636 [ Epoch: 3; iter: 1050; loss: 0.557; load time: 0.048; train time: 0.024; slice time: 0.003;]
+2021-05-21 16:44:22,760 [ Epoch: 3; iter: 1080; loss: 0.705; load time: 0.052; train time: 0.026; slice time: 0.004;]
+2021-05-21 16:44:46,163 [ Epoch: 3; iter: 1060; loss: 0.503; load time: 0.049; train time: 0.025; slice time: 0.003;]
+2021-05-21 16:47:07,264 [ Epoch: 3; iter: 1090; loss: 0.808; load time: 0.053; train time: 0.026; slice time: 0.004;]
+2021-05-21 16:47:07,263 [ Epoch: 3; iter: 1070; loss: 0.808; load time: 0.050; train time: 0.025; slice time: 0.003;]
+2021-05-21 16:49:36,251 [ Epoch: 3; iter: 1080; loss: 0.754; load time: 0.051; train time: 0.025; slice time: 0.004;]
+2021-05-21 16:50:19,508 [ Epoch: 3; iter: 1100; loss: 0.825; load time: 0.054; train time: 0.027; slice time: 0.004;]
+2021-05-21 16:52:11,227 [ Epoch: 3; iter: 1090; loss: 0.394; load time: 0.053; train time: 0.025; slice time: 0.004;]
+2021-05-21 16:53:00,107 [ Epoch: 3; iter: 1110; loss: 0.747; load time: 0.055; train time: 0.028; slice time: 0.004;]
+2021-05-21 16:56:26,223 [ Epoch: 3; iter: 1100; loss: 0.771; load time: 0.054; train time: 0.027; slice time: 0.004;]
+2021-05-21 16:57:11,681 [ Epoch: 3; iter: 1120; loss: 0.405; load time: 0.058; train time: 0.028; slice time: 0.004;]
+2021-05-21 16:59:20,881 [ Epoch: 3; iter: 1110; loss: 0.542; load time: 0.055; train time: 0.028; slice time: 0.004;]
+2021-05-21 17:00:28,681 [ Epoch: 3; iter: 1130; loss: 0.782; load time: 0.059; train time: 0.029; slice time: 0.004;]
+2021-05-21 17:01:33,224 [ Epoch: 3; iter: 1120; loss: 0.551; load time: 0.056; train time: 0.028; slice time: 0.004;]
+2021-05-21 17:02:58,723 [ Epoch: 3; iter: 1140; loss: 0.765; load time: 0.060; train time: 0.029; slice time: 0.004;]
+2021-05-21 17:04:03,821 [ Epoch: 3; iter: 1130; loss: 0.739; load time: 0.057; train time: 0.028; slice time: 0.004;]
+2021-05-21 17:04:13,520 [ Epoch 3 completed. Time taken: 107.6 minutes. Load time: 0.18169188382945975 mins. Train time: 0.08782482286606359 mins]
+2021-05-21 17:04:13,521 [ Average loss: 0.331 ]
+2021-05-21 17:04:13,761 Epoch: 4
+2021-05-21 17:05:00,188 [ Epoch: 4; iter: 1150; loss: 0.375; load time: 0.000; train time: 0.000; slice time: 0.000;]
+2021-05-21 17:06:41,443 [ Epoch: 3; iter: 1140; loss: 0.697; load time: 0.058; train time: 0.029; slice time: 0.004;]
+2021-05-21 17:07:30,621 [ Epoch: 4; iter: 1160; loss: 0.450; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-21 17:08:07,450 Epoch: 4
+2021-05-21 17:08:56,002 [ Epoch: 4; iter: 1150; loss: 0.571; load time: 0.001; train time: 0.000; slice time: 0.000;]
+2021-05-21 17:09:51,088 [ Epoch: 4; iter: 1170; loss: 0.742; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-21 17:11:18,913 [ Epoch: 4; iter: 1160; loss: 0.564; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-21 17:12:40,644 [ Epoch: 4; iter: 1180; loss: 0.748; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-21 17:13:43,153 [ Epoch: 4; iter: 1170; loss: 0.745; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-21 17:15:52,578 [ Epoch: 4; iter: 1190; loss: 0.949; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-21 17:15:52,578 [ Epoch: 4; iter: 1180; loss: 0.396; load time: 0.005; train time: 0.001; slice time: 0.000;]
+2021-05-21 17:18:28,152 [ Epoch: 4; iter: 1200; loss: 0.452; load time: 0.008; train time: 0.004; slice time: 0.001;]
+2021-05-21 17:18:40,152 [ Epoch: 4; iter: 1190; loss: 0.682; load time: 0.006; train time: 0.002; slice time: 0.000;]
+2021-05-21 17:21:14,489 [ Epoch: 4; iter: 1200; loss: 0.361; load time: 0.007; train time: 0.003; slice time: 0.001;]
+2021-05-21 17:21:25,105 [ Epoch: 4; iter: 1210; loss: 0.737; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-21 17:24:12,627 [ Epoch: 4; iter: 1220; loss: 0.406; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-21 17:24:25,317 [ Epoch: 4; iter: 1210; loss: 0.408; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-21 17:27:35,680 [ Epoch: 4; iter: 1230; loss: 0.770; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-21 17:27:48,135 [ Epoch: 4; iter: 1220; loss: 0.472; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-21 17:30:20,748 [ Epoch: 4; iter: 1240; loss: 0.582; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-21 17:31:02,169 [ Epoch: 4; iter: 1230; loss: 0.384; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-21 17:32:37,872 [ Epoch: 4; iter: 1250; loss: 0.514; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-21 17:33:48,876 [ Epoch: 4; iter: 1240; loss: 0.739; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-21 17:35:29,694 [ Epoch: 4; iter: 1260; loss: 0.862; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-21 17:37:02,161 [ Epoch: 4; iter: 1250; loss: 0.405; load time: 0.014; train time: 0.008; slice time: 0.001;]
+2021-05-21 17:38:32,371 [ Epoch: 4; iter: 1270; loss: 0.363; load time: 0.017; train time: 0.009; slice time: 0.001;]
+2021-05-21 17:39:30,822 [ Epoch: 4; iter: 1260; loss: 0.374; load time: 0.015; train time: 0.008; slice time: 0.001;]
+2021-05-21 17:41:10,277 [ Epoch: 4; iter: 1280; loss: 0.733; load time: 0.018; train time: 0.009; slice time: 0.001;]
+2021-05-21 17:42:41,671 [ Epoch: 4; iter: 1270; loss: 0.411; load time: 0.017; train time: 0.009; slice time: 0.001;]
+2021-05-21 17:44:21,507 [ Epoch: 4; iter: 1290; loss: 0.366; load time: 0.019; train time: 0.010; slice time: 0.001;]
+2021-05-21 17:45:25,627 [ Epoch: 4; iter: 1280; loss: 0.373; load time: 0.018; train time: 0.010; slice time: 0.001;]
+2021-05-21 17:46:56,545 [ Epoch: 4; iter: 1300; loss: 0.365; load time: 0.021; train time: 0.011; slice time: 0.001;]
+2021-05-21 17:48:18,161 [ Epoch: 4; iter: 1290; loss: 0.375; load time: 0.019; train time: 0.011; slice time: 0.001;]
+2021-05-21 17:50:12,770 [ Epoch: 4; iter: 1310; loss: 0.965; load time: 0.022; train time: 0.012; slice time: 0.002;]
+2021-05-21 17:51:05,249 [ Epoch: 4; iter: 1300; loss: 0.369; load time: 0.020; train time: 0.011; slice time: 0.001;]
+2021-05-21 17:52:58,013 [ Epoch: 4; iter: 1320; loss: 0.520; load time: 0.023; train time: 0.012; slice time: 0.002;]
+2021-05-21 17:53:49,782 [ Epoch: 4; iter: 1310; loss: 0.579; load time: 0.022; train time: 0.012; slice time: 0.001;]
+2021-05-21 17:55:20,474 [ Epoch: 4; iter: 1330; loss: 0.341; load time: 0.024; train time: 0.013; slice time: 0.002;]
+2021-05-21 17:56:47,819 [ Epoch: 4; iter: 1320; loss: 0.540; load time: 0.023; train time: 0.013; slice time: 0.002;]
+2021-05-21 17:59:58,070 [ Epoch: 4; iter: 1340; loss: 0.633; load time: 0.026; train time: 0.014; slice time: 0.002;]
+2021-05-21 18:00:36,880 [ Epoch: 4; iter: 1330; loss: 0.870; load time: 0.024; train time: 0.014; slice time: 0.002;]
+2021-05-21 18:02:50,053 [ Epoch: 4; iter: 1350; loss: 0.359; load time: 0.027; train time: 0.014; slice time: 0.002;]
+2021-05-21 18:03:47,194 [ Epoch: 4; iter: 1340; loss: 0.435; load time: 0.025; train time: 0.015; slice time: 0.002;]
+2021-05-21 18:05:28,291 [ Epoch: 4; iter: 1360; loss: 0.525; load time: 0.029; train time: 0.014; slice time: 0.002;]
+2021-05-21 18:06:53,793 [ Epoch: 4; iter: 1350; loss: 0.508; load time: 0.026; train time: 0.015; slice time: 0.002;]
+2021-05-21 18:08:54,443 [ Epoch: 4; iter: 1370; loss: 0.441; load time: 0.030; train time: 0.015; slice time: 0.002;]
+2021-05-21 18:09:56,328 [ Epoch: 4; iter: 1360; loss: 0.556; load time: 0.028; train time: 0.016; slice time: 0.002;]
+2021-05-21 18:11:26,123 [ Epoch: 4; iter: 1380; loss: 0.387; load time: 0.031; train time: 0.016; slice time: 0.002;]
+2021-05-21 18:12:36,702 [ Epoch: 4; iter: 1370; loss: 0.339; load time: 0.029; train time: 0.017; slice time: 0.002;]
+2021-05-21 18:13:50,450 [ Epoch: 4; iter: 1390; loss: 0.394; load time: 0.032; train time: 0.016; slice time: 0.002;]
+2021-05-21 18:15:28,700 [ Epoch: 4; iter: 1380; loss: 0.700; load time: 0.030; train time: 0.017; slice time: 0.002;]
+2021-05-21 18:16:36,638 [ Epoch: 4; iter: 1400; loss: 0.843; load time: 0.033; train time: 0.016; slice time: 0.002;]
+2021-05-21 18:18:18,476 [ Epoch: 4; iter: 1390; loss: 0.742; load time: 0.031; train time: 0.018; slice time: 0.002;]
+2021-05-21 18:18:56,419 [ Epoch: 4; iter: 1410; loss: 0.690; load time: 0.034; train time: 0.017; slice time: 0.002;]
+2021-05-21 18:20:52,336 [ Epoch: 4; iter: 1400; loss: 0.541; load time: 0.032; train time: 0.018; slice time: 0.002;]
+2021-05-21 18:22:13,839 [ Epoch: 4; iter: 1420; loss: 0.512; load time: 0.035; train time: 0.018; slice time: 0.002;]
+2021-05-21 18:24:12,424 [ Epoch: 4; iter: 1410; loss: 0.733; load time: 0.033; train time: 0.019; slice time: 0.002;]
+2021-05-21 18:25:57,108 [ Epoch: 4; iter: 1430; loss: 0.960; load time: 0.036; train time: 0.019; slice time: 0.002;]
+2021-05-21 18:26:38,039 [ Epoch: 4; iter: 1420; loss: 0.694; load time: 0.034; train time: 0.019; slice time: 0.002;]
+2021-05-21 18:28:26,153 [ Epoch: 4; iter: 1440; loss: 0.519; load time: 0.037; train time: 0.019; slice time: 0.002;]
+2021-05-21 18:29:17,383 [ Epoch: 4; iter: 1430; loss: 0.654; load time: 0.035; train time: 0.020; slice time: 0.002;]
+2021-05-21 18:31:35,995 [ Epoch: 4; iter: 1450; loss: 0.687; load time: 0.038; train time: 0.020; slice time: 0.003;]
+2021-05-21 18:32:22,010 [ Epoch: 4; iter: 1440; loss: 0.895; load time: 0.036; train time: 0.020; slice time: 0.002;]
+2021-05-21 18:33:47,539 [ Epoch: 4; iter: 1460; loss: 0.363; load time: 0.039; train time: 0.020; slice time: 0.003;]
+2021-05-21 18:35:03,686 [ Epoch: 4; iter: 1450; loss: 0.389; load time: 0.037; train time: 0.021; slice time: 0.002;]
+2021-05-21 18:36:04,587 [ Epoch: 4; iter: 1470; loss: 0.654; load time: 0.040; train time: 0.020; slice time: 0.003;]
+2021-05-21 18:37:51,698 [ Epoch: 4; iter: 1460; loss: 0.402; load time: 0.038; train time: 0.021; slice time: 0.003;]
+2021-05-21 18:38:15,728 [ Epoch: 4; iter: 1480; loss: 0.734; load time: 0.041; train time: 0.020; slice time: 0.003;]
+2021-05-21 18:40:28,223 [ Epoch: 4; iter: 1470; loss: 0.774; load time: 0.039; train time: 0.022; slice time: 0.003;]
+2021-05-21 18:40:41,899 [ Epoch: 4; iter: 1490; loss: 0.455; load time: 0.042; train time: 0.020; slice time: 0.003;]
+2021-05-21 18:43:51,792 [ Epoch: 4; iter: 1500; loss: 0.376; load time: 0.043; train time: 0.021; slice time: 0.003;]
+2021-05-21 18:43:51,792 [ Epoch: 4; iter: 1480; loss: 0.376; load time: 0.040; train time: 0.022; slice time: 0.003;]
+2021-05-21 18:46:21,399 [ Epoch: 4; iter: 1510; loss: 0.734; load time: 0.043; train time: 0.021; slice time: 0.003;]
+2021-05-21 18:46:21,399 [ Epoch: 4; iter: 1490; loss: 0.734; load time: 0.041; train time: 0.023; slice time: 0.003;]
+2021-05-21 18:48:33,866 [ Epoch: 4; iter: 1500; loss: 0.501; load time: 0.041; train time: 0.023; slice time: 0.003;]
+2021-05-21 18:48:59,083 [ Epoch: 4; iter: 1520; loss: 0.420; load time: 0.044; train time: 0.022; slice time: 0.003;]
+2021-05-21 18:50:41,467 [ Epoch 4 completed. Time taken: 106.5 minutes. Load time: 0.1794371084080942 mins. Train time: 0.0871217327072151 mins]
+2021-05-21 18:50:41,468 [ Average loss: 0.286 ]
+2021-05-21 18:50:41,673 Epoch: 5
+2021-05-21 18:51:05,402 [ Epoch: 5; iter: 1530; loss: 0.681; load time: 0.000; train time: 0.000; slice time: 0.000;]
+2021-05-21 18:51:16,990 [ Epoch: 4; iter: 1510; loss: 0.646; load time: 0.042; train time: 0.023; slice time: 0.003;]
+2021-05-21 18:53:53,192 [ Epoch: 4; iter: 1520; loss: 0.391; load time: 0.043; train time: 0.024; slice time: 0.003;]
+2021-05-21 18:53:53,192 [ Epoch: 5; iter: 1540; loss: 0.955; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-21 18:56:02,019 Epoch: 5
+2021-05-21 18:56:24,976 [ Epoch: 5; iter: 1530; loss: 0.348; load time: 0.000; train time: 0.000; slice time: 0.000;]
+2021-05-21 18:56:50,246 [ Epoch: 5; iter: 1550; loss: 0.391; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-21 19:00:26,270 [ Epoch: 5; iter: 1540; loss: 0.380; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-21 19:01:11,094 [ Epoch: 5; iter: 1560; loss: 0.496; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-21 19:03:50,694 [ Epoch: 5; iter: 1550; loss: 0.520; load time: 0.002; train time: 0.002; slice time: 0.000;]
+2021-05-21 19:04:02,195 [ Epoch: 5; iter: 1570; loss: 0.865; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-21 19:07:01,526 [ Epoch: 5; iter: 1580; loss: 0.683; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-21 19:07:01,526 [ Epoch: 5; iter: 1560; loss: 0.683; load time: 0.004; train time: 0.003; slice time: 0.000;]
+2021-05-21 19:09:44,976 [ Epoch: 5; iter: 1590; loss: 0.486; load time: 0.008; train time: 0.004; slice time: 0.000;]
+2021-05-21 19:09:44,976 [ Epoch: 5; iter: 1570; loss: 0.486; load time: 0.005; train time: 0.004; slice time: 0.000;]
+2021-05-21 19:12:16,788 [ Epoch: 5; iter: 1600; loss: 0.586; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-21 19:12:55,539 [ Epoch: 5; iter: 1580; loss: 0.692; load time: 0.006; train time: 0.004; slice time: 0.000;]
+2021-05-21 19:14:55,003 [ Epoch: 5; iter: 1610; loss: 0.680; load time: 0.010; train time: 0.004; slice time: 0.001;]
+2021-05-21 19:15:53,310 [ Epoch: 5; iter: 1590; loss: 0.385; load time: 0.007; train time: 0.005; slice time: 0.000;]
+2021-05-21 19:18:04,483 [ Epoch: 5; iter: 1620; loss: 0.537; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-21 19:18:30,904 [ Epoch: 5; iter: 1600; loss: 0.341; load time: 0.008; train time: 0.005; slice time: 0.001;]
+2021-05-21 19:20:57,311 [ Epoch: 5; iter: 1630; loss: 0.386; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-21 19:21:50,808 [ Epoch: 5; iter: 1610; loss: 0.380; load time: 0.009; train time: 0.006; slice time: 0.001;]
+2021-05-21 19:23:52,678 [ Epoch: 5; iter: 1640; loss: 0.679; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-21 19:24:05,483 [ Epoch: 5; iter: 1620; loss: 0.657; load time: 0.010; train time: 0.006; slice time: 0.001;]
+2021-05-21 19:26:16,407 [ Epoch: 5; iter: 1650; loss: 0.650; load time: 0.014; train time: 0.006; slice time: 0.001;]
+2021-05-21 19:26:29,739 [ Epoch: 5; iter: 1630; loss: 0.492; load time: 0.011; train time: 0.007; slice time: 0.001;]
+2021-05-21 19:29:02,973 [ Epoch: 5; iter: 1660; loss: 0.331; load time: 0.015; train time: 0.007; slice time: 0.001;]
+2021-05-21 19:29:30,403 [ Epoch: 5; iter: 1640; loss: 0.495; load time: 0.012; train time: 0.007; slice time: 0.001;]
+2021-05-21 19:31:40,561 [ Epoch: 5; iter: 1670; loss: 0.379; load time: 0.016; train time: 0.007; slice time: 0.001;]
+2021-05-21 19:32:14,585 [ Epoch: 5; iter: 1650; loss: 0.616; load time: 0.013; train time: 0.008; slice time: 0.001;]
+2021-05-21 19:33:57,937 [ Epoch: 5; iter: 1680; loss: 0.676; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-21 19:34:22,155 [ Epoch: 5; iter: 1660; loss: 0.397; load time: 0.014; train time: 0.008; slice time: 0.001;]
+2021-05-21 19:36:46,331 [ Epoch: 5; iter: 1690; loss: 0.347; load time: 0.018; train time: 0.008; slice time: 0.001;]
+2021-05-21 19:37:24,811 [ Epoch: 5; iter: 1670; loss: 0.321; load time: 0.015; train time: 0.009; slice time: 0.001;]
+2021-05-21 19:39:18,383 [ Epoch: 5; iter: 1700; loss: 0.459; load time: 0.019; train time: 0.008; slice time: 0.001;]
+2021-05-21 19:40:20,719 [ Epoch: 5; iter: 1680; loss: 0.832; load time: 0.016; train time: 0.009; slice time: 0.001;]
+2021-05-21 19:42:03,741 [ Epoch: 5; iter: 1710; loss: 0.919; load time: 0.020; train time: 0.009; slice time: 0.001;]
+2021-05-21 19:42:41,082 [ Epoch: 5; iter: 1690; loss: 0.509; load time: 0.017; train time: 0.010; slice time: 0.001;]
+2021-05-21 19:45:08,916 [ Epoch: 5; iter: 1720; loss: 0.700; load time: 0.021; train time: 0.010; slice time: 0.001;]
+2021-05-21 19:45:22,930 [ Epoch: 5; iter: 1700; loss: 0.355; load time: 0.018; train time: 0.010; slice time: 0.001;]
+2021-05-21 19:48:14,553 [ Epoch: 5; iter: 1730; loss: 0.349; load time: 0.022; train time: 0.010; slice time: 0.001;]
+2021-05-21 19:48:14,553 [ Epoch: 5; iter: 1710; loss: 0.845; load time: 0.019; train time: 0.010; slice time: 0.001;]
+2021-05-21 19:50:49,794 [ Epoch: 5; iter: 1720; loss: 0.659; load time: 0.020; train time: 0.011; slice time: 0.001;]
+2021-05-21 19:51:03,267 [ Epoch: 5; iter: 1740; loss: 0.390; load time: 0.023; train time: 0.011; slice time: 0.001;]
+2021-05-21 19:53:33,235 [ Epoch: 5; iter: 1730; loss: 0.684; load time: 0.021; train time: 0.011; slice time: 0.001;]
+2021-05-21 19:53:33,235 [ Epoch: 5; iter: 1750; loss: 0.684; load time: 0.023; train time: 0.011; slice time: 0.001;]
+2021-05-21 19:56:24,467 [ Epoch: 5; iter: 1740; loss: 0.476; load time: 0.021; train time: 0.012; slice time: 0.001;]
+2021-05-21 19:56:50,705 [ Epoch: 5; iter: 1760; loss: 0.368; load time: 0.024; train time: 0.012; slice time: 0.002;]
+2021-05-21 19:59:16,100 [ Epoch: 5; iter: 1770; loss: 0.329; load time: 0.025; train time: 0.012; slice time: 0.002;]
+2021-05-21 19:59:16,101 [ Epoch: 5; iter: 1750; loss: 0.822; load time: 0.022; train time: 0.012; slice time: 0.002;]
+2021-05-21 20:03:06,144 [ Epoch: 5; iter: 1780; loss: 0.650; load time: 0.027; train time: 0.012; slice time: 0.002;]
+2021-05-21 20:03:31,938 [ Epoch: 5; iter: 1760; loss: 0.540; load time: 0.023; train time: 0.014; slice time: 0.002;]
+2021-05-21 20:05:35,617 [ Epoch: 5; iter: 1790; loss: 0.500; load time: 0.028; train time: 0.012; slice time: 0.002;]
+2021-05-21 20:06:01,214 [ Epoch: 5; iter: 1770; loss: 0.649; load time: 0.024; train time: 0.014; slice time: 0.002;]
+2021-05-21 20:08:17,134 [ Epoch: 5; iter: 1800; loss: 0.820; load time: 0.028; train time: 0.013; slice time: 0.002;]
+2021-05-21 20:08:17,134 [ Epoch: 5; iter: 1780; loss: 0.293; load time: 0.025; train time: 0.014; slice time: 0.002;]
+2021-05-21 20:10:55,358 [ Epoch: 5; iter: 1810; loss: 0.363; load time: 0.029; train time: 0.013; slice time: 0.002;]
+2021-05-21 20:11:34,620 [ Epoch: 5; iter: 1790; loss: 0.906; load time: 0.026; train time: 0.015; slice time: 0.002;]
+2021-05-21 20:13:30,526 [ Epoch: 5; iter: 1820; loss: 0.348; load time: 0.030; train time: 0.013; slice time: 0.002;]
+2021-05-21 20:14:51,190 [ Epoch: 5; iter: 1800; loss: 0.373; load time: 0.026; train time: 0.015; slice time: 0.002;]
+2021-05-21 20:16:11,711 [ Epoch: 5; iter: 1830; loss: 0.616; load time: 0.031; train time: 0.014; slice time: 0.002;]
+2021-05-21 20:17:15,444 [ Epoch: 5; iter: 1810; loss: 0.476; load time: 0.027; train time: 0.016; slice time: 0.002;]
+2021-05-21 20:18:33,737 [ Epoch: 5; iter: 1840; loss: 0.613; load time: 0.032; train time: 0.014; slice time: 0.002;]
+2021-05-21 20:20:05,761 [ Epoch: 5; iter: 1820; loss: 0.560; load time: 0.028; train time: 0.016; slice time: 0.002;]
+2021-05-21 20:21:29,381 [ Epoch: 5; iter: 1850; loss: 0.511; load time: 0.033; train time: 0.014; slice time: 0.002;]
+2021-05-21 20:23:10,197 [ Epoch: 5; iter: 1830; loss: 0.638; load time: 0.029; train time: 0.017; slice time: 0.002;]
+2021-05-21 20:24:28,595 [ Epoch: 5; iter: 1860; loss: 0.326; load time: 0.033; train time: 0.015; slice time: 0.002;]
+2021-05-21 20:26:01,210 [ Epoch: 5; iter: 1840; loss: 0.753; load time: 0.030; train time: 0.017; slice time: 0.002;]
+2021-05-21 20:27:12,182 [ Epoch: 5; iter: 1870; loss: 0.316; load time: 0.034; train time: 0.015; slice time: 0.002;]
+2021-05-21 20:29:15,328 [ Epoch: 5; iter: 1850; loss: 0.845; load time: 0.031; train time: 0.018; slice time: 0.002;]
+2021-05-21 20:29:38,868 [ Epoch: 5; iter: 1880; loss: 0.640; load time: 0.035; train time: 0.016; slice time: 0.002;]
+2021-05-21 20:31:26,939 [ Epoch: 5; iter: 1860; loss: 0.640; load time: 0.031; train time: 0.018; slice time: 0.002;]
+2021-05-21 20:32:15,103 [ Epoch: 5; iter: 1890; loss: 0.865; load time: 0.036; train time: 0.016; slice time: 0.002;]
+2021-05-21 20:34:11,489 [ Epoch: 5; iter: 1870; loss: 0.453; load time: 0.032; train time: 0.018; slice time: 0.002;]
+2021-05-21 20:35:10,270 [ Epoch: 5; iter: 1900; loss: 0.365; load time: 0.036; train time: 0.016; slice time: 0.002;]
+2021-05-21 20:37:17,667 [ Epoch: 5; iter: 1880; loss: 0.785; load time: 0.033; train time: 0.019; slice time: 0.002;]
+2021-05-21 20:37:29,954 [ Epoch: 5; iter: 1910; loss: 0.531; load time: 0.037; train time: 0.017; slice time: 0.002;]
+2021-05-21 20:37:29,966 [ Epoch 5 completed. Time taken: 106.8 minutes. Load time: 0.18493020270299312 mins. Train time: 0.08259141292247466 mins]
+2021-05-21 20:37:29,967 [ Average loss: 0.270 ]
+2021-05-21 20:37:30,169 Epoch: 6
+2021-05-21 20:39:49,700 [ Epoch: 6; iter: 1920; loss: 0.634; load time: 0.001; train time: 0.000; slice time: 0.000;]
+2021-05-21 20:39:49,700 [ Epoch: 5; iter: 1890; loss: 0.634; load time: 0.034; train time: 0.019; slice time: 0.002;]
+2021-05-21 20:42:35,190 [ Epoch: 6; iter: 1930; loss: 0.663; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-21 20:42:45,885 [ Epoch: 5; iter: 1900; loss: 0.506; load time: 0.034; train time: 0.019; slice time: 0.002;]
+2021-05-21 20:44:54,933 [ Epoch: 6; iter: 1940; loss: 0.591; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-21 20:45:35,633 [ Epoch: 5; iter: 1910; loss: 0.660; load time: 0.035; train time: 0.020; slice time: 0.002;]
+2021-05-21 20:45:35,645 Epoch: 6
+2021-05-21 20:47:42,458 [ Epoch: 6; iter: 1950; loss: 0.336; load time: 0.004; train time: 0.001; slice time: 0.000;]
+2021-05-21 20:48:19,155 [ Epoch: 6; iter: 1920; loss: 0.328; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-21 20:50:20,573 [ Epoch: 6; iter: 1960; loss: 0.352; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-21 20:51:16,753 [ Epoch: 6; iter: 1930; loss: 0.367; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-21 20:52:54,800 [ Epoch: 6; iter: 1970; loss: 0.613; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-21 20:54:39,445 [ Epoch: 6; iter: 1940; loss: 0.761; load time: 0.003; train time: 0.002; slice time: 0.000;]
+2021-05-21 20:55:29,875 [ Epoch: 6; iter: 1980; loss: 0.624; load time: 0.006; train time: 0.002; slice time: 0.000;]
+2021-05-21 20:57:07,716 [ Epoch: 6; iter: 1950; loss: 0.619; load time: 0.003; train time: 0.002; slice time: 0.000;]
+2021-05-21 20:58:00,803 [ Epoch: 6; iter: 1990; loss: 0.401; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-21 21:00:17,414 [ Epoch: 6; iter: 1960; loss: 0.356; load time: 0.004; train time: 0.003; slice time: 0.000;]
+2021-05-21 21:00:44,283 [ Epoch: 6; iter: 2000; loss: 0.314; load time: 0.008; train time: 0.003; slice time: 0.001;]
+2021-05-21 21:03:05,567 [ Epoch: 6; iter: 1970; loss: 0.642; load time: 0.005; train time: 0.003; slice time: 0.000;]
+2021-05-21 21:04:15,884 [ Epoch: 6; iter: 2010; loss: 0.763; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-21 21:06:32,590 [ Epoch: 6; iter: 1980; loss: 0.595; load time: 0.006; train time: 0.004; slice time: 0.000;]
+2021-05-21 21:07:34,570 [ Epoch: 6; iter: 2020; loss: 0.339; load time: 0.010; train time: 0.004; slice time: 0.001;]
+2021-05-21 21:09:26,996 [ Epoch: 6; iter: 1990; loss: 0.483; load time: 0.007; train time: 0.005; slice time: 0.000;]
+2021-05-21 21:10:47,616 [ Epoch: 6; iter: 2030; loss: 0.381; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-21 21:12:32,466 [ Epoch: 6; iter: 2000; loss: 0.451; load time: 0.008; train time: 0.005; slice time: 0.001;]
+2021-05-21 21:14:03,365 [ Epoch: 6; iter: 2040; loss: 0.451; load time: 0.012; train time: 0.005; slice time: 0.001;]
+2021-05-21 21:15:19,299 [ Epoch: 6; iter: 2010; loss: 0.327; load time: 0.009; train time: 0.006; slice time: 0.001;]
+2021-05-21 21:16:58,864 [ Epoch: 6; iter: 2050; loss: 0.759; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-21 21:17:50,106 [ Epoch: 6; iter: 2020; loss: 0.472; load time: 0.009; train time: 0.006; slice time: 0.001;]
+2021-05-21 21:20:04,489 [ Epoch: 6; iter: 2060; loss: 0.528; load time: 0.014; train time: 0.006; slice time: 0.001;]
+2021-05-21 21:20:28,731 [ Epoch: 6; iter: 2030; loss: 0.478; load time: 0.010; train time: 0.006; slice time: 0.001;]
+2021-05-21 21:23:25,038 [ Epoch: 6; iter: 2070; loss: 0.479; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-21 21:24:12,140 [ Epoch: 6; iter: 2040; loss: 0.749; load time: 0.011; train time: 0.007; slice time: 0.001;]
+2021-05-21 21:25:31,200 [ Epoch: 6; iter: 2080; loss: 0.624; load time: 0.015; train time: 0.007; slice time: 0.001;]
+2021-05-21 21:27:04,201 [ Epoch: 6; iter: 2050; loss: 0.603; load time: 0.012; train time: 0.008; slice time: 0.001;]
+2021-05-21 21:28:20,067 [ Epoch: 6; iter: 2090; loss: 0.472; load time: 0.016; train time: 0.007; slice time: 0.001;]
+2021-05-21 21:30:03,864 [ Epoch: 6; iter: 2060; loss: 0.589; load time: 0.013; train time: 0.008; slice time: 0.001;]
+2021-05-21 21:30:41,228 [ Epoch: 6; iter: 2100; loss: 0.770; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-21 21:32:33,742 [ Epoch: 6; iter: 2070; loss: 0.339; load time: 0.013; train time: 0.008; slice time: 0.001;]
+2021-05-21 21:32:58,837 [ Epoch: 6; iter: 2110; loss: 0.621; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-21 21:35:41,041 [ Epoch: 6; iter: 2080; loss: 0.348; load time: 0.014; train time: 0.009; slice time: 0.001;]
+2021-05-21 21:36:36,277 [ Epoch: 6; iter: 2120; loss: 0.284; load time: 0.018; train time: 0.008; slice time: 0.001;]
+2021-05-21 21:38:25,495 [ Epoch: 6; iter: 2090; loss: 0.346; load time: 0.015; train time: 0.009; slice time: 0.001;]
+2021-05-21 21:39:02,850 [ Epoch: 6; iter: 2130; loss: 0.314; load time: 0.019; train time: 0.009; slice time: 0.001;]
+2021-05-21 21:41:13,861 [ Epoch: 6; iter: 2100; loss: 0.594; load time: 0.016; train time: 0.010; slice time: 0.001;]
+2021-05-21 21:42:11,270 [ Epoch: 6; iter: 2140; loss: 0.446; load time: 0.020; train time: 0.009; slice time: 0.001;]
+2021-05-21 21:44:09,371 [ Epoch: 6; iter: 2110; loss: 0.347; load time: 0.016; train time: 0.010; slice time: 0.001;]
+2021-05-21 21:44:47,591 [ Epoch: 6; iter: 2150; loss: 0.653; load time: 0.021; train time: 0.009; slice time: 0.001;]
+2021-05-21 21:46:14,049 [ Epoch: 6; iter: 2120; loss: 0.470; load time: 0.017; train time: 0.010; slice time: 0.001;]
+2021-05-21 21:47:11,477 [ Epoch: 6; iter: 2160; loss: 0.494; load time: 0.021; train time: 0.010; slice time: 0.001;]
+2021-05-21 21:48:55,663 [ Epoch: 6; iter: 2130; loss: 0.459; load time: 0.018; train time: 0.011; slice time: 0.001;]
+2021-05-21 21:50:14,954 [ Epoch: 6; iter: 2170; loss: 0.492; load time: 0.022; train time: 0.010; slice time: 0.001;]
+2021-05-21 21:51:38,801 [ Epoch: 6; iter: 2140; loss: 0.583; load time: 0.019; train time: 0.011; slice time: 0.001;]
+2021-05-21 21:52:57,725 [ Epoch: 6; iter: 2180; loss: 0.356; load time: 0.023; train time: 0.010; slice time: 0.001;]
+2021-05-21 21:54:54,804 [ Epoch: 6; iter: 2150; loss: 0.776; load time: 0.019; train time: 0.012; slice time: 0.001;]
+2021-05-21 21:55:48,049 [ Epoch: 6; iter: 2190; loss: 0.628; load time: 0.023; train time: 0.011; slice time: 0.002;]
+2021-05-21 21:57:31,854 [ Epoch: 6; iter: 2160; loss: 0.444; load time: 0.020; train time: 0.012; slice time: 0.001;]
+2021-05-21 21:58:09,230 [ Epoch: 6; iter: 2200; loss: 0.655; load time: 0.024; train time: 0.011; slice time: 0.002;]
+2021-05-21 22:00:10,947 [ Epoch: 6; iter: 2170; loss: 0.384; load time: 0.021; train time: 0.012; slice time: 0.001;]
+2021-05-21 22:00:38,562 [ Epoch: 6; iter: 2210; loss: 0.438; load time: 0.025; train time: 0.011; slice time: 0.002;]
+2021-05-21 22:02:40,162 [ Epoch: 6; iter: 2220; loss: 0.455; load time: 0.025; train time: 0.011; slice time: 0.002;]
+2021-05-21 22:03:06,242 [ Epoch: 6; iter: 2180; loss: 0.331; load time: 0.021; train time: 0.013; slice time: 0.001;]
+2021-05-21 22:06:04,311 [ Epoch: 6; iter: 2230; loss: 0.320; load time: 0.027; train time: 0.011; slice time: 0.002;]
+2021-05-21 22:07:29,737 [ Epoch: 6; iter: 2190; loss: 0.601; load time: 0.022; train time: 0.014; slice time: 0.002;]
+2021-05-21 22:08:49,207 [ Epoch: 6; iter: 2240; loss: 0.595; load time: 0.027; train time: 0.012; slice time: 0.002;]
+2021-05-21 22:10:04,287 [ Epoch: 6; iter: 2200; loss: 0.611; load time: 0.023; train time: 0.014; slice time: 0.002;]
+2021-05-21 22:10:52,467 [ Epoch: 6; iter: 2250; loss: 0.464; load time: 0.028; train time: 0.012; slice time: 0.002;]
+2021-05-21 22:12:52,650 [ Epoch: 6; iter: 2210; loss: 0.464; load time: 0.023; train time: 0.014; slice time: 0.002;]
+2021-05-21 22:13:06,594 [ Epoch: 6; iter: 2260; loss: 0.357; load time: 0.029; train time: 0.012; slice time: 0.002;]
+2021-05-21 22:15:17,045 [ Epoch: 6; iter: 2220; loss: 0.594; load time: 0.024; train time: 0.015; slice time: 0.002;]
+2021-05-21 22:15:59,194 [ Epoch: 6; iter: 2270; loss: 0.636; load time: 0.029; train time: 0.012; slice time: 0.002;]
+2021-05-21 22:18:13,323 [ Epoch: 6; iter: 2230; loss: 0.752; load time: 0.025; train time: 0.015; slice time: 0.002;]
+2021-05-21 22:18:36,642 [ Epoch: 6; iter: 2280; loss: 0.627; load time: 0.030; train time: 0.012; slice time: 0.002;]
+2021-05-21 22:21:12,797 [ Epoch: 6; iter: 2240; loss: 0.600; load time: 0.025; train time: 0.015; slice time: 0.002;]
+2021-05-21 22:21:38,214 [ Epoch: 6; iter: 2290; loss: 0.619; load time: 0.031; train time: 0.013; slice time: 0.002;]
+2021-05-21 22:22:03,170 [ Epoch 6 completed. Time taken: 104.6 minutes. Load time: 0.18471704509245793 mins. Train time: 0.07677931610826412 mins]
+2021-05-21 22:22:03,170 [ Average loss: 0.243 ]
+2021-05-21 22:22:03,389 Epoch: 7
+2021-05-21 22:23:17,478 [ Epoch: 6; iter: 2250; loss: 0.322; load time: 0.026; train time: 0.016; slice time: 0.002;]
+2021-05-21 22:24:18,623 [ Epoch: 7; iter: 2300; loss: 0.540; load time: 0.001; train time: 0.000; slice time: 0.000;]
+2021-05-21 22:25:45,605 [ Epoch: 6; iter: 2260; loss: 0.599; load time: 0.027; train time: 0.016; slice time: 0.002;]
+2021-05-21 22:26:27,670 [ Epoch: 7; iter: 2310; loss: 0.294; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-21 22:28:55,479 [ Epoch: 6; iter: 2270; loss: 0.734; load time: 0.027; train time: 0.016; slice time: 0.002;]
+2021-05-21 22:29:09,377 [ Epoch: 7; iter: 2320; loss: 0.416; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-21 22:31:52,478 [ Epoch: 7; iter: 2330; loss: 0.337; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-21 22:32:06,661 [ Epoch: 6; iter: 2280; loss: 0.578; load time: 0.028; train time: 0.017; slice time: 0.002;]
+2021-05-21 22:34:48,534 [ Epoch: 7; iter: 2340; loss: 0.338; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-21 22:34:48,534 [ Epoch: 6; iter: 2290; loss: 0.518; load time: 0.029; train time: 0.017; slice time: 0.002;]
+2021-05-21 22:35:04,318 Epoch: 7
+2021-05-21 22:37:07,345 [ Epoch: 7; iter: 2300; loss: 0.564; load time: 0.001; train time: 0.000; slice time: 0.000;]
+2021-05-21 22:37:23,423 [ Epoch: 7; iter: 2350; loss: 0.429; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-21 22:39:56,984 [ Epoch: 7; iter: 2310; loss: 0.736; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-21 22:40:23,382 [ Epoch: 7; iter: 2360; loss: 0.732; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-21 22:42:28,345 [ Epoch: 7; iter: 2320; loss: 0.305; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-21 22:43:44,951 [ Epoch: 7; iter: 2370; loss: 0.593; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-21 22:44:44,581 [ Epoch: 7; iter: 2330; loss: 0.596; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-21 22:46:21,393 [ Epoch: 7; iter: 2380; loss: 0.601; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-21 22:47:16,865 [ Epoch: 7; iter: 2340; loss: 0.445; load time: 0.004; train time: 0.001; slice time: 0.000;]
+2021-05-21 22:49:36,044 [ Epoch: 7; iter: 2390; loss: 0.426; load time: 0.007; train time: 0.004; slice time: 0.000;]
+2021-05-21 22:50:24,011 [ Epoch: 7; iter: 2350; loss: 0.311; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-21 22:52:01,172 [ Epoch: 7; iter: 2400; loss: 0.583; load time: 0.008; train time: 0.004; slice time: 0.001;]
+2021-05-21 22:52:26,405 [ Epoch: 7; iter: 2360; loss: 0.436; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-21 22:54:30,266 [ Epoch: 7; iter: 2410; loss: 0.580; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-21 22:54:30,266 [ Epoch: 7; iter: 2370; loss: 0.580; load time: 0.006; train time: 0.002; slice time: 0.000;]
+2021-05-21 22:57:31,515 [ Epoch: 7; iter: 2380; loss: 0.483; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-21 22:57:56,073 [ Epoch: 7; iter: 2420; loss: 0.590; load time: 0.009; train time: 0.005; slice time: 0.001;]
+2021-05-21 23:00:28,848 [ Epoch: 7; iter: 2390; loss: 0.316; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-21 23:01:08,089 [ Epoch: 7; iter: 2430; loss: 0.290; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-21 23:02:47,888 [ Epoch: 7; iter: 2400; loss: 0.529; load time: 0.008; train time: 0.003; slice time: 0.001;]
+2021-05-21 23:03:12,859 [ Epoch: 7; iter: 2440; loss: 0.262; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-21 23:05:30,352 [ Epoch: 7; iter: 2410; loss: 0.587; load time: 0.009; train time: 0.003; slice time: 0.001;]
+2021-05-21 23:06:09,717 [ Epoch: 7; iter: 2450; loss: 0.331; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-21 23:10:11,133 [ Epoch: 7; iter: 2420; loss: 0.371; load time: 0.009; train time: 0.005; slice time: 0.001;]
+2021-05-21 23:10:47,795 [ Epoch: 7; iter: 2460; loss: 0.315; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-21 23:13:17,802 [ Epoch: 7; iter: 2430; loss: 0.798; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-21 23:13:30,060 [ Epoch: 7; iter: 2470; loss: 0.567; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-21 23:15:45,356 [ Epoch: 7; iter: 2440; loss: 0.330; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-21 23:15:59,586 [ Epoch: 7; iter: 2480; loss: 0.434; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-21 23:18:29,595 [ Epoch: 7; iter: 2450; loss: 0.332; load time: 0.011; train time: 0.006; slice time: 0.001;]
+2021-05-21 23:18:54,471 [ Epoch: 7; iter: 2490; loss: 0.426; load time: 0.015; train time: 0.007; slice time: 0.001;]
+2021-05-21 23:21:27,851 [ Epoch: 7; iter: 2460; loss: 0.268; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-21 23:21:54,746 [ Epoch: 7; iter: 2500; loss: 0.579; load time: 0.015; train time: 0.008; slice time: 0.001;]
+2021-05-21 23:23:59,437 [ Epoch: 7; iter: 2470; loss: 0.266; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-21 23:24:27,927 [ Epoch: 7; iter: 2510; loss: 0.597; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-21 23:26:54,772 [ Epoch: 7; iter: 2520; loss: 0.286; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-21 23:27:06,689 [ Epoch: 7; iter: 2480; loss: 0.597; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-21 23:29:30,160 [ Epoch: 7; iter: 2530; loss: 0.439; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-21 23:29:58,168 [ Epoch: 7; iter: 2490; loss: 0.568; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-21 23:31:54,033 [ Epoch: 7; iter: 2540; loss: 0.629; load time: 0.018; train time: 0.008; slice time: 0.001;]
+2021-05-21 23:32:07,759 [ Epoch: 7; iter: 2500; loss: 0.599; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-21 23:34:43,563 [ Epoch: 7; iter: 2550; loss: 0.632; load time: 0.018; train time: 0.009; slice time: 0.001;]
+2021-05-21 23:34:59,365 [ Epoch: 7; iter: 2510; loss: 0.330; load time: 0.015; train time: 0.008; slice time: 0.001;]
+2021-05-21 23:37:57,617 [ Epoch: 7; iter: 2560; loss: 0.624; load time: 0.019; train time: 0.009; slice time: 0.001;]
+2021-05-21 23:37:57,618 [ Epoch: 7; iter: 2520; loss: 0.624; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-21 23:40:28,249 [ Epoch: 7; iter: 2570; loss: 0.411; load time: 0.020; train time: 0.009; slice time: 0.001;]
+2021-05-21 23:40:44,234 [ Epoch: 7; iter: 2530; loss: 0.559; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-21 23:43:14,913 [ Epoch: 7; iter: 2540; loss: 0.582; load time: 0.017; train time: 0.009; slice time: 0.001;]
+2021-05-21 23:43:27,588 [ Epoch: 7; iter: 2580; loss: 0.572; load time: 0.020; train time: 0.010; slice time: 0.001;]
+2021-05-21 23:46:31,208 [ Epoch: 7; iter: 2590; loss: 0.318; load time: 0.021; train time: 0.010; slice time: 0.001;]
+2021-05-21 23:46:31,208 [ Epoch: 7; iter: 2550; loss: 0.776; load time: 0.018; train time: 0.009; slice time: 0.001;]
+2021-05-21 23:49:11,873 [ Epoch: 7; iter: 2600; loss: 0.445; load time: 0.022; train time: 0.010; slice time: 0.001;]
+2021-05-21 23:49:26,194 [ Epoch: 7; iter: 2560; loss: 0.611; load time: 0.018; train time: 0.009; slice time: 0.001;]
+2021-05-21 23:52:32,049 [ Epoch: 7; iter: 2570; loss: 0.661; load time: 0.019; train time: 0.010; slice time: 0.001;]
+2021-05-21 23:52:46,455 [ Epoch: 7; iter: 2610; loss: 0.528; load time: 0.022; train time: 0.011; slice time: 0.001;]
+2021-05-21 23:55:44,540 [ Epoch: 7; iter: 2580; loss: 0.425; load time: 0.020; train time: 0.010; slice time: 0.001;]
+2021-05-21 23:56:26,749 [ Epoch: 7; iter: 2620; loss: 0.455; load time: 0.023; train time: 0.012; slice time: 0.001;]
+2021-05-21 23:58:24,590 [ Epoch: 7; iter: 2590; loss: 0.484; load time: 0.020; train time: 0.011; slice time: 0.001;]
+2021-05-21 23:59:56,337 [ Epoch: 7; iter: 2630; loss: 0.496; load time: 0.024; train time: 0.012; slice time: 0.001;]
+2021-05-22 00:01:23,998 [ Epoch: 7; iter: 2600; loss: 0.638; load time: 0.021; train time: 0.011; slice time: 0.001;]
+2021-05-22 00:02:54,800 [ Epoch: 7; iter: 2640; loss: 0.524; load time: 0.024; train time: 0.013; slice time: 0.002;]
+2021-05-22 00:04:07,195 [ Epoch: 7; iter: 2610; loss: 0.281; load time: 0.021; train time: 0.011; slice time: 0.001;]
+2021-05-22 00:06:30,653 [ Epoch: 7; iter: 2650; loss: 0.579; load time: 0.025; train time: 0.013; slice time: 0.002;]
+2021-05-22 00:06:46,435 [ Epoch: 7; iter: 2620; loss: 0.424; load time: 0.022; train time: 0.011; slice time: 0.001;]
+2021-05-22 00:10:22,635 [ Epoch: 7; iter: 2660; loss: 0.287; load time: 0.026; train time: 0.013; slice time: 0.002;]
+2021-05-22 00:11:12,088 [ Epoch: 7; iter: 2630; loss: 0.604; load time: 0.023; train time: 0.012; slice time: 0.002;]
+2021-05-22 00:13:33,117 [ Epoch: 7; iter: 2670; loss: 0.437; load time: 0.026; train time: 0.014; slice time: 0.002;]
+2021-05-22 00:14:26,953 [ Epoch: 7; iter: 2640; loss: 0.486; load time: 0.023; train time: 0.013; slice time: 0.002;]
+2021-05-22 00:14:26,964 [ Epoch 7 completed. Time taken: 112.4 minutes. Load time: 0.1859892523205509 mins. Train time: 0.09637378377232053 mins]
+2021-05-22 00:14:26,964 [ Average loss: 0.240 ]
+2021-05-22 00:14:27,206 Epoch: 8
+2021-05-22 00:16:20,128 [ Epoch: 8; iter: 2680; loss: 0.470; load time: 0.000; train time: 0.000; slice time: 0.000;]
+2021-05-22 00:16:42,459 [ Epoch: 7; iter: 2650; loss: 0.541; load time: 0.024; train time: 0.013; slice time: 0.002;]
+2021-05-22 00:18:37,135 [ Epoch: 8; iter: 2690; loss: 0.593; load time: 0.001; train time: 0.000; slice time: 0.000;]
+2021-05-22 00:20:27,358 [ Epoch: 7; iter: 2660; loss: 0.319; load time: 0.024; train time: 0.014; slice time: 0.002;]
+2021-05-22 00:21:32,238 [ Epoch: 8; iter: 2700; loss: 0.552; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 00:23:01,115 [ Epoch: 7; iter: 2670; loss: 0.539; load time: 0.025; train time: 0.014; slice time: 0.002;]
+2021-05-22 00:24:05,756 Epoch: 8
+2021-05-22 00:24:45,866 [ Epoch: 8; iter: 2710; loss: 0.580; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 00:26:00,056 [ Epoch: 8; iter: 2680; loss: 0.468; load time: 0.000; train time: 0.000; slice time: 0.000;]
+2021-05-22 00:27:03,661 [ Epoch: 8; iter: 2720; loss: 0.303; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-22 00:28:43,846 [ Epoch: 8; iter: 2690; loss: 0.343; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-22 00:29:42,376 [ Epoch: 8; iter: 2730; loss: 0.278; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-22 00:31:25,783 [ Epoch: 8; iter: 2700; loss: 0.475; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 00:32:28,803 [ Epoch: 8; iter: 2740; loss: 0.595; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-22 00:34:09,851 [ Epoch: 8; iter: 2710; loss: 0.275; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 00:35:09,957 [ Epoch: 8; iter: 2750; loss: 0.523; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-22 00:36:41,364 [ Epoch: 8; iter: 2720; loss: 0.285; load time: 0.003; train time: 0.002; slice time: 0.000;]
+2021-05-22 00:37:59,059 [ Epoch: 8; iter: 2760; loss: 0.515; load time: 0.005; train time: 0.003; slice time: 0.000;]
+2021-05-22 00:39:16,099 [ Epoch: 8; iter: 2730; loss: 0.565; load time: 0.003; train time: 0.002; slice time: 0.000;]
+2021-05-22 00:40:45,160 [ Epoch: 8; iter: 2770; loss: 0.534; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-22 00:42:14,444 [ Epoch: 8; iter: 2740; loss: 0.712; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-22 00:43:34,690 [ Epoch: 8; iter: 2780; loss: 0.570; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-22 00:44:29,845 [ Epoch: 8; iter: 2750; loss: 0.329; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-22 00:47:12,760 [ Epoch: 8; iter: 2760; loss: 0.293; load time: 0.005; train time: 0.003; slice time: 0.000;]
+2021-05-22 00:47:12,760 [ Epoch: 8; iter: 2790; loss: 0.681; load time: 0.007; train time: 0.004; slice time: 0.000;]
+2021-05-22 00:49:31,285 [ Epoch: 8; iter: 2800; loss: 0.286; load time: 0.008; train time: 0.004; slice time: 0.001;]
+2021-05-22 00:50:31,655 [ Epoch: 8; iter: 2770; loss: 0.312; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-22 00:52:17,758 [ Epoch: 8; iter: 2810; loss: 0.405; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-22 00:53:50,433 [ Epoch: 8; iter: 2780; loss: 0.510; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-22 00:54:46,132 [ Epoch: 8; iter: 2820; loss: 0.418; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-22 00:57:30,024 [ Epoch: 8; iter: 2790; loss: 0.309; load time: 0.007; train time: 0.004; slice time: 0.000;]
+2021-05-22 00:58:24,555 [ Epoch: 8; iter: 2830; loss: 0.407; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-22 01:00:34,142 [ Epoch: 8; iter: 2800; loss: 0.267; load time: 0.008; train time: 0.004; slice time: 0.001;]
+2021-05-22 01:01:13,653 [ Epoch: 8; iter: 2840; loss: 0.410; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-22 01:03:12,984 [ Epoch: 8; iter: 2810; loss: 0.298; load time: 0.009; train time: 0.005; slice time: 0.001;]
+2021-05-22 01:03:50,194 [ Epoch: 8; iter: 2850; loss: 0.297; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-22 01:05:37,782 [ Epoch: 8; iter: 2820; loss: 0.305; load time: 0.009; train time: 0.005; slice time: 0.001;]
+2021-05-22 01:06:16,413 [ Epoch: 8; iter: 2860; loss: 0.566; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-22 01:08:51,913 [ Epoch: 8; iter: 2830; loss: 0.531; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-22 01:09:03,478 [ Epoch: 8; iter: 2870; loss: 0.600; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-22 01:12:22,009 [ Epoch: 8; iter: 2880; loss: 0.553; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-22 01:13:04,109 [ Epoch: 8; iter: 2840; loss: 0.383; load time: 0.011; train time: 0.006; slice time: 0.001;]
+2021-05-22 01:15:33,545 [ Epoch: 8; iter: 2850; loss: 0.249; load time: 0.011; train time: 0.006; slice time: 0.001;]
+2021-05-22 01:15:46,863 [ Epoch: 8; iter: 2890; loss: 0.407; load time: 0.014; train time: 0.006; slice time: 0.001;]
+2021-05-22 01:18:02,060 [ Epoch: 8; iter: 2860; loss: 0.671; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-22 01:18:29,108 [ Epoch: 8; iter: 2900; loss: 0.258; load time: 0.015; train time: 0.007; slice time: 0.001;]
+2021-05-22 01:20:34,693 [ Epoch: 8; iter: 2870; loss: 0.546; load time: 0.012; train time: 0.007; slice time: 0.001;]
+2021-05-22 01:20:59,405 [ Epoch: 8; iter: 2910; loss: 0.309; load time: 0.015; train time: 0.007; slice time: 0.001;]
+2021-05-22 01:23:04,087 [ Epoch: 8; iter: 2920; loss: 0.567; load time: 0.016; train time: 0.007; slice time: 0.001;]
+2021-05-22 01:23:16,131 [ Epoch: 8; iter: 2880; loss: 0.505; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-22 01:25:28,345 [ Epoch: 8; iter: 2930; loss: 0.413; load time: 0.016; train time: 0.007; slice time: 0.001;]
+2021-05-22 01:25:41,947 [ Epoch: 8; iter: 2890; loss: 0.550; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-22 01:28:12,918 [ Epoch: 8; iter: 2940; loss: 0.425; load time: 0.017; train time: 0.007; slice time: 0.001;]
+2021-05-22 01:28:26,527 [ Epoch: 8; iter: 2900; loss: 0.574; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-22 01:31:09,917 [ Epoch: 8; iter: 2950; loss: 0.537; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-22 01:31:46,075 [ Epoch: 8; iter: 2910; loss: 0.624; load time: 0.014; train time: 0.008; slice time: 0.001;]
+2021-05-22 01:33:46,612 [ Epoch: 8; iter: 2960; loss: 0.580; load time: 0.018; train time: 0.008; slice time: 0.001;]
+2021-05-22 01:34:15,018 [ Epoch: 8; iter: 2920; loss: 0.576; load time: 0.015; train time: 0.008; slice time: 0.001;]
+2021-05-22 01:36:34,778 [ Epoch: 8; iter: 2970; loss: 0.295; load time: 0.018; train time: 0.008; slice time: 0.001;]
+2021-05-22 01:37:24,900 [ Epoch: 8; iter: 2930; loss: 0.649; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-22 01:39:29,410 [ Epoch: 8; iter: 2980; loss: 0.402; load time: 0.019; train time: 0.009; slice time: 0.001;]
+2021-05-22 01:39:53,526 [ Epoch: 8; iter: 2940; loss: 0.533; load time: 0.016; train time: 0.009; slice time: 0.001;]
+2021-05-22 01:42:08,030 [ Epoch: 8; iter: 2990; loss: 0.531; load time: 0.019; train time: 0.009; slice time: 0.001;]
+2021-05-22 01:42:32,166 [ Epoch: 8; iter: 2950; loss: 0.368; load time: 0.017; train time: 0.009; slice time: 0.001;]
+2021-05-22 01:44:36,425 [ Epoch: 8; iter: 3000; loss: 0.386; load time: 0.020; train time: 0.009; slice time: 0.001;]
+2021-05-22 01:45:14,925 [ Epoch: 8; iter: 2960; loss: 0.443; load time: 0.017; train time: 0.009; slice time: 0.001;]
+2021-05-22 01:47:37,882 [ Epoch: 8; iter: 3010; loss: 0.508; load time: 0.020; train time: 0.009; slice time: 0.001;]
+2021-05-22 01:48:15,338 [ Epoch: 8; iter: 2970; loss: 0.297; load time: 0.018; train time: 0.010; slice time: 0.001;]
+2021-05-22 01:50:58,447 [ Epoch: 8; iter: 3020; loss: 0.331; load time: 0.021; train time: 0.010; slice time: 0.001;]
+2021-05-22 01:51:29,739 [ Epoch: 8; iter: 2980; loss: 0.425; load time: 0.018; train time: 0.010; slice time: 0.001;]
+2021-05-22 01:53:57,138 [ Epoch: 8; iter: 3030; loss: 0.308; load time: 0.021; train time: 0.010; slice time: 0.001;]
+2021-05-22 01:54:48,797 [ Epoch: 8; iter: 2990; loss: 0.702; load time: 0.019; train time: 0.010; slice time: 0.001;]
+2021-05-22 01:56:45,075 [ Epoch: 8; iter: 3040; loss: 0.513; load time: 0.022; train time: 0.010; slice time: 0.001;]
+2021-05-22 01:57:25,626 [ Epoch: 8; iter: 3000; loss: 0.285; load time: 0.019; train time: 0.011; slice time: 0.001;]
+2021-05-22 01:59:22,894 [ Epoch: 8; iter: 3050; loss: 0.307; load time: 0.022; train time: 0.010; slice time: 0.001;]
+2021-05-22 02:00:40,497 [ Epoch: 8; iter: 3010; loss: 0.422; load time: 0.020; train time: 0.011; slice time: 0.001;]
+2021-05-22 02:01:00,845 [ Epoch 8 completed. Time taken: 106.6 minutes. Load time: 0.18130743405789812 mins. Train time: 0.0855592799644404 mins]
+2021-05-22 02:01:00,846 [ Average loss: 0.224 ]
+2021-05-22 02:01:01,052 Epoch: 9
+2021-05-22 02:02:17,448 [ Epoch: 9; iter: 3060; loss: 0.735; load time: 0.000; train time: 0.000; slice time: 0.000;]
+2021-05-22 02:03:09,049 [ Epoch: 8; iter: 3020; loss: 0.611; load time: 0.020; train time: 0.011; slice time: 0.001;]
+2021-05-22 02:05:11,530 [ Epoch: 8; iter: 3030; loss: 0.296; load time: 0.021; train time: 0.011; slice time: 0.001;]
+2021-05-22 02:05:22,990 [ Epoch: 9; iter: 3070; loss: 0.534; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-22 02:07:59,052 [ Epoch: 9; iter: 3080; loss: 0.542; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-22 02:07:59,052 [ Epoch: 8; iter: 3040; loss: 0.542; load time: 0.021; train time: 0.011; slice time: 0.001;]
+2021-05-22 02:10:17,223 [ Epoch: 8; iter: 3050; loss: 0.300; load time: 0.022; train time: 0.012; slice time: 0.001;]
+2021-05-22 02:10:55,923 [ Epoch: 9; iter: 3090; loss: 0.302; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 02:11:46,125 Epoch: 9
+2021-05-22 02:13:59,304 [ Epoch: 9; iter: 3060; loss: 0.599; load time: 0.000; train time: 0.000; slice time: 0.000;]
+2021-05-22 02:15:16,759 [ Epoch: 9; iter: 3100; loss: 0.556; load time: 0.003; train time: 0.002; slice time: 0.000;]
+2021-05-22 02:17:02,908 [ Epoch: 9; iter: 3070; loss: 0.466; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-22 02:17:55,247 [ Epoch: 9; iter: 3110; loss: 0.283; load time: 0.003; train time: 0.002; slice time: 0.000;]
+2021-05-22 02:19:53,546 [ Epoch: 9; iter: 3080; loss: 0.298; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-22 02:20:32,092 [ Epoch: 9; iter: 3120; loss: 0.507; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-22 02:22:14,146 [ Epoch: 9; iter: 3090; loss: 0.321; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 02:23:19,639 [ Epoch: 9; iter: 3130; loss: 0.650; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-22 02:24:44,810 [ Epoch: 9; iter: 3100; loss: 0.725; load time: 0.003; train time: 0.002; slice time: 0.000;]
+2021-05-22 02:25:34,135 [ Epoch: 9; iter: 3140; loss: 0.516; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-22 02:27:29,058 [ Epoch: 9; iter: 3110; loss: 0.319; load time: 0.003; train time: 0.002; slice time: 0.000;]
+2021-05-22 02:28:18,629 [ Epoch: 9; iter: 3150; loss: 0.405; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-22 02:30:40,364 [ Epoch: 9; iter: 3120; loss: 0.701; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-22 02:31:15,576 [ Epoch: 9; iter: 3160; loss: 0.652; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-22 02:32:42,637 [ Epoch: 9; iter: 3130; loss: 0.291; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-22 02:34:17,358 [ Epoch: 9; iter: 3170; loss: 0.273; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-22 02:35:21,836 [ Epoch: 9; iter: 3140; loss: 0.307; load time: 0.005; train time: 0.003; slice time: 0.000;]
+2021-05-22 02:37:10,741 [ Epoch: 9; iter: 3180; loss: 0.525; load time: 0.007; train time: 0.004; slice time: 0.000;]
+2021-05-22 02:37:49,183 [ Epoch: 9; iter: 3150; loss: 0.400; load time: 0.005; train time: 0.003; slice time: 0.000;]
+2021-05-22 02:40:25,370 [ Epoch: 9; iter: 3190; loss: 0.258; load time: 0.008; train time: 0.004; slice time: 0.000;]
+2021-05-22 02:40:25,370 [ Epoch: 9; iter: 3160; loss: 0.387; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-22 02:42:36,083 [ Epoch: 9; iter: 3170; loss: 0.306; load time: 0.006; train time: 0.003; slice time: 0.000;]
+2021-05-22 02:42:50,593 [ Epoch: 9; iter: 3200; loss: 0.397; load time: 0.008; train time: 0.004; slice time: 0.001;]
+2021-05-22 02:45:24,660 [ Epoch: 9; iter: 3180; loss: 0.690; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-22 02:45:36,876 [ Epoch: 9; iter: 3210; loss: 0.544; load time: 0.009; train time: 0.005; slice time: 0.001;]
+2021-05-22 02:47:56,932 [ Epoch: 9; iter: 3220; loss: 0.534; load time: 0.009; train time: 0.005; slice time: 0.001;]
+2021-05-22 02:47:56,932 [ Epoch: 9; iter: 3190; loss: 0.534; load time: 0.007; train time: 0.004; slice time: 0.000;]
+2021-05-22 02:50:49,613 [ Epoch: 9; iter: 3200; loss: 0.259; load time: 0.008; train time: 0.004; slice time: 0.001;]
+2021-05-22 02:51:00,297 [ Epoch: 9; iter: 3230; loss: 0.504; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-22 02:53:17,376 [ Epoch: 9; iter: 3240; loss: 0.284; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-22 02:53:17,376 [ Epoch: 9; iter: 3210; loss: 0.686; load time: 0.008; train time: 0.004; slice time: 0.001;]
+2021-05-22 02:55:39,189 [ Epoch: 9; iter: 3250; loss: 0.296; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-22 02:55:39,189 [ Epoch: 9; iter: 3220; loss: 0.296; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-22 02:58:02,051 [ Epoch: 9; iter: 3260; loss: 0.365; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-22 02:58:13,350 [ Epoch: 9; iter: 3230; loss: 0.608; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-22 03:01:03,368 [ Epoch: 9; iter: 3270; loss: 0.394; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-22 03:01:03,368 [ Epoch: 9; iter: 3240; loss: 0.274; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-22 03:03:49,745 [ Epoch: 9; iter: 3280; loss: 0.296; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-22 03:04:43,787 [ Epoch: 9; iter: 3250; loss: 0.461; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-22 03:06:41,051 [ Epoch: 9; iter: 3290; loss: 0.427; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-22 03:08:01,841 [ Epoch: 9; iter: 3260; loss: 0.304; load time: 0.011; train time: 0.006; slice time: 0.001;]
+2021-05-22 03:09:56,105 [ Epoch: 9; iter: 3300; loss: 0.282; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-22 03:10:22,916 [ Epoch: 9; iter: 3270; loss: 0.421; load time: 0.011; train time: 0.006; slice time: 0.001;]
+2021-05-22 03:12:21,836 [ Epoch: 9; iter: 3310; loss: 0.262; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-22 03:13:34,380 [ Epoch: 9; iter: 3280; loss: 0.482; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-22 03:15:32,767 [ Epoch: 9; iter: 3320; loss: 0.466; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-22 03:18:20,197 [ Epoch: 9; iter: 3290; loss: 0.481; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-22 03:19:59,139 [ Epoch: 9; iter: 3330; loss: 0.437; load time: 0.015; train time: 0.007; slice time: 0.001;]
+2021-05-22 03:21:54,183 [ Epoch: 9; iter: 3300; loss: 0.384; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-22 03:23:15,715 [ Epoch: 9; iter: 3340; loss: 0.499; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:25:02,312 [ Epoch: 9; iter: 3310; loss: 0.475; load time: 0.014; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:25:56,530 [ Epoch: 9; iter: 3350; loss: 0.454; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:27:29,966 [ Epoch: 9; iter: 3320; loss: 0.704; load time: 0.014; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:28:33,717 [ Epoch: 9; iter: 3360; loss: 0.414; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:30:07,424 [ Epoch: 9; iter: 3330; loss: 0.243; load time: 0.015; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:31:23,764 [ Epoch: 9; iter: 3370; loss: 0.380; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:32:40,726 [ Epoch: 9; iter: 3340; loss: 0.266; load time: 0.015; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:33:40,856 [ Epoch: 9; iter: 3380; loss: 0.465; load time: 0.018; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:35:37,842 [ Epoch: 9; iter: 3350; loss: 0.270; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:36:03,489 [ Epoch: 9; iter: 3390; loss: 0.555; load time: 0.018; train time: 0.008; slice time: 0.001;]
+2021-05-22 03:38:41,008 [ Epoch: 9; iter: 3360; loss: 0.393; load time: 0.016; train time: 0.009; slice time: 0.001;]
+2021-05-22 03:38:54,860 [ Epoch: 9; iter: 3400; loss: 0.403; load time: 0.019; train time: 0.009; slice time: 0.001;]
+2021-05-22 03:40:58,260 [ Epoch: 9; iter: 3410; loss: 0.260; load time: 0.019; train time: 0.009; slice time: 0.001;]
+2021-05-22 03:41:27,593 [ Epoch: 9; iter: 3370; loss: 0.554; load time: 0.017; train time: 0.009; slice time: 0.001;]
+2021-05-22 03:43:40,877 [ Epoch: 9; iter: 3380; loss: 0.424; load time: 0.017; train time: 0.009; slice time: 0.001;]
+2021-05-22 03:43:51,077 [ Epoch: 9; iter: 3420; loss: 0.691; load time: 0.020; train time: 0.009; slice time: 0.001;]
+2021-05-22 03:46:28,563 [ Epoch: 9; iter: 3430; loss: 0.558; load time: 0.020; train time: 0.009; slice time: 0.001;]
+2021-05-22 03:46:43,312 [ Epoch: 9; iter: 3390; loss: 0.335; load time: 0.018; train time: 0.009; slice time: 0.001;]
+2021-05-22 03:48:43,362 [ Epoch 9 completed. Time taken: 107.7 minutes. Load time: 0.18537107608289216 mins. Train time: 0.08440641121090392 mins]
+2021-05-22 03:48:43,363 [ Average loss: 0.215 ]
+2021-05-22 03:48:43,597 Epoch: 10
+2021-05-22 03:49:11,321 [ Epoch: 9; iter: 3400; loss: 0.426; load time: 0.018; train time: 0.009; slice time: 0.001;]
+2021-05-22 03:49:25,013 [ Epoch: 10; iter: 3440; loss: 0.686; load time: 0.000; train time: 0.000; slice time: 0.000;]
+2021-05-22 03:51:50,173 [ Epoch: 10; iter: 3450; loss: 0.383; load time: 0.001; train time: 0.000; slice time: 0.000;]
+2021-05-22 03:52:27,686 [ Epoch: 9; iter: 3410; loss: 0.689; load time: 0.018; train time: 0.010; slice time: 0.001;]
+2021-05-22 03:54:19,453 [ Epoch: 10; iter: 3460; loss: 0.307; load time: 0.001; train time: 0.000; slice time: 0.000;]
+2021-05-22 03:55:35,440 [ Epoch: 9; iter: 3420; loss: 0.253; load time: 0.019; train time: 0.010; slice time: 0.001;]
+2021-05-22 03:57:04,491 [ Epoch: 10; iter: 3470; loss: 0.368; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 03:58:20,491 [ Epoch: 9; iter: 3430; loss: 0.329; load time: 0.019; train time: 0.010; slice time: 0.001;]
+2021-05-22 03:59:49,743 [ Epoch: 10; iter: 3480; loss: 0.268; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 04:00:32,558 Epoch: 10
+2021-05-22 04:01:08,339 [ Epoch: 10; iter: 3440; loss: 0.500; load time: 0.000; train time: 0.000; slice time: 0.000;]
+2021-05-22 04:02:09,241 [ Epoch: 10; iter: 3490; loss: 0.296; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-22 04:04:04,086 [ Epoch: 10; iter: 3450; loss: 0.564; load time: 0.001; train time: 0.000; slice time: 0.000;]
+2021-05-22 04:04:52,381 [ Epoch: 10; iter: 3500; loss: 0.400; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-22 04:06:33,766 [ Epoch: 10; iter: 3460; loss: 0.479; load time: 0.001; train time: 0.001; slice time: 0.000;]
+2021-05-22 04:07:52,356 [ Epoch: 10; iter: 3510; loss: 0.516; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-22 04:09:28,043 [ Epoch: 10; iter: 3470; loss: 0.411; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 04:10:57,561 [ Epoch: 10; iter: 3520; loss: 0.673; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-22 04:12:17,685 [ Epoch: 10; iter: 3480; loss: 0.271; load time: 0.002; train time: 0.001; slice time: 0.000;]
+2021-05-22 04:14:06,510 [ Epoch: 10; iter: 3530; loss: 0.404; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-22 04:15:22,298 [ Epoch: 10; iter: 3490; loss: 0.497; load time: 0.003; train time: 0.001; slice time: 0.000;]
+2021-05-22 04:16:17,434 [ Epoch: 10; iter: 3540; loss: 0.394; load time: 0.005; train time: 0.002; slice time: 0.000;]
+2021-05-22 04:17:55,580 [ Epoch: 10; iter: 3500; loss: 0.279; load time: 0.003; train time: 0.002; slice time: 0.000;]
+2021-05-22 04:18:59,595 [ Epoch: 10; iter: 3550; loss: 0.244; load time: 0.006; train time: 0.002; slice time: 0.000;]
+2021-05-22 04:22:26,149 [ Epoch: 10; iter: 3510; loss: 0.368; load time: 0.004; train time: 0.002; slice time: 0.000;]
+2021-05-22 04:22:42,106 [ Epoch: 10; iter: 3560; loss: 0.522; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-22 04:25:15,039 [ Epoch: 10; iter: 3570; loss: 0.541; load time: 0.007; train time: 0.003; slice time: 0.000;]
+2021-05-22 04:25:41,412 [ Epoch: 10; iter: 3520; loss: 0.503; load time: 0.004; train time: 0.003; slice time: 0.000;]
+2021-05-22 04:28:33,805 [ Epoch: 10; iter: 3580; loss: 0.246; load time: 0.008; train time: 0.003; slice time: 0.000;]
+2021-05-22 04:28:46,811 [ Epoch: 10; iter: 3530; loss: 0.257; load time: 0.005; train time: 0.003; slice time: 0.000;]
+2021-05-22 04:31:28,618 [ Epoch: 10; iter: 3590; loss: 0.345; load time: 0.008; train time: 0.003; slice time: 0.001;]
+2021-05-22 04:31:56,230 [ Epoch: 10; iter: 3540; loss: 0.262; load time: 0.005; train time: 0.003; slice time: 0.000;]
+2021-05-22 04:34:14,855 [ Epoch: 10; iter: 3600; loss: 0.392; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-22 04:34:50,600 [ Epoch: 10; iter: 3550; loss: 0.321; load time: 0.006; train time: 0.004; slice time: 0.000;]
+2021-05-22 04:37:00,982 [ Epoch: 10; iter: 3610; loss: 0.557; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-22 04:37:25,586 [ Epoch: 10; iter: 3560; loss: 0.522; load time: 0.006; train time: 0.004; slice time: 0.000;]
+2021-05-22 04:39:39,429 [ Epoch: 10; iter: 3620; loss: 0.245; load time: 0.009; train time: 0.004; slice time: 0.001;]
+2021-05-22 04:39:54,689 [ Epoch: 10; iter: 3570; loss: 0.384; load time: 0.007; train time: 0.004; slice time: 0.000;]
+2021-05-22 04:42:34,978 [ Epoch: 10; iter: 3630; loss: 0.404; load time: 0.010; train time: 0.004; slice time: 0.001;]
+2021-05-22 04:42:46,450 [ Epoch: 10; iter: 3580; loss: 0.542; load time: 0.007; train time: 0.004; slice time: 0.000;]
+2021-05-22 04:44:53,257 [ Epoch: 10; iter: 3590; loss: 0.230; load time: 0.007; train time: 0.004; slice time: 0.001;]
+2021-05-22 04:46:08,418 [ Epoch: 10; iter: 3640; loss: 0.687; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-22 04:47:13,914 [ Epoch: 10; iter: 3600; loss: 0.537; load time: 0.008; train time: 0.005; slice time: 0.001;]
+2021-05-22 04:48:37,897 [ Epoch: 10; iter: 3650; loss: 0.489; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-22 04:50:05,420 [ Epoch: 10; iter: 3610; loss: 0.246; load time: 0.008; train time: 0.005; slice time: 0.001;]
+2021-05-22 04:51:59,555 [ Epoch: 10; iter: 3660; loss: 0.537; load time: 0.011; train time: 0.005; slice time: 0.001;]
+2021-05-22 04:52:33,727 [ Epoch: 10; iter: 3620; loss: 0.528; load time: 0.009; train time: 0.005; slice time: 0.001;]
+2021-05-22 04:54:39,621 [ Epoch: 10; iter: 3670; loss: 0.640; load time: 0.012; train time: 0.005; slice time: 0.001;]
+2021-05-22 04:54:53,775 [ Epoch: 10; iter: 3630; loss: 0.419; load time: 0.009; train time: 0.005; slice time: 0.001;]
+2021-05-22 04:57:24,182 [ Epoch: 10; iter: 3680; loss: 0.523; load time: 0.012; train time: 0.006; slice time: 0.001;]
+2021-05-22 04:57:24,182 [ Epoch: 10; iter: 3640; loss: 0.523; load time: 0.010; train time: 0.005; slice time: 0.001;]
+2021-05-22 05:00:02,179 [ Epoch: 10; iter: 3690; loss: 0.520; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-22 05:00:37,229 [ Epoch: 10; iter: 3650; loss: 0.683; load time: 0.010; train time: 0.006; slice time: 0.001;]
+2021-05-22 05:02:31,773 [ Epoch: 10; iter: 3700; loss: 0.283; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-22 05:03:35,392 [ Epoch: 10; iter: 3660; loss: 0.287; load time: 0.010; train time: 0.006; slice time: 0.001;]
+2021-05-22 05:05:21,256 [ Epoch: 10; iter: 3710; loss: 0.326; load time: 0.013; train time: 0.006; slice time: 0.001;]
+2021-05-22 05:05:48,552 [ Epoch: 10; iter: 3670; loss: 0.262; load time: 0.011; train time: 0.006; slice time: 0.001;]
+2021-05-22 05:08:53,863 [ Epoch: 10; iter: 3720; loss: 0.247; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-22 05:08:53,863 [ Epoch: 10; iter: 3680; loss: 0.378; load time: 0.011; train time: 0.006; slice time: 0.001;]
+2021-05-22 05:11:35,255 [ Epoch: 10; iter: 3730; loss: 0.550; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-22 05:11:49,467 [ Epoch: 10; iter: 3690; loss: 0.508; load time: 0.012; train time: 0.007; slice time: 0.001;]
+2021-05-22 05:14:05,871 [ Epoch: 10; iter: 3740; loss: 0.268; load time: 0.015; train time: 0.007; slice time: 0.001;]
+2021-05-22 05:14:57,322 [ Epoch: 10; iter: 3700; loss: 0.292; load time: 0.012; train time: 0.007; slice time: 0.001;]
+2021-05-22 05:17:00,501 [ Epoch: 10; iter: 3750; loss: 0.278; load time: 0.015; train time: 0.007; slice time: 0.001;]
+2021-05-22 05:17:14,682 [ Epoch: 10; iter: 3710; loss: 0.370; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-22 05:19:37,288 [ Epoch: 10; iter: 3720; loss: 0.384; load time: 0.013; train time: 0.007; slice time: 0.001;]
+2021-05-22 05:20:03,533 [ Epoch: 10; iter: 3760; loss: 0.525; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-22 05:21:45,870 [ Epoch: 10; iter: 3730; loss: 0.244; load time: 0.014; train time: 0.007; slice time: 0.001;]
+2021-05-22 05:24:19,889 [ Epoch: 10; iter: 3770; loss: 0.629; load time: 0.016; train time: 0.008; slice time: 0.001;]
+2021-05-22 05:25:14,143 [ Epoch: 10; iter: 3740; loss: 0.376; load time: 0.014; train time: 0.008; slice time: 0.001;]
+2021-05-22 05:28:08,413 [ Epoch: 10; iter: 3780; loss: 0.285; load time: 0.017; train time: 0.008; slice time: 0.001;]
+2021-05-22 05:28:21,951 [ Epoch: 10; iter: 3750; loss: 0.362; load time: 0.014; train time: 0.008; slice time: 0.001;]
+2021-05-22 05:31:20,965 [ Epoch: 10; iter: 3760; loss: 0.281; load time: 0.015; train time: 0.008; slice time: 0.001;]
+2021-05-22 05:31:35,929 [ Epoch: 10; iter: 3790; loss: 0.365; load time: 0.017; train time: 0.009; slice time: 0.001;]
+2021-05-22 05:34:09,698 [ Epoch: 10; iter: 3770; loss: 0.403; load time: 0.015; train time: 0.008; slice time: 0.001;]
+2021-05-22 05:34:59,815 [ Epoch: 10; iter: 3800; loss: 0.415; load time: 0.018; train time: 0.009; slice time: 0.001;]
+2021-05-22 05:36:45,029 [ Epoch: 10; iter: 3780; loss: 0.695; load time: 0.016; train time: 0.009; slice time: 0.001;]
+2021-05-22 05:36:57,337 [ Epoch: 10; iter: 3810; loss: 0.365; load time: 0.018; train time: 0.009; slice time: 0.001;]
+2021-05-22 05:39:27,130 [ Epoch: 10; iter: 3820; loss: 0.520; load time: 0.019; train time: 0.009; slice time: 0.001;]
+2021-05-22 05:39:27,130 [ Epoch: 10; iter: 3790; loss: 0.520; load time: 0.016; train time: 0.009; slice time: 0.001;]
+2021-05-22 05:39:27,143 [ Epoch 10 completed. Time taken: 110.7 minutes. Load time: 0.18628530768615845 mins. Train time: 0.09160145634547982 mins]
+2021-05-22 05:39:27,143 [ Average loss: 0.210 ]
+2021-05-22 05:39:27,382 Epochs ended
+2021-05-22 05:39:27,525 Closing envs
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 58, in execute_exp
+    trainer.train()
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/contextlib.py", line 52, in inner
+    return func(*args, **kwds)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rearrangement/il/behavior_cloning_distrib_trainer.py", line 459, in train
+    loss.backward()
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/tensor.py", line 221, in backward
+    torch.autograd.backward(self, gradient, retain_graph, create_graph)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/autograd/__init__.py", line 132, in backward
+    allow_unreachable=True)  # allow_unreachable flag
+RuntimeError: [/opt/conda/conda-bld/pytorch_1607370120218/work/third_party/gloo/gloo/transport/tcp/pair.cc:575] Connection closed by peer [100.96.167.36]:50048
+slurmstepd: error: *** JOB 41633735 ON learnfair1630 CANCELLED AT 2021-05-22T17:49:41 ***
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.

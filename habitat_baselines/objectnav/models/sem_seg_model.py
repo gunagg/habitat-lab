@@ -216,8 +216,10 @@ class SemSegSeqNet(Net):
                 observations["objectgoal"].long()
             ]
             idx = idx.to(obj_semantic.device)
+            if len(idx.size()) == 3:
+                idx = idx.squeeze(1)
 
-            goal_visible_pixels = (obj_semantic == idx.squeeze(1)).sum(dim=1) # Sum over all since we're not batched
+            goal_visible_pixels = (obj_semantic == idx).sum(dim=1) # Sum over all since we're not batched
             goal_visible_area = torch.true_divide(goal_visible_pixels, obj_semantic.size(-1))
 
             return goal_visible_area.unsqueeze(-1)

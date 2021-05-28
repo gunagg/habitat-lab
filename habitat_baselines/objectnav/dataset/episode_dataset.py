@@ -141,7 +141,7 @@ class ObjectNavEpisodeDataset(Dataset):
 
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(1e11),
+                map_size=int(5e11),
                 writemap=True,
             )
 
@@ -272,7 +272,7 @@ class ObjectNavEpisodeDataset(Dataset):
         if self.lmdb_env is None:
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(1e11),
+                map_size=int(5e11),
                 writemap=True,
             )
             self.lmdb_txn = self.lmdb_env.begin()

@@ -9,7 +9,7 @@ import seaborn as sns
 import gzip
 
 from collections import defaultdict
-from psiturk_dataset.utils.utils import write_json, write_gzip, load_dataset
+from psiturk_dataset.utils.utils import write_json, write_gzip, load_dataset, load_json_dataset
 from tqdm import tqdm
 
 # eval success episodes
@@ -79,20 +79,43 @@ def sample_episodes_by_episode_ids(path, output_path):
     write_gzip(output_path, output_path)
 
 
-def sample_objectnav_episodes(path, output_path):
+def sample_objectnav_episodes(path, output_path, prev_tasks):
+    prev_task_files = glob.glob(prev_tasks + "/*.json")
+    prev_episode_points = {}
+    for prev_task in prev_task_files:
+        data = load_json_dataset(prev_task)
+        for ep in data["episodes"]:
+            key = str(ep["start_position"])
+            if key not in prev_episode_points.keys():
+                prev_episode_points[key] = 0
+            prev_episode_points[key] += 1
+
     files = glob.glob(path + "/*.json.gz")
     hits = []
     scene_ep_map = defaultdict(int)
+    num_duplicates = 0
+    total_episodes = 0
+    print("Number of existing episodes: {}".format(len(prev_episode_points.keys())))
     for file_path in files:
         data = load_dataset(file_path)
         scene_id = file_path.split("/")[-1].split(".")[0]
         object_category_map = defaultdict(int)
         episodes = []
+        count = 0
         for episode in data["episodes"]:
+            key = str(episode["start_position"])
+            if prev_episode_points.get(key) is not None and prev_episode_points[key] > 0:
+                num_duplicates += 1
+                continue
             object_category = episode["object_category"]
-            if object_category_map[object_category] < 5:
+            if object_category_map[object_category] < 10:
                 object_category_map[object_category] += 1
                 episodes.append(episode)
+                if key not in prev_episode_points.keys():
+                    prev_episode_points[key] = 0
+                prev_episode_points[key] += 1
+                count += 1
+
         data["episodes"] = episodes
         dest_path = os.path.join(output_path, "{}.json".format(scene_id))
         write_json(data, dest_path)
@@ -102,14 +125,15 @@ def sample_objectnav_episodes(path, output_path):
         data["episodes"] = episodes[:1]
         dest_path = os.path.join(output_path, "{}_train.json".format(scene_id))
         write_json(data, dest_path)
+        total_episodes += len(episodes)
 
         ep = {
             "name": "{}.json".format(scene_id),
-            "config": "tasks/objectnav/{}.json".format(scene_id),
+            "config": "tasks/objectnav_v2/{}.json".format(scene_id),
             "scene": "{}.glb".format(scene_id),
             "trainingTask": {
                 "name": "{}_train.json".format(scene_id),
-                "config": "tasks/objectnav/{}_train.json".format(scene_id)
+                "config": "tasks/objectnav_v2/{}_train.json".format(scene_id)
             }
         }
 
@@ -119,6 +143,10 @@ def sample_objectnav_episodes(path, output_path):
         f.write(json.dumps(hits, indent=4))
     with open("scene_ep_map.json", "w") as f:
         f.write(json.dumps(scene_ep_map))
+
+    print("Number of new episodes: {}".format(total_episodes))
+    print("Number of duplicate episodes: {}".format(num_duplicates))
+    print("Number of new episodes: {}".format(len(prev_episode_points.keys())))
 
 
 def sample_episodes_by_scene(path, output_path, limit=500):
@@ -198,11 +226,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--objectnav", dest='is_objectnav', action='store_true'
     )
+    parser.add_argument(
+        "--prev-tasks", type=str, default="data/datasets/objectnav_mp3d_v2/train/sampled/"
+    )
     args = parser.parse_args()
     if args.sample_episodes and not args.is_objectnav and not args.per_scene:
         sample_episodes_by_episode_ids(args.input_path, args.output_path)
     elif args.sample_episodes and args.is_objectnav:
-        sample_objectnav_episodes_custom(args.input_path, args.output_path)
+        sample_objectnav_episodes(args.input_path, args.output_path, args.prev_tasks)
     elif args.per_scene and args.sample_episodes:
         sample_episodes_by_scene(args.input_path, args.output_path, args.limit)
     else:

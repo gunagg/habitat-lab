@@ -80,6 +80,8 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
     with habitat.Env(cfg) as env:
         obs_list = []
         total_success = 0
+        total_spl = 0
+        total_coverage = 0
         num_episodes = len(env.episodes)
 
         print("Total episodes: {}".format(len(env.episodes)))
@@ -102,13 +104,13 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 "episodeLength": len(env.current_episode.reference_replay)
             }
             instructions.append(data)
-            step_index = 0
+            step_index = 1
             grab_seen = False
             grab_count = 0
             success = 0
             total_reward = 0.0
             episode = env.current_episode
-            
+
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
                     log_action_data(data, i)
@@ -139,19 +141,23 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 i+=1
             
             total_success += success
-            save_image(frame, "s_path_{}.png".format(ep_id))
-            make_videos([observation_list], output_prefix, ep_id)
+            total_spl += info["spl"]
+            total_coverage += info["coverage"]["reached"]
+            # save_image(frame, "s_path_{}.png".format(ep_id))
+            # make_videos([observation_list], output_prefix, ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, success))
 
-        print("Episode success: {}".format(total_success / num_episodes))
+        print("Average success: {} - {} - {}".format(total_success / num_episodes, total_success, num_episodes))
+        print("Average SPL: {} - {} - {}".format(total_spl / num_episodes, total_spl, num_episodes))
+        print("Average Coverage: {} - {} - {}".format(total_coverage / num_episodes, total_coverage, num_episodes))
 
         if os.path.isfile("instructions.json"):
             inst_file = open("instructions.json", "r")
             existing_instructions = json.loads(inst_file.read())
             instructions.extend(existing_instructions)
 
-        inst_file = open("instructions.json", "w")
-        inst_file.write(json.dumps(instructions))
+        # inst_file = open("instructions.json", "w")
+        # inst_file.write(json.dumps(instructions))
         return obs_list
 
 

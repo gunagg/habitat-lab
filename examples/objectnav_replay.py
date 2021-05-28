@@ -131,6 +131,36 @@ def setup_model(observation_space, action_space, device):
     model.to(device)
     return model
 
+
+def parse_gt_semantic(sim, semantic_obs):
+    # obtain mapping from instance id to semantic label id
+    scene = sim.semantic_annotations()
+
+    instance_id_to_label_id = {int(obj.id.split("_")[-1]): obj.category.index() for obj in scene.objects}
+    mapping = np.array([ instance_id_to_label_id[i] for i in range(len(instance_id_to_label_id)) ])
+
+    # ! MP3D object id to category ID mapping
+    # Should raise a warning, but just driving ahead for now
+    if mapping.size > 0:
+        semantic_obs = np.take(mapping, semantic_obs)
+    else:
+        semantic_obs = semantic_obs.astype(int)
+    return semantic_obs.astype(int)
+
+
+def get_goal_semantic(sem_obs, object_oal, task_cat2mpcat40, episode):
+    obj_semantic = sem_obs
+    task_cat2mpcat40 = torch.tensor(task_cat2mpcat40)
+    idx = task_cat2mpcat40[
+        torch.Tensor(object_oal).long()
+    ]
+    idx = idx.to(obj_semantic.device)
+
+    goal_visible_pixels = (obj_semantic == idx) # Sum over all since we're not batched
+    return goal_visible_pixels.long()
+
+
+
 def run_reference_replay(
     cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None, task_cat2mpcat40=None, sem_seg=False
 ):
@@ -146,6 +176,7 @@ def run_reference_replay(
         semantic_predictor = load_rednet(
                 device,
                 ckpt="data/rednet-models/rednet_semmap_mp3d_tuned.pth",
+                # ckpt="data/rednet-models/rednet_semmap_mp3d_40.pth",
                 resize=True # since we train on half-vision
             )
     
@@ -153,9 +184,11 @@ def run_reference_replay(
         obs_list = []
         success = 0
         spl = 0
+        total_coverage = 0
+        norm_coverage = 0
+        coverage = 0
 
-        if num_episodes is None:
-            num_episodes = len(env.episodes)
+        num_episodes = 0
         
         # observation_space = env.observation_space
         # action_space = env.action_space
@@ -166,7 +199,6 @@ def run_reference_replay(
 
         print("Total episodes: {}".format(len(env.episodes)))
         fails = []
-        ep_idd = 0
         for ep_id in range(len(env.episodes)):
             observation_list = []
             print("before reset")
@@ -192,7 +224,7 @@ def run_reference_replay(
             total_reward = 0.0
             episode = env.current_episode
             ep_success = 0
-            ep_idd += 1
+
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
                     log_action_data(data, i)
@@ -209,9 +241,13 @@ def run_reference_replay(
                 if semantic_predictor is not None:
                     sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
                     # sem_obs_2 = semantic_predictor_2(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
-                    frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs, "gt_semantic": sem_obs_2}, info)
+                    sem_obs_2 = parse_gt_semantic(env._sim, observations["semantic"])
+                    sem_obs_2 = torch.Tensor(sem_obs_2).unsqueeze(0).long().to(device)
                     observations["predicted_sem_obs"] = sem_obs
-                    # observations["semantic"] = sem_obs_2
+                    observations["semantic"] = sem_obs_2
+                    sem_obs_goal = get_goal_semantic(sem_obs, observations["objectgoal"], task_cat2mpcat40, episode)
+                    sem_obs_gt_goal = get_goal_semantic(sem_obs_2, observations["objectgoal"], task_cat2mpcat40, episode)
+                    frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)                    
 
                 frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
 
@@ -219,16 +255,23 @@ def run_reference_replay(
                     ep_success = 1
 
                 observation_list.append(frame)
+                if action_name == "STOP":
+                    break
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
-            print("Total reward for trajectory: {} - {}".format(total_reward, grab_count))
+            print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
             success += ep_success
             spl += info["spl"]
+            # coverage += info["coverage"]["reached"]
+            # total_coverage += info["top_down_map"]["fog_of_war_mask"].sum()
+            # norm_coverage += (info["top_down_map"]["fog_of_war_mask"].sum() / info["top_down_map"]["fog_of_war_mask"].size)
+            num_episodes += 1
+            ## print("Coverage: {} - {}".format(info["top_down_map"]["fog_of_war_mask"].sum(), info["top_down_map"]["fog_of_war_mask"].size))
 
             if sem_seg:
                 goal_visible_area, goal_visible_area_gt = get_goal_visible_area(observations, task_cat2mpcat40, episode)
+                print("Goal visible area: {}, GT: {}".format(goal_visible_area, goal_visible_area_gt))
 
-            print("Goal visible area: {}, GT: {}".format(goal_visible_area, goal_visible_area_gt))
             if ep_success == 0:
                 fails.append({
                     "episodeId": instructions[-1]["episodeId"],
@@ -237,7 +280,13 @@ def run_reference_replay(
 
         print("Total episode success: {}".format(success))
         print("SPL: {}, {}, {}".format(spl/num_episodes, spl, num_episodes))
+        print("Success: {}, {}, {}".format(success/num_episodes, success, num_episodes))
+        print("Coverage (Fog Of War): {}, {}, {}".format(total_coverage/num_episodes, total_coverage, num_episodes))
+        print("Norm Coverage (Fog Of War): {}, {}, {}".format(norm_coverage/num_episodes, norm_coverage, num_episodes))
+        print("Coverage: {}, {}, {}".format(coverage/num_episodes, coverage, num_episodes))
         print("Failed episodes: {}".format(fails))
+        inst_file = open("instructions.json", "w")
+        inst_file.write(json.dumps(instructions))
         return obs_list
 
 
@@ -258,7 +307,7 @@ def main():
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
-    # cfg.DATASET.DATA_PATH = args.replay_episode
+    cfg.DATASET.DATA_PATH = args.replay_episode
     # cfg.DATASET.CONTENT_SCENES = ["D7G3Y4RVNrH"]
     cfg.freeze()
 

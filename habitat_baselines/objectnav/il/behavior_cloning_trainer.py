@@ -384,7 +384,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                         T, N = gt_next_action_sample.shape
                         logits = logits.view(T, N, -1)
-                        pred_actions = torch.argmax(logits, dim=2)
+                        # pred_actions = torch.argmax(logits, dim=2)
 
                         action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
                         denom = inflec_weights_sample.sum(0)

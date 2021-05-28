@@ -85,9 +85,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        # self.device = (
-        #     torch.device("cpu")
-        # )
 
     def _make_results_dir(self, split="val"):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
