@@ -439,34 +439,38 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
                         avg_slice_time += ((time.time() - slice_start_time) / 60)
 
                         train_time = time.time()
+                        logger.info("Before sync: {} - {}/{} - {}".format(self.model.require_backward_grad_sync, i, num_steps))
 
-                        logits, rnn_hidden_states = self.model(
-                            observations_batch_sample,
-                            rnn_hidden_states,
-                            gt_prev_action_sample,
-                            episode_not_dones_sample
-                        )
+                        with (self.model.no_sync() if i != num_steps - 1 else contextlib.suppress()):
+                            logger.info("No sync: {} - {}/{} - {}".format(self.model.require_backward_grad_sync, i, num_steps))
+                            logits, rnn_hidden_states = self.model(
+                                observations_batch_sample,
+                                rnn_hidden_states,
+                                gt_prev_action_sample,
+                                episode_not_dones_sample
+                            )
 
-                        T, N = gt_next_action_sample.shape
-                        logits = logits.view(T, N, -1)
-                        pred_actions = torch.argmax(logits, dim=2)
+                            T, N = gt_next_action_sample.shape
+                            logits = logits.view(T, N, -1)
 
-                        action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
-                        denom = inflec_weights_sample.sum(0)
-                        denom[denom == 0.0] = 1
-                        action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
-                        loss = (action_loss / num_steps)
-                        loss.backward()
-                        # Sync loss
-                        stats = torch.tensor(
-                            [loss.detach().item()],
-                            device=self.device,
-                        )
-                        distrib.all_reduce(stats)
-                        batch_loss += stats[0].item()
-                        rnn_hidden_states = rnn_hidden_states.detach()
+                            action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
+                            denom = inflec_weights_sample.sum(0)
+                            denom[denom == 0.0] = 1
+                            action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
+                            loss = (action_loss / num_steps)
+                            loss.backward()
+                            batch_loss += loss.item()
 
-                        avg_train_time += ((time.time() - train_time) / 60)
+                    # Sync loss
+                    stats = torch.tensor(
+                        [batch_loss],
+                        device=self.device,
+                    )
+                    distrib.all_reduce(stats)
+                    batch_loss += stats[0].item()
+                    rnn_hidden_states = rnn_hidden_states.detach()
+
+                    avg_train_time += ((time.time() - train_time) / 60)
 
                     if t % config.LOG_INTERVAL == 0:
                         logger.info(

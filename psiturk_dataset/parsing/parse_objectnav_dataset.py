@@ -247,7 +247,7 @@ def convert_to_episode(csv_reader):
     return episode, episode_length
 
 
-def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_length=1500, sample=False):
+def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_length=1000, sample=False):
     all_episodes = {
         "episodes": []
     }

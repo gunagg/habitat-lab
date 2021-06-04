@@ -31,6 +31,7 @@ from habitat_baselines.rl.ppo.policy import Net
 from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetNet
 from habitat_baselines.objectnav.models.rednet import load_rednet
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
+from habitat_baselines.rl.ddppo.algo.ddppo import DecentralizedDistributedMixin
 
 from habitat.utils.visualizations.utils import observations_to_image, images_to_video
 
@@ -99,18 +100,18 @@ class SemSegSeqNet(Net):
         sem_seg_output_size = 0
         self.semantic_predictor = None
         if model_config.USE_SEMANTICS:
-            self.semantic_predictor = load_rednet(
-                device,
-                ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
-                resize=True # since we train on half-vision
-            )
-            # Disable gradients
-            for param in self.semantic_predictor.parameters():
-                param.requires_grad_(False)
-            self.semantic_predictor.eval()
+            # self.semantic_predictor = load_rednet(
+            #     device,
+            #     ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
+            #     resize=True # since we train on half-vision
+            # )
+            # self.semantic_predictor.eval()
+            # # Disable gradients
+            # for param in self.semantic_predictor.parameters():
+            #     param.requires_grad_(False)
 
             sem_embedding_size = model_config.SEMANTIC_ENCODER.embedding_size
-            self.semantic_embedder = nn.Embedding(40 + 2, sem_embedding_size)
+            # self.semantic_embedder = nn.Embedding(40 + 2, sem_embedding_size)
 
             rgb_shape = observation_space.spaces["rgb"].shape
             spaces = {
@@ -212,6 +213,11 @@ class SemSegSeqNet(Net):
         # recalculating to keep this self-contained instead of depending on training infra
         if "semantic" in observations and "objectgoal" in observations:
             obj_semantic = observations["semantic"].flatten(start_dim=1)
+            
+            if len(observations["objectgoal"].size()) == 3:
+                observations["objectgoal"] = observations["objectgoal"].view(
+                    -1, observations["objectgoal"].size(2)
+                )
             idx = self.task_cat2mpcat40[
                 observations["objectgoal"].long()
             ]
@@ -233,15 +239,21 @@ class SemSegSeqNet(Net):
 
         rgb_obs = observations["rgb"]
         depth_obs = observations["depth"]
+        semantic_obs = observations["semantic"]
 
         if len(rgb_obs.size()) == 5:
             observations["rgb"] = rgb_obs.contiguous().view(
                 -1, rgb_obs.size(2), rgb_obs.size(3), rgb_obs.size(4)
             )
-        
+
         if len(depth_obs.size()) == 5:
             observations["depth"] = depth_obs.contiguous().view(
                 -1, depth_obs.size(2), depth_obs.size(3), depth_obs.size(4)
+            )
+
+        if len(semantic_obs.size()) == 4:
+            observations["semantic"] = semantic_obs.contiguous().view(
+                -1, semantic_obs.size(2), semantic_obs.size(3)
             )
 
         depth_embedding = self.depth_encoder(observations)
@@ -255,8 +267,7 @@ class SemSegSeqNet(Net):
         x = [depth_embedding, rgb_embedding]
 
         if self.model_config.USE_SEMANTICS:
-            observations["semantic"] = self.get_semantic_observations(observations)
-
+            # observations["semantic"] = self.get_semantic_observations(observations)
             if self.model_config.embed_sge:
                 sge_embedding = self._extract_sge(observations)
                 x.append(sge_embedding)
@@ -327,3 +338,30 @@ class SemSegSeqModel(nn.Module):
         distribution = self.action_distribution(features)
 
         return distribution.logits, rnn_hidden_states
+
+class SemSegSeqPolicy(nn.Module):
+    def __init__(
+        self, observation_space: Space, action_space: Space, model_config: Config, device
+    ):
+        super().__init__()
+        self.actor_critic = SemSegSeqModel(
+            observation_space=observation_space,
+            model_config=model_config,
+            action_space=action_space,
+            device=device,
+        )
+        self.device = device
+    
+    def forward(
+        self, observations, rnn_hidden_states, prev_actions, masks
+    ) -> CustomFixedCategorical:
+
+        logits, rnn_hidden_states = self.actor_critic(
+            observations, rnn_hidden_states, prev_actions, masks
+        )
+
+        return logits, rnn_hidden_states
+
+
+class DDPSemSegSeqModel(DecentralizedDistributedMixin, SemSegSeqPolicy):
+    pass

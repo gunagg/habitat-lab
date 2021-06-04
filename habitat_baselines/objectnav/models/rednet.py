@@ -394,12 +394,15 @@ class RedNetResizeWrapper(nn.Module):
         if self.resize:
             rgb = F.interpolate(rgb, self.pretrained_size, mode='bilinear')
             depth = F.interpolate(depth, self.pretrained_size, mode='nearest')
+        
+        semmap_rgb_norm = self.semmap_rgb_norm.to(rgb.device)
 
-        rgb = self.semmap_rgb_norm(rgb)
+        rgb = semmap_rgb_norm(rgb)
 
         depth_clip = (depth < 1.0).squeeze(1)
         # depth_clip = ((depth < 1.0) & (depth > 0.0)).squeeze(1)
-        depth = self.semmap_depth_norm(depth)
+        semmap_depth_norm = self.semmap_depth_norm.to(depth.device)
+        depth = semmap_depth_norm(depth)
         with torch.no_grad():
             scores = self.rednet(rgb, depth)
             pred = (torch.max(scores, 1)[1] + 1).float() # B x 480 x 640

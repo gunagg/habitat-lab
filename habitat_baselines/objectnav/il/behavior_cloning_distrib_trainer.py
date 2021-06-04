@@ -38,7 +38,7 @@ from habitat_baselines.common.obs_transformers import (
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, collate_fn
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
-from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
+from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel, DDPSemSegSeqModel
 from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.utils.common import (
@@ -221,6 +221,7 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
             model = SingleResNetSeqModel(observation_space, action_space, model_config, device)
         elif model_config.USE_SEMANTICS:
             model = SemSegSeqModel(observation_space, action_space, model_config, device)
+            # model = DDPSemSegSeqModel(observation_space, action_space, model_config, device)
         else:
             model = Seq2SeqModel(observation_space, action_space, model_config)
         return model   
@@ -330,10 +331,14 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
         # Distributed data parallel setup
         if torch.cuda.is_available():
             self.model = torch.nn.parallel.DistributedDataParallel(
-                self.model, device_ids=[self.device], output_device=self.device
+                self.model, device_ids=[self.device], output_device=self.device,
+                find_unused_parameters = True
             )
         else:
-            self.model = torch.nn.parallel.DistributedDataParallel(self.model)
+            self.model = torch.nn.parallel.DistributedDataParallel(
+                self.model, find_unused_parameters = True
+            )
+        # self.model.init_distributed(find_unused_params=True)
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -447,37 +452,57 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
 
                         train_time = time.time()
 
-                        logits, rnn_hidden_states = self.model(
-                            observations_batch_sample,
-                            rnn_hidden_states,
-                            gt_prev_action_sample,
-                            episode_not_dones_sample
-                        )
+                        if i != num_steps - 1:
+                            with self.model.no_sync():
+                                logits, rnn_hidden_states = self.model(
+                                    observations_batch_sample,
+                                    rnn_hidden_states,
+                                    gt_prev_action_sample,
+                                    episode_not_dones_sample
+                                )
 
-                        T, N = gt_next_action_sample.shape
-                        logits = logits.view(T, N, -1)
-                        # pred_actions = torch.argmax(logits, dim=2)
+                                T, N = gt_next_action_sample.shape
+                                logits = logits.view(T, N, -1)
+                                # pred_actions = torch.argmax(logits, dim=2)
 
-                        action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
-                        denom = inflec_weights_sample.sum(0)
-                        denom[denom == 0.0] = 1
-                        action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
-                        loss = (action_loss / num_steps)
-                        loss.backward()
-                        # Sync loss
-                        stats = torch.tensor(
-                            [loss.detach().item()],
-                            device=self.device,
-                        )
-                        distrib.all_reduce(stats)
-                        batch_loss += stats[0].item()
+                                action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
+                                denom = inflec_weights_sample.sum(0)
+                                denom[denom == 0.0] = 1
+                                action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
+                                loss = (action_loss / num_steps)
+                                loss.backward()
+                        else:
+                            logits, rnn_hidden_states = self.model(
+                                observations_batch_sample,
+                                rnn_hidden_states,
+                                gt_prev_action_sample,
+                                episode_not_dones_sample
+                            )
+
+                            T, N = gt_next_action_sample.shape
+                            logits = logits.view(T, N, -1)
+
+                            action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
+                            denom = inflec_weights_sample.sum(0)
+                            denom[denom == 0.0] = 1
+                            action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
+                            loss = (action_loss / num_steps)
+                            loss.backward()
+                        batch_loss += loss.item()
                         rnn_hidden_states = rnn_hidden_states.detach()
-
                         avg_train_time += ((time.time() - train_time) / 60)
+
+                    # Sync loss
+                    stats = torch.tensor(
+                        [batch_loss],
+                        device=self.device,
+                    )
+                    distrib.all_reduce(stats)
+                    batch_loss += stats[0].item()
 
                     avg_loss += batch_loss
 
-                    if t % config.LOG_INTERVAL == 0:
+                    if t % config.LOG_INTERVAL == 0 and self.world_rank == 0:
                         logger.info(
                             "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f}; samples: {:.3f}]".format(
                                 epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t, t
@@ -563,7 +588,12 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
 
         # Map location CPU is almost always better than mapping to a CUDA device.
         ckpt_dict = torch.load(checkpoint_path, map_location=self.device)
-        self.model.load_state_dict(ckpt_dict, strict=True)
+        self.model.load_state_dict(
+            {
+                k.replace("module.", ""): v
+                for k, v in ckpt_dict.items()
+                if "module" in k
+            }, strict=True)
         self.model.to(self.device)
         self.model.eval()
 

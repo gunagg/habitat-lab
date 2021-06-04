@@ -13,14 +13,20 @@ def read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, idx=0):
     observations = msgpack_numpy.unpackb(observations_binary, raw=False)
     for k, v in observations.items():
         obs = np.array(observations[k])
+        if k == "semantic":
+            obs = obs.astype(np.uint8)
         observations[k] = torch.from_numpy(obs)
     
     obs_list = []
     print("Observations shape: {}".format(observations["rgb"].shape))
     for i in range(observations["rgb"].shape[0]):
-        frame = observations_to_image({"rgb": observations["rgb"][i]}, {})
+        frame = observations_to_image({
+            "rgb": observations["rgb"][i],
+            "depth": observations["depth"][i],
+            # "gt_semantic": observations["semantic"][i],
+            # "semantic": observations["pred_semantic"][i]
+        }, {})
         obs_list.append(frame)
-    
 
     next_action_idx = "{0:0=6d}_next_action".format(idx)
     next_action_binary = lmdb_cursor.get(next_action_idx.encode())

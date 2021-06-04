@@ -204,7 +204,7 @@ def get_simulator(objnav_config):
     navmesh_settings.set_defaults()
     navmesh_settings.agent_radius = objnav_config.SIMULATOR.AGENT_0.RADIUS
     navmesh_settings.agent_height = objnav_config.SIMULATOR.AGENT_0.HEIGHT
-    sim._sim.recompute_navmesh(sim._sim.pathfinder, navmesh_settings)
+    sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
     return sim
 
 
@@ -357,7 +357,7 @@ def generate_scene(args):
     # sim = get_simulator(objnav_config)
 
     if True:
-        total_objs_json = 500 if split == "train" else 200
+        total_objs_json = 200 if split == "train" else 200
         # if split == 'val':
         #    total_obs_json = 100
         # if split == 'val_mini':
@@ -389,10 +389,14 @@ def generate_scene(args):
                     traceback.print_exc()
                     print("Skipping category")
                     pbar.update(eps_per_obj - eps_generated)
+        print("Generation done")
+        print("Start saving...")
 
         for ep in dset.episodes:
             # STRIP OUT PATH
             ep.scene_id = ep.scene_id[len("./data/scene_datasets/") :]
+        
+        print("Save at {}".format(fname))
 
         os.makedirs(osp.dirname(fname), exist_ok=True)
         save_dataset(dset, fname)
@@ -522,8 +526,8 @@ if __name__ == "__main__":
             for scene in scenes
         ]
         blacklist = ["JmbYfDe2QKZ"]
-        # whitelist = ['gTV8FGcVJC9', 'SN83YJsR3w2', 'JmbYfDe2QKZ', 'VzqfbhrpDEA', '2n8kARJN3HM']
-        whitelist = ['JmbYfDe2QKZ'] #, 'SN83YJsR3w2', 'JmbYfDe2QKZ', 'VzqfbhrpDEA', '2n8kARJN3HM']
+        whitelist = ['SN83YJsR3w2'] #, '2n8kARJN3HM']
+        #whitelist = ['SN83YJsR3w2'] #, 'SN83YJsR3w2', 'JmbYfDe2QKZ', 'VzqfbhrpDEA', '2n8kARJN3HM']
         # if split != 'val' assert
         scenes = [
             scene

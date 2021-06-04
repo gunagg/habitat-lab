@@ -13,6 +13,7 @@ from habitat_sim.utils import viz_utils as vut
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_sim.utils.common import quat_to_coeffs
 from habitat.utils.visualizations.utils import make_video_cv2, observations_to_image, images_to_video, append_text_to_image
+from habitat_sim.utils.common import quat_to_coeffs, quat_from_magnum, quat_from_angle_axis
 
 from threading import Thread
 from time import sleep
@@ -21,6 +22,7 @@ from PIL import Image
 
 from habitat_baselines.objectnav.models.rednet import load_rednet
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
+from psiturk_dataset.utils.utils import write_json
 
 config = habitat.get_config("configs/tasks/objectnav_mp3d_video.yaml")
 
@@ -160,6 +162,39 @@ def get_goal_semantic(sem_obs, object_oal, task_cat2mpcat40, episode):
     return goal_visible_pixels.long()
 
 
+def get_agent_pose(sim):
+    agent_translation = sim._default_agent.body.object.translation
+    agent_rotation = sim._default_agent.body.object.rotation
+    sensor_data = {}
+    for sensor_key, v in sim._default_agent._sensors.items():
+        rotation = quat_from_magnum(v.object.rotation)
+        rotation = quat_to_coeffs(rotation).tolist()
+        translation = v.object.translation
+        sensor_data[sensor_key] = {
+            "rotation": rotation,
+            "translation": np.array(translation).tolist()
+        }
+    
+    return {
+        "position": np.array(agent_translation).tolist(),
+        "rotation": quat_to_coeffs(quat_from_magnum(agent_rotation)).tolist(),
+        "sensor_data": sensor_data
+    }
+
+
+def create_episode_trajectory(trajectory, episode):
+    goal_positions = []
+    for goal in episode.goals:
+        for view_point in goal.view_points:
+            goal_positions.append(view_point.agent_state.position)
+    data = {
+        "trajectory": trajectory,
+        "object_goal": episode.object_category,
+        "goal_locations": goal_positions,
+        "scene_id": episode.scene_id.split("/")[-1]
+    }
+    return data
+
 
 def run_reference_replay(
     cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None, task_cat2mpcat40=None, sem_seg=False
@@ -209,7 +244,7 @@ def run_reference_replay(
             physics_simulation_library = env._sim.get_physics_simulation_library()
             print("Physics simulation library: {}".format(physics_simulation_library))
             print("Episode length: {}, Episode index: {}".format(len(env.current_episode.reference_replay), ep_id))
-            print("Scene Id : {}".format(env.current_episode.scene_id))
+            print("Scene Id : {}, Episode Id: {}".format(env.current_episode.scene_id, env.current_episode.episode_id))
             i = 0
             data = {
                 "episodeId": env.current_episode.episode_id,
@@ -224,6 +259,10 @@ def run_reference_replay(
             total_reward = 0.0
             episode = env.current_episode
             ep_success = 0
+            replay_data = []
+
+            if len(episode.reference_replay) > 2500:
+                continue
 
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
@@ -233,8 +272,7 @@ def run_reference_replay(
                     action
                 )
 
-                if step_env:
-                    observations = env.step(action=action)
+                observations = env.step(action=action)
 
                 info = env.get_metrics()
                 frame = observations_to_image({"rgb": observations["rgb"]}, info)
@@ -250,6 +288,7 @@ def run_reference_replay(
                     frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)                    
 
                 frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
+                replay_data.append(get_agent_pose(env._sim))
 
                 if info["success"]:
                     ep_success = 1
@@ -271,6 +310,12 @@ def run_reference_replay(
             if sem_seg:
                 goal_visible_area, goal_visible_area_gt = get_goal_visible_area(observations, task_cat2mpcat40, episode)
                 print("Goal visible area: {}, GT: {}".format(goal_visible_area, goal_visible_area_gt))
+
+            if episode.episode_id == "A2DDPSXH2X96RF:3DPNQGW4LNILYXAJE2Z4ZUL33AU642":
+                trajectory = create_episode_trajectory(replay_data, episode)
+                print(trajectory.keys())
+                write_json(trajectory, "data/visualizations/teaser/trajectories/{}_human_trajectory.json".format(trajectory["scene_id"].split(".")[0]))
+                break
 
             if ep_success == 0:
                 fails.append({

@@ -204,7 +204,7 @@ class RearrangementSim(HabitatSim):
             offsets = [0, 0.05, -0.05, 0.1, -0.1, -0.2]
             is_colliding = False
             for offset in offsets:
-                finalPosition = newPosition + filterDiff + mn.Vector3(0.0, 0.05, 0.0)
+                finalPosition = newPosition + filterDiff + mn.Vector3(0.0, offset, 0.0)
                 collision = self.is_collision(self.agent_object_handle, finalPosition, True)
                 if collision:
                     is_colliding = True
@@ -277,7 +277,7 @@ class RearrangementSim(HabitatSim):
                 # find no collision point
                 count = 0
                 contact = self.is_collision(scene_object.object_handle, new_object_position)
-                while contact and count < 4:
+                while contact and count < 2:
                     new_object_position = mn.Vector3(
                         new_object_position.x,
                         new_object_position.y + 0.25,

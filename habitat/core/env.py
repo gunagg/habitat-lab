@@ -220,6 +220,21 @@ class Env:
         self.reconfigure(self._config)
 
         observations = self.task.reset(episode=self.current_episode)
+
+        # obtain mapping from instance id to semantic label id
+        scene = self.sim.semantic_annotations()
+
+        instance_id_to_label_id = {int(obj.id.split("_")[-1]): obj.category.index() for obj in scene.objects}
+        self.mapping = np.array([ instance_id_to_label_id[i] for i in range(len(instance_id_to_label_id)) ])
+
+        # ! MP3D object id to category ID mapping
+        if 'semantic' in observations: # If no map, then we're using semantics on scene without
+            # Should raise a warning, but just driving ahead for now
+            if self.mapping.size > 0:
+                observations['semantic'] = np.take(self.mapping, observations['semantic'])
+            else:
+                observations['semantic'] = observations['semantic'].astype(int)
+
         self._task.measurements.reset_measures(
             episode=self.current_episode,
             task=self.task, observations=observations
@@ -268,6 +283,13 @@ class Env:
         observations = self.task.step(
             action=action, episode=self.current_episode
         )
+
+        # Instance to sem seg
+        if 'semantic' in observations:
+            if self.mapping.size > 0:
+                observations['semantic'] = np.take(self.mapping, observations['semantic'])
+            else:
+                observations['semantic'] = observations['semantic'].astype(int)
 
         self._task.measurements.update_measures(
             episode=self.current_episode, action=action,

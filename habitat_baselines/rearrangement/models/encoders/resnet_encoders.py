@@ -334,6 +334,7 @@ class ResnetSemSeqEncoder(nn.Module):
         trainable=False,
         spatial_output: bool = False,
         semantic_embedding_size=4,
+        use_pred_semantics=False,
     ):
         super().__init__()
         self.semantic_embedder = nn.Embedding(40 + 2, semantic_embedding_size)

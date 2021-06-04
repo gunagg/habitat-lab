@@ -7,19 +7,19 @@ ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/s_path_v4/seed_1_2node/val"
-VIDEO_DIR: "video_dir/s_path_v4/seed_1_2node/val"
+TENSORBOARD_DIR: "tb/resnet18_random_split_v4/seed_4/val"
+VIDEO_DIR: "video_dir/resnet18_random_split_v4/seed_4/val"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/pick_and_place/s_path_v4/s_path_v4_2node_ep10_seed1.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/resnet18_random_split_v4/seed_4/model_10.ckpt"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 5
-CHECKPOINT_FOLDER: "data/new_checkpoints/s_path_v4/seed_1_2node"
+CHECKPOINT_FOLDER: "data/new_checkpoints/resnet18_random_split_v4/seed_4"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 1
-DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/s_path_v5/{split}/{scene_split}.db"
+DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/v4/{split}/{scene_split}.db"
 RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/object_rearrangement/results/"
 EVAL_SAVE_RESULTS: True
@@ -33,7 +33,7 @@ IL:
   BehaviorCloning:
     lr: 0.001
     max_epochs: 10
-    batch_size: 8
+    batch_size: 2
     timestep_batch_size: 512
     freeze_encoder: False
 

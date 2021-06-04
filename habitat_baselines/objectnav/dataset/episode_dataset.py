@@ -21,6 +21,7 @@ from habitat.tasks.rearrangement.rearrangement import InstructionData, Rearrange
 from habitat.tasks.utils import get_habitat_sim_action
 from habitat.utils.visualizations.utils import observations_to_image, images_to_video, append_text_to_image
 from habitat_sim.utils import viz_utils as vut
+from habitat_baselines.objectnav.models.rednet import load_rednet
 
 
 class ObservationsDict(dict):
@@ -107,6 +108,7 @@ class ObjectNavEpisodeDataset(Dataset):
 
         self.config = config.TASK_CONFIG
         self.dataset_path = config.DATASET_PATH.format(split=mode, scene_split=scene_split_name)
+        logger.info("datasetpath: {}".format(self.dataset_path))
 
         self.config.defrost()
         self.config.DATASET.CONTENT_SCENES = content_scenes
@@ -122,6 +124,17 @@ class ObjectNavEpisodeDataset(Dataset):
             self.inflec_weight = torch.tensor([1.0, inflection_weight_coef])
         else:
             self.inflec_weight = torch.tensor([1.0, 1.0])
+        
+        self.device = (
+            torch.device("cuda", 0)
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+        self.semantic_predictor = load_rednet(
+            self.device,
+            ckpt="data/rednet-models/rednet_semmap_mp3d_tuned.pth",
+            resize=True # since we train on half-vision
+        )
 
         if not self.cache_exists():
             """
@@ -141,7 +154,7 @@ class ObjectNavEpisodeDataset(Dataset):
 
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(5e11),
+                map_size=int(2e12),
                 writemap=True,
             )
 
@@ -170,6 +183,12 @@ class ObjectNavEpisodeDataset(Dataset):
         self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 4)
         self.lmdb_env.close()
         self.lmdb_env = None
+    
+    def get_pred_semantic_obs(self, observations):
+        obs_rgb = torch.Tensor(observations["rgb"]).unsqueeze(0).to(self.device)
+        obs_depth = torch.Tensor(observations["depth"]).unsqueeze(0).to(self.device)
+        semantic_obs = self.semantic_predictor(obs_rgb, obs_depth)
+        return semantic_obs.squeeze(0).cpu().numpy()
 
     def save_frames(
         self, state_index_queue: List[int], episode: RearrangementEpisode, observation: Dict
@@ -181,8 +200,12 @@ class ObjectNavEpisodeDataset(Dataset):
         prev_actions = []
         obs_list = []
         observations = defaultdict(list)
+        pred_semantic_obs = self.get_pred_semantic_obs(observation)
+
         observations["depth"].append(observation["depth"])
         observations["rgb"].append(observation["rgb"])
+        observations["semantic"].append(observation["semantic"])
+        observations["pred_semantic"].append(pred_semantic_obs)
         observations["gps"].append(observation["gps"])
         observations["compass"].append(observation["compass"])
         observations["objectgoal"].append(observation["objectgoal"])
@@ -195,7 +218,7 @@ class ObjectNavEpisodeDataset(Dataset):
         reference_replay = episode.reference_replay
         success = 0
         info = {}
-        if len(reference_replay) > 1800:
+        if len(reference_replay) > 1000:
             return
         for state_index in state_index_queue:
             state = reference_replay[state_index]
@@ -212,8 +235,12 @@ class ObjectNavEpisodeDataset(Dataset):
             prev_state = reference_replay[state_index]
             prev_action = self.possible_actions.index(prev_state.action)
 
+            pred_semantic_obs = self.get_pred_semantic_obs(observation)
+
             observations["depth"].append(observation["depth"])
             observations["rgb"].append(observation["rgb"])
+            observations["semantic"].append(observation["semantic"])
+            observations["pred_semantic"].append(pred_semantic_obs)
             observations["gps"].append(observation["gps"])
             observations["compass"].append(observation["compass"])
             observations["objectgoal"].append(observation["objectgoal"])
@@ -272,7 +299,7 @@ class ObjectNavEpisodeDataset(Dataset):
         if self.lmdb_env is None:
             self.lmdb_env = lmdb.open(
                 self.dataset_path,
-                map_size=int(5e11),
+                map_size=int(2e12),
                 writemap=True,
             )
             self.lmdb_txn = self.lmdb_env.begin()

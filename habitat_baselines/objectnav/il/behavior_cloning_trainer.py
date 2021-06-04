@@ -57,6 +57,7 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
 from habitat_baselines.utils.visualizations.utils import (
     save_frame,
 )
+from habitat_baselines.objectnav.models.rednet import load_rednet
 from PIL import Image
 
 
@@ -235,11 +236,13 @@ class ObjectNavBCTrainer(BaseILTrainer):
             )
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
-        for scene in ["split_1", "split_2", "split_3", "split_4"]:
+        # for scene in ["split_1", "split_2", "split_3", "split_4"]:
+        for scene in ["split_5"]:
             dataset = ObjectNavEpisodeDataset(
                 config,
                 use_iw=config.IL.USE_IW,
                 split_name=scene,
+                mode="sample",
                 inflection_weight_coef=config.MODEL.inflection_weight_coef
             )
             datasets.append(dataset)
@@ -352,6 +355,10 @@ class ObjectNavBCTrainer(BaseILTrainer):
                     )
 
                     optim.zero_grad()
+
+                    # if config.MODEL.USE_PRED_SEMANTICS:
+                    #     print("Use pred")
+                    #     batch["semantic"] = batch["pred_semantic"].clone()
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size
@@ -494,6 +501,15 @@ class ObjectNavBCTrainer(BaseILTrainer):
         self.model.to(self.device)
         self.model.eval()
 
+        self.semantic_predictor = None
+        if config.MODEL.USE_SEMANTICS:
+            self.semantic_predictor = load_rednet(
+                self.device,
+                ckpt=config.MODEL.SEMANTIC_ENCODER.rednet_ckpt,
+                resize=True # since we train on half-vision
+            )
+            self.semantic_predictor.eval()
+
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
 
@@ -549,6 +565,12 @@ class ObjectNavBCTrainer(BaseILTrainer):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
+                # if self.semantic_predictor is not None:
+                #     batch["pred_semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+
+                # if config.MODEL.USE_PRED_SEMANTICS:
+                #     batch["semantic"] = batch["pred_semantic"].clone()
+
                 (
                     logits,
                     rnn_hidden_states

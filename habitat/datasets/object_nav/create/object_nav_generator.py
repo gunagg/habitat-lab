@@ -51,7 +51,7 @@ def _get_multipath(sim: HabitatSim, start, ends):
     multi_goal = habitat_sim.MultiGoalShortestPath()
     multi_goal.requested_start = start
     multi_goal.requested_ends = ends
-    sim._sim.pathfinder.find_path(multi_goal)
+    sim.pathfinder.find_path(multi_goal)
     return multi_goal
 
 
@@ -59,7 +59,7 @@ def _get_action_shortest_path(
     sim: HabitatSim, start_pos, start_rot, goal_pos, goal_radius=0.05
 ):
     sim.set_agent_state(start_pos, start_rot, reset_sensors=True)
-    greedy_follower = sim._sim.make_greedy_follower()
+    greedy_follower = sim.make_greedy_follower()
     return greedy_follower.find_path(goal_pos)
 
 
@@ -261,7 +261,7 @@ def build_goal(
     # obb = habitat_sim.geo.OBB(object_aabb)
     # thetas = np.arange(0, 2 * np.pi, step=turn_radians)
     def down_is_navigable(pt):
-        pf = sim._sim.pathfinder
+        pf = sim.pathfinder
 
         delta_y = 0.05
         max_steps = int(2 / delta_y)
@@ -292,7 +292,7 @@ def build_goal(
         #     #     print(pt)
         #     #     print(other_points)
         #     return -1.0, pt, None
-        pf = sim._sim.pathfinder
+        pf = sim.pathfinder
         pt = np.array(pf.snap_point(pt))
 
         goal_direction = object_position - pt
@@ -310,7 +310,7 @@ def build_goal(
 
         # q = quat_from_angle_axis(theta, habitat_sim.geo.UP)
         cov = 0
-        agent = sim._sim.get_agent(0)
+        agent = sim.get_agent(0)
         for act in [
             HabitatSimActions.LOOK_DOWN,
             HabitatSimActions.LOOK_UP,
@@ -431,7 +431,7 @@ def _create_episode(
         goals=goals,
         scene_id=scene_id,
         object_category=goals[0].object_category,
-        scene_state=scene_state,
+        # scene_state=scene_state,
         start_position=start_position,
         start_rotation=start_rotation,
         shortest_paths=shortest_paths,
@@ -524,7 +524,7 @@ def generate_objectnav_episode(
                 is_compatible, dist, euclid_dist, source_rotation, geodesic_distances, goals_sorted, shortest_path, ending_state = (
                     compat_outputs
                 )
-                shortest_paths = [shortest_path]
+                shortest_paths = None #[shortest_path]
 
                 episode = _create_episode(
                     episode_id=episode_count,
@@ -537,7 +537,7 @@ def generate_objectnav_episode(
                         "geodesic_distance": dist,
                         "euclidean_distance": euclid_dist,
                         "closest_goal_object_id": goals_sorted[0].object_id,
-                        # "navigation_bounds": sim._sim.pathfinder.get_bounds(),
+                        # "navigation_bounds": sim.pathfinder.get_bounds(),
                         # "best_viewpoint_position": ending_state.position,
                     },
                     goals=goals_sorted,
@@ -651,7 +651,7 @@ def generate_objectnav_episode_with_added_objects(
                         "geodesic_distance": dist,
                         "euclidean_distance": euclid_dist,
                         "closest_goal_object_id": goals_sorted[0].object_id,
-                        # "navigation_bounds": sim._sim.pathfinder.get_bounds(),
+                        # "navigation_bounds": sim.pathfinder.get_bounds(),
                         # "best_viewpoint_position": ending_state.position,
                     },
                     goals=goals_sorted,

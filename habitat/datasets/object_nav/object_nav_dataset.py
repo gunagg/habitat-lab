@@ -55,6 +55,21 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
         dataset["goals_by_category"] = goals_by_category
 
         return dataset
+    
+    @staticmethod
+    def dedup_goals_dset(dataset):
+        if len(dataset.episodes) == 0:
+            return dataset
+        goals_by_category = dict()
+        for i, ep in enumerate(dataset.episodes):
+            dataset.episodes[i].object_category = ep.goals[0].object_category
+            # ep = ObjectGoalNavEpisode(**ep)
+            goals_key = ep.goals_key
+            if goals_key not in goals_by_category:
+                goals_by_category[goals_key] = ep.goals
+            dataset.episodes[i].goals = []
+        dataset.goals_by_category = goals_by_category
+        return dataset
 
     def to_json(self) -> str:
         for i in range(len(self.episodes)):

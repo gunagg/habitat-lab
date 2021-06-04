@@ -7,7 +7,7 @@ SIMULATOR:
   TYPE: RearrangementSim-v0
   ACTION_SPACE_CONFIG: RearrangementActions-v0
   AGENT_0:
-    SENSORS: ["RGB_SENSOR", "SEMANTIC_SENSOR", "DEPTH_SENSOR"]
+    SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
     MAX_CLIMB: 0.5
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
@@ -29,7 +29,7 @@ SIMULATOR:
     HEIGHT: 256
     POSITION: [0, 1.5, 0]
     CHANNELS: 1
-SEED: 105
+SEED: 101
 TASK:
   TYPE: RearrangementTask-v0
   POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN", "GRAB_RELEASE", "MOVE_BACKWARD", "NO_OP"]
@@ -99,3 +99,4 @@ DATASET:
   SPLIT: "sample"
   DATA_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/v4/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/habitat-test-scenes/"
+  CONTENT_SCENES: ["JeFG25nYj2p"]

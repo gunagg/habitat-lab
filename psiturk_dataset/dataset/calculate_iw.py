@@ -66,6 +66,8 @@ def calculate_inflection_weight_objectnav(path, stats_path):
     inflections = 0
     total_actions = 0
     total_episodes = 0
+    ep_lt_than_1k = 0
+    ep_lt_than_500 = 0
 
     data_stats = {
         "episode_length": [],
@@ -90,10 +92,16 @@ def calculate_inflection_weight_objectnav(path, stats_path):
             inflections += num_inflections
             total_actions += num_actions
             total_episodes += 1
+            if len(reference_replay) < 1000:
+                ep_lt_than_1k += 1
+            
+            if len(reference_replay) < 500:
+                ep_lt_than_500 += 1
 
     save_meta_for_analysis(data_stats, stats_path)
 
     print("Total episodes: {}".format(total_episodes))
+    print("Total episodes less than 1k and 0.5k: {} -- {}".format(ep_lt_than_1k, ep_lt_than_500))
     print("Inflection weight: {}".format(total_actions / inflections))
     print("Average episode length: {}".format(total_actions / total_episodes))
     print("Total actions: {}".format(total_actions))

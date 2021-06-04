@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ddp_onav
-#SBATCH --gres gpu:4
-#SBATCH --nodes 1
+#SBATCH --gres gpu:1
+#SBATCH --nodes 2
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
 #SBATCH --partition=long
