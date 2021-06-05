@@ -47,7 +47,7 @@ def read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, idx=0):
             "prev_action": prev_action
         }))
 
-    images_to_video(obs_list, output_dir="demos", video_name="re_create_4_{}".format(idx))
+    images_to_video(obs_list, output_dir="demos", video_name="re_create_3_{}".format(idx))
 
 
 def get_videos_from_lmdb(path, ub):
@@ -59,7 +59,7 @@ def get_videos_from_lmdb(path, ub):
     lmdb_txn = lmdb_env.begin()
     lmdb_cursor = lmdb_txn.cursor()
     for i in range(0, ub):
-        read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, 1000)
+        read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, 0)
 
 
 if __name__ == "__main__":

@@ -407,8 +407,8 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                     if t % config.LOG_INTERVAL == 0:
                         logger.info(
-                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f}; samples: {:.3f}]".format(
-                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t, t
+                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; avg loss: {:.3f};]".format(
+                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_loss / t
                             )
                         )
                         writer.add_scalar("train_loss", loss, t)

@@ -169,7 +169,7 @@ class ObjectNavEpisodeDataset(Dataset):
                 except AttributeError as e:
                     logger.error(e)
                 self.save_frames(state_index_queue, episode, observations)
-            
+
             logger.info("Total success: {}".format(self.total_success / len(self.episodes)))
             logger.info("Objectnav dataset ready!")
             self.env.close()
@@ -201,13 +201,14 @@ class ObjectNavEpisodeDataset(Dataset):
         prev_actions = []
         obs_list = []
         observations = defaultdict(list)
+        # sem_observations = defaultdict(list)
 
         observations["depth"].append(observation["depth"])
         observations["rgb"].append(observation["rgb"])
         observations["gps"].append(observation["gps"])
         observations["compass"].append(observation["compass"])
         observations["objectgoal"].append(observation["objectgoal"])
-        observations["semantic"].append(observation["semantic"])
+        # observations["semantic"].append(observation["semantic"])
 
         next_action = self.possible_actions.index(episode.reference_replay[1].action)
         next_actions.append(next_action)
@@ -236,7 +237,7 @@ class ObjectNavEpisodeDataset(Dataset):
 
             observations["depth"].append(observation["depth"])
             observations["rgb"].append(observation["rgb"])
-            observations["semantic"].append(observation["semantic"])
+            # observations["semantic"].append(observation["semantic"])
             observations["gps"].append(observation["gps"])
             observations["compass"].append(observation["compass"])
             observations["objectgoal"].append(observation["objectgoal"])

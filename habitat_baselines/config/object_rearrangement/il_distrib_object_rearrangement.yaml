@@ -7,33 +7,33 @@ ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/overfitting/seed_5/val"
-VIDEO_DIR: "video_dir/overfitting/seed_5/val"
+TENSORBOARD_DIR: "tb/s_path_v4/seed1_1node/test"
+VIDEO_DIR: "video_dir/s_path_v4/seed1_1node/test"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/overfitting/seed_5/model_500.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/pick_and_place/s_path_v4/s_path_v4_1node_ep10_seed1.ckpt"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/overfitting/seed_5"
+NUM_PROCESSES: 5
+CHECKPOINT_FOLDER: "data/new_checkpoints/s_path_v4/seed1_1node"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
-CHECKPOINT_INTERVAL: 100
+CHECKPOINT_INTERVAL: 1
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/v4/{split}/{scene_split}.db"
 RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/object_rearrangement/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "val"
+  SPLIT: "test"
 
 IL:
   USE_IW: True
   distrib_backend: GLOO
   BehaviorCloning:
     lr: 0.001
-    max_epochs: 500
-    batch_size: 2
+    max_epochs: 10
+    batch_size: 8
     timestep_batch_size: 512
     freeze_encoder: False
 

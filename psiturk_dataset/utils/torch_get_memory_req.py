@@ -7,7 +7,7 @@ def get_tensor_memory_in_gb(shape=(480, 640, 3)):
     return memory_in_bytes / (1024**3)
 
 
-def get_total_input_memory(num=1000, batch_size=8):
+def get_total_input_memory(num=500, batch_size=8):
     rgb = get_tensor_memory_in_gb((num, batch_size, 480, 640, 3))
     depth = get_tensor_memory_in_gb((num, batch_size, 480, 640, 1))
     semantic = get_tensor_memory_in_gb((num, batch_size, 480, 640, 1))

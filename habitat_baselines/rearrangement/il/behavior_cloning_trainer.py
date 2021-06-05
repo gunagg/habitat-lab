@@ -279,6 +279,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             batch_size=batch_size,
             shuffle=True,
             num_workers=8,
+            drop_last=True,
         )
         logger.info("Dataloader setup")
 
