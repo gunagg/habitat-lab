@@ -7,18 +7,18 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/overfitting/seed_2"
-VIDEO_DIR: "video_dir/objectnav/overfitting/seed_2"
+TENSORBOARD_DIR: "tb/objectnav/sem_seg_ft/seed_2"
+VIDEO_DIR: "video_dir/objectnav/sem_seg_ft/seed_2"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/overfitting/seed_2/model_200.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/sem_seg_ft/seed_2/model_300.ckpt"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting/seed_2"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/sem_seg_ft/seed_2"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
-CHECKPOINT_INTERVAL: 100
+CHECKPOINT_INTERVAL: 1
 SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/{split}/{type}"
@@ -32,9 +32,9 @@ IL:
   USE_IW: True
   BehaviorCloning:
     lr: 0.001
-    max_epochs: 500
-    batch_size: 1
-    timestep_batch_size: 64
+    max_epochs: 20
+    batch_size: 8
+    timestep_batch_size: 128
     freeze_encoder: False
 
 RL:
@@ -54,6 +54,7 @@ MODEL:
   force_blind_policy: False
   embed_sge: True
   USE_SEMANTICS: True
+  SWITCH_TO_PRED_SEMANTICS_EPOCH: 15
   USE_PRED_SEMANTICS: True
   SEMANTIC_ENCODER:
     rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"

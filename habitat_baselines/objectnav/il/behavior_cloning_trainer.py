@@ -236,13 +236,11 @@ class ObjectNavBCTrainer(BaseILTrainer):
             )
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
-        # for scene in ["split_1", "split_2", "split_3", "split_4"]:
-        for scene in ["split_5"]:
+        for scene in ["split_1", "split_2", "split_3", "split_4"]:
             dataset = ObjectNavEpisodeDataset(
                 config,
                 use_iw=config.IL.USE_IW,
                 split_name=scene,
-                mode="sample",
                 inflection_weight_coef=config.MODEL.inflection_weight_coef
             )
             datasets.append(dataset)
@@ -274,7 +272,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
             rearrangement_dataset,
             collate_fn=collate_fn,
             batch_size=batch_size,
-            num_workers=4,
+            num_workers=8,
             shuffle=True,
             drop_last=True,
         )
@@ -333,6 +331,9 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                 batch_start_time = time.time()
 
+                if config.MODEL.USE_PRED_SEMANTICS and epoch >= config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH:
+                    logger.info("Finetuning on pred semantic masks")
+
                 for batch in train_loader:
                     torch.cuda.empty_cache()
                     t += 1
@@ -356,9 +357,8 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                     optim.zero_grad()
 
-                    # if config.MODEL.USE_PRED_SEMANTICS:
-                    #     print("Use pred")
-                    #     batch["semantic"] = batch["pred_semantic"].clone()
+                    if config.MODEL.USE_PRED_SEMANTICS and epoch >= config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH:
+                        observations_batch["semantic"] = observations_batch["pred_semantic"].clone()
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size
@@ -391,7 +391,6 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                         T, N = gt_next_action_sample.shape
                         logits = logits.view(T, N, -1)
-                        # pred_actions = torch.argmax(logits, dim=2)
 
                         action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
                         denom = inflec_weights_sample.sum(0)
@@ -416,12 +415,6 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                     optim.step()
                     scheduler.step()
-                    rnn_hidden_states = torch.zeros(
-                        config.MODEL.STATE_ENCODER.num_recurrent_layers,
-                        batch_size,
-                        config.MODEL.STATE_ENCODER.hidden_size,
-                        device=self.device,
-                    )
                     batch_start_time = time.time()
 
                 end_time = time.time()
@@ -443,6 +436,10 @@ class ObjectNavBCTrainer(BaseILTrainer):
                 if epoch % config.CHECKPOINT_INTERVAL == 0:
                     self.save_checkpoint(
                         self.model.module.state_dict(), "model_{}.ckpt".format(epoch)
+                    )
+                if config.MODEL.USE_PRED_SEMANTICS and epoch == config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH - 1:
+                    self.save_checkpoint(
+                        self.model.module.state_dict(), "model_gt_{}.ckpt".format(epoch)
                     )
 
                 epoch += 1
@@ -565,11 +562,11 @@ class ObjectNavBCTrainer(BaseILTrainer):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
-                # if self.semantic_predictor is not None:
-                #     batch["pred_semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+                if self.semantic_predictor is not None:
+                    batch["pred_semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
 
-                # if config.MODEL.USE_PRED_SEMANTICS:
-                #     batch["semantic"] = batch["pred_semantic"].clone()
+                if config.MODEL.USE_PRED_SEMANTICS:
+                    batch["semantic"] = batch["pred_semantic"].clone()
 
                 (
                     logits,

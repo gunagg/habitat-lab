@@ -120,6 +120,7 @@ class RearrangementEpisodeDataset(Dataset):
 
         self.total_actions = 0
         self.inflections = 0
+        self.inflection_weight_coef = inflection_weight_coef
 
         if use_iw:
             self.inflec_weight = torch.tensor([1.0, inflection_weight_coef])
@@ -301,5 +302,6 @@ class RearrangementEpisodeDataset(Dataset):
         weight_binary = self.lmdb_cursor.get(weight_idx.encode())
         weight = np.frombuffer(weight_binary, dtype="float32")
         weight = torch.from_numpy(np.copy(weight))
+        weight = torch.where(weight != 1.0, self.inflection_weight_coef, 1.0)
 
         return idx, observations, next_action, prev_action, weight

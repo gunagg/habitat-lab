@@ -498,7 +498,7 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                         device=self.device,
                     )
                     distrib.all_reduce(stats)
-                    batch_loss += stats[0].item()
+                    batch_loss = stats[0].item()
 
                     avg_loss += batch_loss
 

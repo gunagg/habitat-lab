@@ -235,7 +235,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             )
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
-        for scene in ["29hnd4uzFmX"]:
+        for scene in content_scenes:
             dataset = RearrangementEpisodeDataset(
                 config,
                 content_scenes=[scene],
@@ -312,7 +312,6 @@ class RearrangementBCTrainer(BaseILTrainer):
 
         epoch, t = 1, 0
         softmax = torch.nn.Softmax(dim=1)
-        AuxLosses.activate()
         logger.info("Starting training: {}".format(self.device))
         with (
             TensorboardWriter(
@@ -351,7 +350,6 @@ class RearrangementBCTrainer(BaseILTrainer):
                     )
 
                     optim.zero_grad()
-                    AuxLosses.clear()
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size
@@ -441,12 +439,10 @@ class RearrangementBCTrainer(BaseILTrainer):
         checkpoint_index: int = 0,
     ) -> None:
         r"""Evaluates a single checkpoint.
-
         Args:
             checkpoint_path: path of checkpoint
             writer: tensorboard writer object for logging to tensorboard
             checkpoint_index: index of cur checkpoint for logging
-
         Returns:
             None
         """
@@ -514,8 +510,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         ]  # type: List[List[np.ndarray]]
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
-        
-        self._make_results_dir(config.EVAL.SPLIT + "_rerun")
 
         number_of_eval_episodes = self.config.TEST_EPISODE_COUNT
         if number_of_eval_episodes == -1:
@@ -540,7 +534,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
-            torch.cuda.empty_cache()
 
             with torch.no_grad():
                 (
@@ -583,7 +576,6 @@ class RearrangementBCTrainer(BaseILTrainer):
             next_episodes = self.envs.current_episodes()
             envs_to_pause = []
             n_envs = self.envs.num_envs
-            success_episode_data = []
             for i in range(n_envs):
                 if (
                     next_episodes[i].scene_id,
@@ -610,32 +602,15 @@ class RearrangementBCTrainer(BaseILTrainer):
                     next_episodes = self.envs.current_episodes()
                     episode_count += 1
 
-                    metrics = self._extract_scalars_from_info(infos[i])
-                    if episode_stats["success"]:
-                        success_episode_data.append({
-                            "episode_id": current_episodes[i].episode_id,
-                            "metrics": metrics
-                        })
-                    
-
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
-                            episode_id=current_episodes[i].episode_id,
+                            episode_id=episode_count,
                             checkpoint_idx=checkpoint_index,
-                            metrics={"success": metrics["success"], "grab_success": metrics["grab_success"]},
+                            metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
-                        )
-
-                        self._save_results(
-                            batch,
-                            infos,
-                            config.RESULTS_DIR,
-                            i,
-                            config.EVAL.SPLIT + "_rerun",
-                            episode_count,
                         )
 
                         rgb_frames[i] = []
@@ -692,11 +667,6 @@ class RearrangementBCTrainer(BaseILTrainer):
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
         if len(metrics) > 0:
             writer.add_scalars("eval_metrics", metrics, step_id)
-        
-        output_dir = config.EVAL_RESUTLS_DIR
-        with open(os.path.join(output_dir, "{}_success_episodes.json".format(config.EVAL.SPLIT)), "w") as f:
-            f.write(json.dumps(success_episode_data))
-
 
         self.envs.close()
 

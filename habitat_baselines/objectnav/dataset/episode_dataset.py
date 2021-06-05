@@ -119,28 +119,29 @@ class ObjectNavEpisodeDataset(Dataset):
         self.count = 0
         self.success_threshold = config.TASK_CONFIG.TASK.SUCCESS_DISTANCE
         self.total_success = 0
+        self.inflection_weight_coef = inflection_weight_coef
 
         if use_iw:
             self.inflec_weight = torch.tensor([1.0, inflection_weight_coef])
         else:
             self.inflec_weight = torch.tensor([1.0, 1.0])
-        
-        self.device = (
-            torch.device("cuda", 0)
-            if torch.cuda.is_available()
-            else torch.device("cpu")
-        )
-        self.semantic_predictor = load_rednet(
-            self.device,
-            ckpt="data/rednet-models/rednet_semmap_mp3d_tuned.pth",
-            resize=True # since we train on half-vision
-        )
 
         if not self.cache_exists():
             """
             for each scene > load scene in memory > save frames for each
             episode corresponding to that scene
             """
+            self.device = (
+                torch.device("cuda", 0)
+                if torch.cuda.is_available()
+                else torch.device("cpu")
+            )
+            self.semantic_predictor = load_rednet(
+                self.device,
+                ckpt="data/rednet-models/rednet_semmap_mp3d_tuned.pth",
+                resize=True # since we train on half-vision
+            )
+
             self.env = habitat.Env(config=self.config)
             self.episodes = self.env._dataset.episodes
 
@@ -200,15 +201,13 @@ class ObjectNavEpisodeDataset(Dataset):
         prev_actions = []
         obs_list = []
         observations = defaultdict(list)
-        pred_semantic_obs = self.get_pred_semantic_obs(observation)
 
         observations["depth"].append(observation["depth"])
         observations["rgb"].append(observation["rgb"])
-        observations["semantic"].append(observation["semantic"])
-        observations["pred_semantic"].append(pred_semantic_obs)
         observations["gps"].append(observation["gps"])
         observations["compass"].append(observation["compass"])
         observations["objectgoal"].append(observation["objectgoal"])
+        observations["semantic"].append(observation["semantic"])
 
         next_action = self.possible_actions.index(episode.reference_replay[1].action)
         next_actions.append(next_action)
@@ -235,23 +234,14 @@ class ObjectNavEpisodeDataset(Dataset):
             prev_state = reference_replay[state_index]
             prev_action = self.possible_actions.index(prev_state.action)
 
-            pred_semantic_obs = self.get_pred_semantic_obs(observation)
-
             observations["depth"].append(observation["depth"])
             observations["rgb"].append(observation["rgb"])
             observations["semantic"].append(observation["semantic"])
-            observations["pred_semantic"].append(pred_semantic_obs)
             observations["gps"].append(observation["gps"])
             observations["compass"].append(observation["compass"])
             observations["objectgoal"].append(observation["objectgoal"])
             next_actions.append(next_action)
             prev_actions.append(prev_action)
-
-            # frame = observations_to_image(
-            #     {"rgb": observation["rgb"]}, {}
-            # )
-            # frame = append_text_to_image(frame, "Find the {}".format(episode.object_category))
-            # obs_list.append(frame)
 
         oracle_actions = np.array(next_actions)
         inflection_weights = np.concatenate(([1], oracle_actions[1:] != oracle_actions[:-1]))
@@ -314,6 +304,20 @@ class ObjectNavEpisodeDataset(Dataset):
             obs = np.array(observations[k])
             observations[k] = torch.from_numpy(obs)
 
+        # sem_obs_idx = "{0:0=6d}_sobs".format(idx)
+        # sem_observations_binary = self.lmdb_cursor.get(sem_obs_idx.encode())
+        # sem_observations = msgpack_numpy.unpackb(sem_observations_binary, raw=False)
+        # for k, v in sem_observations.items():
+        #     obs = np.array(sem_observations[k])
+        #     observations[k] = torch.from_numpy(obs)
+        
+        # pred_sem_obs_idx = "{0:0=6d}_pobs".format(idx)
+        # pred_sem_observations_binary = self.lmdb_cursor.get(pred_sem_obs_idx.encode())
+        # pred_sem_observations = msgpack_numpy.unpackb(pred_sem_observations_binary, raw=False)
+        # for k, v in pred_sem_observations.items():
+        #     obs = np.array(pred_sem_observations[k])
+        #     observations[k] = torch.from_numpy(obs)
+
         next_action_idx = "{0:0=6d}_next_action".format(idx)
         next_action_binary = self.lmdb_cursor.get(next_action_idx.encode())
         next_action = np.frombuffer(next_action_binary, dtype="int")
@@ -328,5 +332,6 @@ class ObjectNavEpisodeDataset(Dataset):
         weight_binary = self.lmdb_cursor.get(weight_idx.encode())
         weight = np.frombuffer(weight_binary, dtype="float32")
         weight = torch.from_numpy(np.copy(weight))
+        weight = torch.where(weight != 1.0, self.inflection_weight_coef, 1.0)
 
         return idx, observations, next_action, prev_action, weight

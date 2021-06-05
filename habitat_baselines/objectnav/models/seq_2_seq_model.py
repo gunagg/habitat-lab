@@ -217,17 +217,6 @@ class Seq2SeqModel(nn.Module):
             model_config=model_config,
             num_actions=action_space.n,
         )
-        # self.net = PointNavResNetNet(
-        #     observation_space=observation_space,
-        #     action_space=action_space,
-        #     hidden_size=model_config.hidden_size,
-        #     num_recurrent_layers=model_config.num_recurrent_layers,
-        #     rnn_type=model_config.rnn_type,
-        #     backbone=model_config.backbone,
-        #     resnet_baseplanes=model_config.resnet_baseplanes,
-        #     normalize_visual_inputs=model_config.normalize_visual_inputs,
-        #     force_blind_policy=model_config.force_blind_policy,
-        # )
         self.action_distribution = CategoricalNet(
             self.net.output_size, action_space.n
         )

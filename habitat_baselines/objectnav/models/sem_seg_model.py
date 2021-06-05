@@ -100,15 +100,15 @@ class SemSegSeqNet(Net):
         sem_seg_output_size = 0
         self.semantic_predictor = None
         if model_config.USE_SEMANTICS:
-            # self.semantic_predictor = load_rednet(
-            #     device,
-            #     ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
-            #     resize=True # since we train on half-vision
-            # )
-            # self.semantic_predictor.eval()
-            # # Disable gradients
-            # for param in self.semantic_predictor.parameters():
-            #     param.requires_grad_(False)
+            self.semantic_predictor = load_rednet(
+                device,
+                ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
+                resize=True # since we train on half-vision
+            )
+            self.semantic_predictor.eval()
+            # Disable gradients
+            for param in self.semantic_predictor.parameters():
+                param.requires_grad_(False)
 
             sem_embedding_size = model_config.SEMANTIC_ENCODER.embedding_size
             # self.semantic_embedder = nn.Embedding(40 + 2, sem_embedding_size)
@@ -215,7 +215,7 @@ class SemSegSeqNet(Net):
             obj_semantic = observations["semantic"].flatten(start_dim=1)
             
             if len(observations["objectgoal"].size()) == 3:
-                observations["objectgoal"] = observations["objectgoal"].view(
+                observations["objectgoal"] = observations["objectgoal"].contiguous().view(
                     -1, observations["objectgoal"].size(2)
                 )
             idx = self.task_cat2mpcat40[
@@ -267,7 +267,7 @@ class SemSegSeqNet(Net):
         x = [depth_embedding, rgb_embedding]
 
         if self.model_config.USE_SEMANTICS:
-            # observations["semantic"] = self.get_semantic_observations(observations)
+            observations["semantic"] = self.get_semantic_observations(observations)
             if self.model_config.embed_sge:
                 sge_embedding = self._extract_sge(observations)
                 x.append(sge_embedding)

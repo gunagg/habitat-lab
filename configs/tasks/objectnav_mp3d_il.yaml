@@ -51,6 +51,6 @@ TASK:
 SEED: 102
 DATASET:
   TYPE: ObjectNav-v1
-  SPLIT: sample
-  DATA_PATH: "data/datasets/objectnav_mp3d_v4/{split}/{split}.json.gz"
+  SPLIT: train
+  DATA_PATH: "data/datasets/objectnav_mp3d_v2/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"

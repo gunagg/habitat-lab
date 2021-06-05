@@ -1,11 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=il_ddp
-#SBATCH --gres gpu:2
-#SBATCH --nodes 1
+#SBATCH --job-name=ddp_onav
+#SBATCH --gres gpu:1
+#SBATCH --nodes 2
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --partition=overcap
-#SBATCH --account=overcap
+#SBATCH --partition=long
 #SBATCH --constraint=rtx_6000
 #SBATCH --output=slurm_logs/ddppo-%j.out
 #SBATCH --error=slurm_logs/ddppo-%j.err

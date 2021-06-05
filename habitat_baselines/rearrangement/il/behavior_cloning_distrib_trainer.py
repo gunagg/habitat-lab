@@ -321,10 +321,10 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
         # Distributed data parallel setup
         if torch.cuda.is_available():
             self.model = torch.nn.parallel.DistributedDataParallel(
-                self.model, device_ids=[self.device], output_device=self.device
+                self.model, device_ids=[self.device], output_device=self.device, find_unused_parameters=True
             )
         else:
-            self.model = torch.nn.parallel.DistributedDataParallel(self.model)    
+            self.model = torch.nn.parallel.DistributedDataParallel(self.model, find_unused_parameters=True)    
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -439,10 +439,26 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
                         avg_slice_time += ((time.time() - slice_start_time) / 60)
 
                         train_time = time.time()
-                        logger.info("Before sync: {} - {}/{} - {}".format(self.model.require_backward_grad_sync, i, num_steps))
 
-                        with (self.model.no_sync() if i != num_steps - 1 else contextlib.suppress()):
-                            logger.info("No sync: {} - {}/{} - {}".format(self.model.require_backward_grad_sync, i, num_steps))
+                        if i != num_steps - 1 :
+                            with self.model.no_sync():
+                                logits, rnn_hidden_states = self.model(
+                                    observations_batch_sample,
+                                    rnn_hidden_states,
+                                    gt_prev_action_sample,
+                                    episode_not_dones_sample
+                                )
+
+                                T, N = gt_next_action_sample.shape
+                                logits = logits.view(T, N, -1)
+
+                                action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
+                                denom = inflec_weights_sample.sum(0)
+                                denom[denom == 0.0] = 1
+                                action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
+                                loss = (action_loss / num_steps)
+                                loss.backward()
+                        else:
                             logits, rnn_hidden_states = self.model(
                                 observations_batch_sample,
                                 rnn_hidden_states,
@@ -459,7 +475,9 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
                             action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
                             loss = (action_loss / num_steps)
                             loss.backward()
-                            batch_loss += loss.item()
+                        batch_loss += loss.item()
+                        avg_train_time += ((time.time() - train_time) / 60)
+                        rnn_hidden_states = rnn_hidden_states.detach()
 
                     # Sync loss
                     stats = torch.tensor(
@@ -467,15 +485,12 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
                         device=self.device,
                     )
                     distrib.all_reduce(stats)
-                    batch_loss += stats[0].item()
-                    rnn_hidden_states = rnn_hidden_states.detach()
-
-                    avg_train_time += ((time.time() - train_time) / 60)
+                    batch_loss = stats[0].item()
 
                     if t % config.LOG_INTERVAL == 0:
                         logger.info(
-                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f};]".format(
-                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t,
+                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f};]".format(
+                                epoch, t, batch_loss / self.world_size, avg_load_time / t, avg_train_time / t,
                             )
                         )
 
