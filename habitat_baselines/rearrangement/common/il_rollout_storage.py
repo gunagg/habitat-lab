@@ -52,7 +52,6 @@ class RolloutStorage:
 
         self.actions = torch.zeros(num_steps, num_envs, action_shape)
         self.prev_actions = torch.zeros(num_steps + 1, num_envs, action_shape)
-        self.running_scenes = [[]] * (num_steps + 1)
         if action_space.__class__.__name__ == "ActionSpace":
             self.actions = self.actions.long()
             self.prev_actions = self.prev_actions.long()
@@ -81,7 +80,6 @@ class RolloutStorage:
         actions,
         rewards,
         masks,
-        scene_ids,
     ):
         for sensor in observations:
             self.observations[sensor][self.step + 1].copy_(
@@ -91,7 +89,6 @@ class RolloutStorage:
         self.prev_actions[self.step + 1].copy_(actions)
         self.rewards[self.step].copy_(rewards)
         self.masks[self.step + 1].copy_(masks)
-        self.running_scenes[self.step + 1] = scene_ids
 
         self.step = self.step + 1
     
@@ -112,8 +109,12 @@ class RolloutStorage:
         )
         self.masks[0].copy_(self.masks[self.step])
         self.prev_actions[0].copy_(self.prev_actions[self.step])
-        self.running_scenes[0] = self.running_scenes[self.step]
         self.step = 0
+
+    def get_next_actions(self):
+        next_action_observations = self.observations["demonstration"][self.step]
+        actions = next_action_observations.clone()
+        return actions
 
     def recurrent_generator(self, num_mini_batch):
         num_processes = self.rewards.size(1)
@@ -131,7 +132,7 @@ class RolloutStorage:
             actions_batch = []
             prev_actions_batch = []
             masks_batch = []
-            old_action_log_probs_batch = []
+            # old_action_log_probs_batch = []
 
             for offset in range(num_envs_per_batch):
                 ind = perm[start_ind + offset]
@@ -148,9 +149,9 @@ class RolloutStorage:
                 actions_batch.append(self.actions[: self.step, ind])
                 prev_actions_batch.append(self.prev_actions[: self.step, ind])
                 masks_batch.append(self.masks[: self.step, ind])
-                old_action_log_probs_batch.append(
-                    self.action_log_probs[: self.step, ind]
-                )
+                # old_action_log_probs_batch.append(
+                #     self.action_log_probs[: self.step, ind]
+                # )
 
             T, N = self.step, num_envs_per_batch
 
@@ -163,9 +164,9 @@ class RolloutStorage:
             actions_batch = torch.stack(actions_batch, 1)
             prev_actions_batch = torch.stack(prev_actions_batch, 1)
             masks_batch = torch.stack(masks_batch, 1)
-            old_action_log_probs_batch = torch.stack(
-                old_action_log_probs_batch, 1
-            )
+            # old_action_log_probs_batch = torch.stack(
+            #     old_action_log_probs_batch, 1
+            # )
 
             # States is just a (num_recurrent_layers, N, -1) tensor
             recurrent_hidden_states_batch = torch.stack(
@@ -181,9 +182,6 @@ class RolloutStorage:
             actions_batch = self._flatten_helper(T, N, actions_batch)
             prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
             masks_batch = self._flatten_helper(T, N, masks_batch)
-            old_action_log_probs_batch = self._flatten_helper(
-                T, N, old_action_log_probs_batch
-            )
 
             yield (
                 observations_batch,
@@ -191,7 +189,6 @@ class RolloutStorage:
                 actions_batch,
                 prev_actions_batch,
                 masks_batch,
-                old_action_log_probs_batch,
             )
 
     @staticmethod

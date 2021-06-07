@@ -8,8 +8,8 @@ echo "Generate IL episode dataset"
 echo "hab sim: ${PYTHONPATH}"
 
 scene=$1
-path=$3
 task=$2
+path=$3
 semantic=$4
 
 if [[ $semantic == "semantic" ]]; then

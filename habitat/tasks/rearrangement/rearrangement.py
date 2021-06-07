@@ -207,14 +207,15 @@ class DemonstrationSensor(Sensor):
         task: EmbodiedTask,
         **kwargs
     ):
+        # Fetch next action as observation
         if not task.is_episode_active:  # reset
-            self.timestep = 0
+            self.timestep = 1
         
         if self.timestep < len(episode.reference_replay):
             action_name = episode.reference_replay[self.timestep].action
             action = get_habitat_sim_action(action_name)
         else:
-            action = -1
+            action = 0
 
         # print("{} -- {}".format(self.timestep, get_habitat_sim_action_str(action)))
         self.timestep += 1
