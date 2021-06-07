@@ -7,19 +7,19 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/resnet18_full/seed_1/"
-VIDEO_DIR: "video_dir/objectnav/resnet18_full/seed_1/"
+TENSORBOARD_DIR: "tb/objectnav/resnet18_challenge/seed_2/"
+VIDEO_DIR: "video_dir/objectnav/resnet18_challenge/seed_2/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/resnet18_full/seed_1/model_300.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/resnet18_challenge/seed_2/model_300.ckpt"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/resnet18_full/seed_1"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/resnet18_challenge/seed_2"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 1
-DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
+DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v4/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
@@ -54,6 +54,7 @@ MODEL:
   embed_sge: False
   USE_SEMANTICS: False
   USE_PRED_SEMANTICS: False
+  SWITCH_TO_PRED_SEMANTICS_EPOCH: 25
   SEMANTIC_ENCODER:
     rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"
     cnn_type: "ResnetSemSegEncoder"

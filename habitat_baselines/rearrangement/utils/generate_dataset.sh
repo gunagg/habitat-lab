@@ -10,5 +10,11 @@ echo "hab sim: ${PYTHONPATH}"
 scene=$1
 path=$3
 task=$2
+semantic=$4
 
-python habitat_baselines/rearrangement/utils/generate_dataset.py --episodes $path --mode train --scene $scene --task $task
+if [[ $semantic == "semantic" ]]; then
+    echo "Add semantic obs"
+    python habitat_baselines/rearrangement/utils/generate_dataset.py --episodes $path --mode train --scene $scene --task $task --use-semantic
+else
+    python habitat_baselines/rearrangement/utils/generate_dataset.py --episodes $path --mode train --scene $scene --task $task
+fi

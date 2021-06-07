@@ -36,7 +36,11 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, collate_fn
+from habitat_baselines.objectnav.dataset.episode_dataset import (
+    ObjectNavEpisodeDataset,
+    ObjectNavEpisodeDatasetV2,
+    collate_fn,
+)
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel, DDPSemSegSeqModel
 from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
@@ -229,20 +233,23 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
     def _setup_dataset(self):
         config = self.config
 
-        content_scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
-        if "*" in content_scenes:
-            dataset = make_dataset(
-                config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
-            )
-            content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
         for scene in ["split_1", "split_2", "split_3", "split_4"]:
-            dataset = ObjectNavEpisodeDataset(
-                config,
-                use_iw=config.IL.USE_IW,
-                split_name=scene,
-                inflection_weight_coef=config.MODEL.inflection_weight_coef
-            )
+            if config.MODEL.USE_SEMANTICS:
+                dataset = ObjectNavEpisodeDatasetV2(
+                    config,
+                    use_iw=config.IL.USE_IW,
+                    split_name=scene,
+                    inflection_weight_coef=config.MODEL.inflection_weight_coef
+                )
+            else:
+                logger.info("Using DatasetV1")
+                dataset = ObjectNavEpisodeDataset(
+                    config,
+                    use_iw=config.IL.USE_IW,
+                    split_name=scene,
+                    inflection_weight_coef=config.MODEL.inflection_weight_coef
+                )
             datasets.append(dataset)
 
         concat_dataset = ConcatDataset(datasets)
@@ -338,7 +345,6 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
             self.model = torch.nn.parallel.DistributedDataParallel(
                 self.model, find_unused_parameters = True
             )
-        # self.model.init_distributed(find_unused_params=True)
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -377,6 +383,7 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                 logger.info("Epoch: {}".format(epoch))
                 start_time = time.time()
                 avg_loss = 0.0
+                steps = 0.0
                 avg_load_time = 0.0
                 avg_slice_time = 0.0
                 avg_train_time = 0.0
@@ -407,9 +414,13 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                     requeue_job()
                     return
 
+                if config.MODEL.USE_PRED_SEMANTICS and epoch >= config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH:
+                    logger.info("Finetuning on pred semantic masks")
+
                 for batch in train_loader:
                     torch.cuda.empty_cache()
                     t += 1
+                    steps += 1
 
                     (
                      observations_batch,
@@ -429,6 +440,9 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                     )
 
                     optim.zero_grad()
+
+                    if config.MODEL.USE_PRED_SEMANTICS and epoch >= config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH:
+                        observations_batch["semantic"] = observations_batch["pred_semantic"].clone()
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size
@@ -463,7 +477,6 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
 
                                 T, N = gt_next_action_sample.shape
                                 logits = logits.view(T, N, -1)
-                                # pred_actions = torch.argmax(logits, dim=2)
 
                                 action_loss = cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
                                 denom = inflec_weights_sample.sum(0)
@@ -504,8 +517,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
 
                     if t % config.LOG_INTERVAL == 0 and self.world_rank == 0:
                         logger.info(
-                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; slice time: {:.3f}; samples: {:.3f}]".format(
-                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_slice_time / t, t
+                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; ]".format(
+                                epoch, t, batch_loss, avg_load_time / steps, avg_train_time / steps,
                             )
                         )
                         writer.add_scalar("train_loss", loss, t)
@@ -534,6 +547,11 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                     if epoch % config.CHECKPOINT_INTERVAL == 0:
                         self.save_checkpoint(
                             self.model.state_dict(), "model_{}.ckpt".format(epoch)
+                        )
+                    # Save last checkpoint trained on GT sem seg masks
+                    if config.MODEL.USE_PRED_SEMANTICS and epoch == config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH - 1:
+                        self.save_checkpoint(
+                            self.model.module.state_dict(), "model_gt_{}.ckpt".format(epoch)
                         )
 
                 epoch += 1

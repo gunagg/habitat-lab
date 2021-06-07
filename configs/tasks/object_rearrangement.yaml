@@ -97,5 +97,5 @@ TASK:
 DATASET:
   TYPE: RearrangementDataset-v0
   SPLIT: "sample"
-  DATA_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/v4/{split}/{split}.json.gz"
+  DATA_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/unseen_scenes/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/habitat-test-scenes/"

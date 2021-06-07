@@ -275,6 +275,8 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id=
 
             turns_done = False
             turns_count = 0
+            action_data = get_action_data(HabitatSimActions.STOP, env._sim)
+            reference_replay.append(action_data)
             while not env.episode_over:
                 best_action = follower.get_next_action(
                     env.current_episode.goals[goal_idx].position

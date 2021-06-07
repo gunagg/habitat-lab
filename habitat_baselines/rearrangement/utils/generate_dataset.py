@@ -9,7 +9,7 @@ import os
 from habitat import Config
 from habitat import get_config as get_task_config
 from habitat_baselines.rearrangement.dataset.episode_dataset import RearrangementEpisodeDataset
-from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset
+from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, ObjectNavEpisodeDatasetV2
 
 from time import sleep
 
@@ -23,7 +23,7 @@ objectnav_scene_splits = {
     "split_5": ["17DRP5sb8fy"]
 }
 
-def generate_episode_dataset(config, mode, task, split_name="split_1"):
+def generate_episode_dataset(config, mode, task, split_name="split_1", use_semantic=False):
     if task == "rearrangement":
         rearrangement_dataset = RearrangementEpisodeDataset(
             config,
@@ -33,14 +33,24 @@ def generate_episode_dataset(config, mode, task, split_name="split_1"):
             inflection_weight_coef=config.MODEL.inflection_weight_coef
         )
     else:
-        rearrangement_dataset = ObjectNavEpisodeDataset(
-            config,
-            content_scenes=config.TASK_CONFIG.DATASET.CONTENT_SCENES,
-            mode=mode,
-            use_iw=config.IL.USE_IW,
-            split_name=split_name,
-            inflection_weight_coef=config.MODEL.inflection_weight_coef
-        )
+        if use_semantic:
+            dataset = ObjectNavEpisodeDatasetV2(
+                config,
+                content_scenes=config.TASK_CONFIG.DATASET.CONTENT_SCENES,
+                mode=mode,
+                use_iw=config.IL.USE_IW,
+                split_name=split_name,
+                inflection_weight_coef=config.MODEL.inflection_weight_coef
+            )
+        else:
+            rearrangement_dataset = ObjectNavEpisodeDataset(
+                config,
+                content_scenes=config.TASK_CONFIG.DATASET.CONTENT_SCENES,
+                mode=mode,
+                use_iw=config.IL.USE_IW,
+                split_name=split_name,
+                inflection_weight_coef=config.MODEL.inflection_weight_coef
+            )
 
 
 def main():
@@ -56,6 +66,9 @@ def main():
     )
     parser.add_argument(
         "--task", type=str, default="rearrangement"
+    )
+    parser.add_argument(
+        "--use-semantic", dest='use_semantic', action='store_true'
     )
     args = parser.parse_args()
 
@@ -82,7 +95,7 @@ def main():
     cfg.TASK_CONFIG = task_config
     cfg.freeze()
 
-    observations = generate_episode_dataset(cfg, args.mode, args.task, args.scene)
+    observations = generate_episode_dataset(cfg, args.mode, args.task, args.scene, args.use_semantic)
 
 if __name__ == "__main__":
     main()

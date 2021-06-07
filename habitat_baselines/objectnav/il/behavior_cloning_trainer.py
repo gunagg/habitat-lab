@@ -272,7 +272,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
             rearrangement_dataset,
             collate_fn=collate_fn,
             batch_size=batch_size,
-            num_workers=8,
+            num_workers=4,
             shuffle=True,
             drop_last=True,
         )
@@ -331,8 +331,8 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                 batch_start_time = time.time()
 
-                if config.MODEL.USE_PRED_SEMANTICS and epoch >= config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH:
-                    logger.info("Finetuning on pred semantic masks")
+                # if config.MODEL.USE_PRED_SEMANTICS and epoch >= config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH:
+                #     logger.info("Finetuning on pred semantic masks")
 
                 for batch in train_loader:
                     torch.cuda.empty_cache()
@@ -357,8 +357,8 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                     optim.zero_grad()
 
-                    if config.MODEL.USE_PRED_SEMANTICS and epoch >= config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH:
-                        observations_batch["semantic"] = observations_batch["pred_semantic"].clone()
+                    # if config.MODEL.USE_PRED_SEMANTICS and epoch >= config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH:
+                    #     observations_batch["semantic"] = observations_batch["pred_semantic"].clone()
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size
@@ -416,6 +416,12 @@ class ObjectNavBCTrainer(BaseILTrainer):
                     optim.step()
                     scheduler.step()
                     batch_start_time = time.time()
+                    rnn_hidden_states = torch.zeros(
+                        config.MODEL.STATE_ENCODER.num_recurrent_layers,
+                        batch_size,
+                        config.MODEL.STATE_ENCODER.hidden_size,
+                        device=self.device,
+                    )
 
                 end_time = time.time()
                 time_taken = "{:.1f}".format((end_time - start_time) / 60)
@@ -437,10 +443,10 @@ class ObjectNavBCTrainer(BaseILTrainer):
                     self.save_checkpoint(
                         self.model.module.state_dict(), "model_{}.ckpt".format(epoch)
                     )
-                if config.MODEL.USE_PRED_SEMANTICS and epoch == config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH - 1:
-                    self.save_checkpoint(
-                        self.model.module.state_dict(), "model_gt_{}.ckpt".format(epoch)
-                    )
+                # if config.MODEL.USE_PRED_SEMANTICS and epoch == config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH - 1:
+                #     self.save_checkpoint(
+                #         self.model.module.state_dict(), "model_gt_{}.ckpt".format(epoch)
+                #     )
 
                 epoch += 1
         self.envs.close()

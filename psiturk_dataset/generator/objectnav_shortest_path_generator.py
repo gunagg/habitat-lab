@@ -223,9 +223,9 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="d
         write_json(dataset, "{}/{}.json".format(output_path, scene_id))
         write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
 
-        if len(failed_dataset["episodes"]) > 0:
-            write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
-            write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
+        # if len(failed_dataset["episodes"]) > 0:
+        #     write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
+        #     write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
 
 
 def main():
@@ -243,7 +243,7 @@ def main():
         "--episodes", type=str, default="data/episodes/sampled.json.gz"
     )
     parser.add_argument(
-        "--output-path", type=str, default="data/episodes/s_path_objectnav/round_2"
+        "--output-path", type=str, default="data/episodes/s_path_objectnav/round_2_full/extended"
     )
     args = parser.parse_args()
     cfg = config
