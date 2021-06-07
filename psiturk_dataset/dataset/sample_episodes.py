@@ -80,15 +80,17 @@ def sample_episodes_by_episode_ids(path, output_path):
 
 
 def sample_objectnav_episodes(path, output_path, prev_tasks):
-    prev_task_files = glob.glob(prev_tasks + "/*.json")
+    prev_tasks = ["data/datasets/objectnav_mp3d_v2/train/sampled", "data/datasets/objectnav_mp3d_v2/train/sampled_v2"]
     prev_episode_points = {}
-    for prev_task in prev_task_files:
-        data = load_json_dataset(prev_task)
-        for ep in data["episodes"]:
-            key = str(ep["start_position"])
-            if key not in prev_episode_points.keys():
-                prev_episode_points[key] = 0
-            prev_episode_points[key] += 1
+    for prev_path in prev_tasks:
+        prev_task_files = glob.glob(prev_path + "/*.json")
+        for prev_task in prev_task_files:
+            data = load_json_dataset(prev_task)
+            for ep in data["episodes"]:
+                key = str(ep["start_position"])
+                if key not in prev_episode_points.keys():
+                    prev_episode_points[key] = 0
+                prev_episode_points[key] += 1
 
     files = glob.glob(path + "/*.json.gz")
     hits = []
@@ -108,7 +110,7 @@ def sample_objectnav_episodes(path, output_path, prev_tasks):
                 num_duplicates += 1
                 continue
             object_category = episode["object_category"]
-            if object_category_map[object_category] < 10:
+            if object_category_map[object_category] < 15:
                 object_category_map[object_category] += 1
                 episodes.append(episode)
                 if key not in prev_episode_points.keys():
@@ -118,13 +120,16 @@ def sample_objectnav_episodes(path, output_path, prev_tasks):
 
         data["episodes"] = episodes
         dest_path = os.path.join(output_path, "{}.json".format(scene_id))
+        # print(output_path)
+        # print(dest_path)
         write_json(data, dest_path)
+        write_gzip(dest_path, dest_path)
 
         scene_ep_map[scene_id] = len(data['episodes'])
 
-        data["episodes"] = episodes[:1]
-        dest_path = os.path.join(output_path, "{}_train.json".format(scene_id))
-        write_json(data, dest_path)
+        # data["episodes"] = episodes[:1]
+        # dest_path = os.path.join(output_path, "{}_train.json".format(scene_id))
+        # write_json(data, dest_path)
         total_episodes += len(episodes)
 
         ep = {
