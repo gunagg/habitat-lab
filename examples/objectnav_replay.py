@@ -260,6 +260,7 @@ def run_reference_replay(
             episode = env.current_episode
             ep_success = 0
             replay_data = []
+            sys.exit(1)
 
             if len(episode.reference_replay) > 2500:
                 continue

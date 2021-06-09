@@ -392,7 +392,7 @@ class ObjectNavEpisodeDatasetV2(Dataset):
                 lock=False,
             )
 
-        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 6)
+        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 5)
         self.lmdb_env.close()
         self.lmdb_env = None
     

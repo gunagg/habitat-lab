@@ -39,6 +39,7 @@ from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
 from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
+from habitat_baselines.objectnav.models.rednet import load_rednet
 
 
 @baseline_registry.register_trainer(name="objectnav-bc-env")
@@ -90,7 +91,15 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             observation_space, self.envs.action_spaces[0], model_config, self.device
         )
         self.model.to(self.device)
-        print(type(il_cfg.lr))
+
+        self.semantic_predictor = None
+        if model_config.USE_PRED_SEMANTICS:
+            self.semantic_predictor = load_rednet(
+                self.device,
+                ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
+                resize=True # since we train on half-vision
+            )
+            self.semantic_predictor.eval()
 
         self.agent = BCAgent(
             model=self.model,
@@ -188,7 +197,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         # fetch actions and environment state from replay buffer
         next_actions = rollouts.get_next_actions()
-        actions = next_actions.long().to(device="cpu")
+        actions = next_actions.long().unsqueeze(-1)
         step_data = [a.item() for a in next_actions.long().to(device="cpu")]
 
         pth_time += time.time() - t_sample_action
@@ -205,6 +214,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         t_update_stats = time.time()
         batch = batch_obs(observations, device=self.device)
+        if self.config.MODEL.USE_PRED_SEMANTICS and self.current_update >= self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE:
+            batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         rewards = torch.tensor(
@@ -345,6 +356,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             for update in range(self.config.NUM_UPDATES):
                 profiling_wrapper.on_start_step()
                 profiling_wrapper.range_push("train update")
+                
+                self.current_update = update
 
                 if il_cfg.use_linear_lr_decay and update > 0:
                     lr_scheduler.step()  # type: ignore
@@ -409,10 +422,10 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 )
 
                 # log stats
-                if update > 0 and update % self.config.LOG_INTERVAL == 0:
+                if update % self.config.LOG_INTERVAL == 0:
                     logger.info(
-                        "update: {}\tfps: {:.3f}\t".format(
-                            update, count_steps / (time.time() - t_start)
+                        "update: {}\tfps: {:.3f}\tloss: {:.3f}".format(
+                            update, count_steps / (time.time() - t_start), total_loss
                         )
                     )
 
@@ -432,6 +445,12 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                                 if k != "count"
                             ),
                         )
+                    )
+   
+                if update == self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE - 1:
+                    self.save_checkpoint(
+                        f"ckpt_gt_best.{count_checkpoints}.pth",
+                        dict(step=count_steps),
                     )
 
                 # checkpoint model
@@ -474,6 +493,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
+        # config.TASK_CONFIG.DATASET.TYPE = "ObjectNav-v1"
         config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:
@@ -486,8 +506,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         self._setup_actor_critic_agent(il_cfg, config.MODEL)
 
-        self.agent.load_state_dict(ckpt_dict["state_dict"])
-        self.actor_critic = self.agent.actor_critic
+        self.agent.load_state_dict(ckpt_dict["state_dict"], strict=True)
+        self.model = self.agent.model
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
@@ -498,7 +518,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            self.actor_critic.net.num_recurrent_layers,
+            self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
             self.config.NUM_PROCESSES,
             il_cfg.hidden_size,
             device=self.device,
@@ -533,7 +553,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 number_of_eval_episodes = total_num_eps
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
-        self.actor_critic.eval()
+        self.model.eval()
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -541,20 +561,20 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
+                if self.semantic_predictor is not None:
+                    batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
                 (
-                    _,
-                    actions,
-                    _,
+                    logits,
                     test_recurrent_hidden_states,
-                ) = self.actor_critic.act(
+                ) = self.model(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,
                     not_done_masks,
-                    deterministic=False,
                 )
 
-                prev_actions.copy_(actions)  # type: ignore
+                actions = torch.argmax(logits, dim=1)
+                prev_actions.copy_(actions.unsqueeze(1))  # type: ignore
 
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts

@@ -90,10 +90,10 @@ def calculate_inflection_weight_objectnav(path, stats_path):
                 data_stats["action_frequency"][action] += 1
 
             inflections += num_inflections
-            total_actions += num_actions
             total_episodes += 1
             if len(reference_replay) < 1000:
                 ep_lt_than_1k += 1
+                total_actions += num_actions
             
             if len(reference_replay) < 500:
                 ep_lt_than_500 += 1

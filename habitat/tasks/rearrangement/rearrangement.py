@@ -196,6 +196,7 @@ class DemonstrationSensor(Sensor):
         self.uuid = "demonstration"
         self.observation_space = spaces.Discrete(0)
         self.timestep = 0
+        self.prev_action = 0
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.uuid
@@ -203,21 +204,25 @@ class DemonstrationSensor(Sensor):
     def _get_observation(
         self,
         observations: Dict[str, Observations],
-        episode: RearrangementEpisode,
+        episode,
         task: EmbodiedTask,
         **kwargs
     ):
+
         # Fetch next action as observation
-        if not task.is_episode_active:  # reset
+        if task.is_resetting:  # reset
             self.timestep = 1
+            # logger.info("reseting {}".format(task.is_resetting))
         
         if self.timestep < len(episode.reference_replay):
             action_name = episode.reference_replay[self.timestep].action
             action = get_habitat_sim_action(action_name)
+            #logger.info("{} -- {}".format(self.timestep, action_name))
         else:
             action = 0
+            # logger.info("{} -- {}".format(self.timestep, "STOP"))
 
-        # print("{} -- {}".format(self.timestep, get_habitat_sim_action_str(action)))
+        # logger.info("{} -- {}".format(self.timestep, action))
         self.timestep += 1
         return action
 
@@ -227,9 +232,10 @@ class DemonstrationSensor(Sensor):
 
 @registry.register_sensor(name="InflectionWeightSensor")
 class InflectionWeightSensor(Sensor):
-    def __init__(self, **kwargs):
+    def __init__(self, config: Config, **kwargs):
         self.uuid = "inflection_weight"
         self.observation_space = spaces.Discrete(0)
+        self._config = config
         self.timestep = 0
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -238,18 +244,23 @@ class InflectionWeightSensor(Sensor):
     def _get_observation(
         self,
         observations: Dict[str, Observations],
-        episode: RearrangementEpisode,
+        episode,
         task: EmbodiedTask,
         **kwargs
     ):
-        if not task.is_episode_active:  # reset
+        if task.is_resetting:  # reset
+            # logger.info("Reset: {}, lim: {}".format(self.timestep, len(episode.reference_replay)))
             self.timestep = 0
         
         inflection_weight = 0.0
+        # logger.info("Ts: {}, lim: {}".format(self.timestep, len(episode.reference_replay)))
         if self.timestep == 0:
             inflection_weight = 1.0
-        elif episode.reference_replay[self.timestep - 1].action != episode.reference_replay[self.timestep]:
-            inflection_weight = 1.0
+        elif self.timestep >= len(episode.reference_replay):
+            # logger.info("EP: {} Ts: {}, lim: {}".format(episode.episode_id, self.timestep, len(episode.reference_replay)))
+            inflection_weight = 1.0 
+        elif episode.reference_replay[self.timestep - 1].action != episode.reference_replay[self.timestep].action:
+            inflection_weight = self._config.INFLECTION_COEF
         # print("{} -- {}".format(self.timestep, get_habitat_sim_action_str(action)))
         self.timestep += 1
         return inflection_weight

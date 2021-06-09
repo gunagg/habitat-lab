@@ -142,7 +142,7 @@ class DecentralizedDistributedMixin:
                     self.ddp = torch.nn.parallel.DistributedDataParallel(model)
 
         self._ddp_hooks = Guard(self.model, self.device)  # type: ignore
-        self.get_advantages = self._get_advantages_distributed
+        # self.get_advantages = self._get_advantages_distributed
 
         self.reducer = self._ddp_hooks.ddp.reducer
         self.find_unused_params = find_unused_params

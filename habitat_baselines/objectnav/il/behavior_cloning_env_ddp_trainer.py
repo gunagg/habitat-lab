@@ -44,6 +44,7 @@ from habitat_baselines.objectnav.il.behavior_cloning_env_trainer import ObjectNa
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
 from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
+from habitat_baselines.objectnav.models.rednet import load_rednet
 
 
 @baseline_registry.register_trainer(name="ddp-objectnav-bc-env")
@@ -94,7 +95,15 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             observation_space, self.envs.action_spaces[0], model_config, self.device
         )
         self.model.to(self.device)
-        print(type(il_cfg.lr))
+
+        self.semantic_predictor = None
+        if model_config.USE_PRED_SEMANTICS:
+            self.semantic_predictor = load_rednet(
+                self.device,
+                ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
+                resize=True # since we train on half-vision
+            )
+            self.semantic_predictor.eval()
 
         self.agent = DDPBCAgent(
             model=self.model,
@@ -155,6 +164,12 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             workers_ignore_signals=True,
         )
 
+        logger.info(
+            "[ train_loader has {} samples ]".format(
+                self.envs.count_episodes()
+            )
+        )
+
         il_cfg = self.config.IL.BehaviorCloning
         if (
             not os.path.isdir(self.config.CHECKPOINT_FOLDER)
@@ -188,7 +203,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             obs_space,
             self.envs.action_spaces[0],
             il_cfg.hidden_size,
-            num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
+            num_recurrent_layers=self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
         )
         rollouts.to(self.device)
 
@@ -251,6 +266,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             for update in range(start_update, self.config.NUM_UPDATES):
                 profiling_wrapper.on_start_step()
                 profiling_wrapper.range_push("train update")
+                self.current_update = update
 
                 if il_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore
@@ -340,7 +356,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
                     device=self.device,
                 )
                 distrib.all_reduce(stats)
-                count_steps += stats[2].item()
+                count_steps += stats[1].item()
 
                 if self.world_rank == 0:
                     num_rollouts_done_store.set("num_done", "0")
@@ -383,10 +399,10 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
                     # log stats
                     if update > 0 and update % self.config.LOG_INTERVAL == 0:
                         logger.info(
-                            "update: {}\tfps: {:.3f}\t".format(
+                            "update: {}\tfps: {:.3f}\tloss: {:.3f}".format(
                                 update,
                                 count_steps
-                                / ((time.time() - t_start) + prev_time),
+                                / ((time.time() - t_start) + prev_time), losses[0]
                             )
                         )
 
@@ -407,6 +423,12 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
                             )
                         )
 
+                    if update == self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE - 1:
+                        self.save_checkpoint(
+                            f"ckpt_gt_best.{count_checkpoints}.pth",
+                            dict(step=count_steps),
+                        )
+
                     # checkpoint model
                     if update % self.config.CHECKPOINT_INTERVAL == 0:
                         self.save_checkpoint(
@@ -414,6 +436,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
                             dict(step=count_steps),
                         )
                         count_checkpoints += 1
+
 
                 profiling_wrapper.range_pop()  # train update
 

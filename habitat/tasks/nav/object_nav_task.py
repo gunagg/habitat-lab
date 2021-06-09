@@ -233,10 +233,12 @@ class ObjectNavigationTask(NavigationTask):
     Used to explicitly state a type of the task in config.
     """
     _is_episode_active: bool
+    _prev_action: int
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._is_episode_active = False
 
-    def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
+    def _check_episode_is_active(self,  action, *args: Any, **kwargs: Any) -> bool:
         return not getattr(self, "is_stop_called", False)
+

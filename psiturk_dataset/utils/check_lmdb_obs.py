@@ -17,14 +17,28 @@ def read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, idx=0):
             obs = obs.astype(np.uint8)
         observations[k] = torch.from_numpy(obs)
     
+    obs_idx = "{0:0=6d}_sobs".format(idx)
+    observations_binary = lmdb_cursor.get(obs_idx.encode())
+    sem_observations = msgpack_numpy.unpackb(observations_binary, raw=False)
+    for k, v in sem_observations.items():
+        obs = np.array(sem_observations[k])
+        observations[k] = torch.from_numpy(obs)
+    
+    obs_idx = "{0:0=6d}_pobs".format(idx)
+    observations_binary = lmdb_cursor.get(obs_idx.encode())
+    sem_observations = msgpack_numpy.unpackb(observations_binary, raw=False)
+    for k, v in sem_observations.items():
+        obs = np.array(sem_observations[k])
+        observations[k] = torch.from_numpy(obs)
+    
     obs_list = []
     print("Observations shape: {}".format(observations["rgb"].shape))
     for i in range(observations["rgb"].shape[0]):
         frame = observations_to_image({
             "rgb": observations["rgb"][i],
             "depth": observations["depth"][i],
-            # "gt_semantic": observations["semantic"][i],
-            # "semantic": observations["pred_semantic"][i]
+            "gt_semantic": observations["semantic"][i],
+            "semantic": observations["pred_semantic"][i]
         }, {})
         obs_list.append(frame)
 
@@ -47,7 +61,7 @@ def read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, idx=0):
             "prev_action": prev_action
         }))
 
-    images_to_video(obs_list, output_dir="demos", video_name="re_create_3_{}".format(idx))
+    images_to_video(obs_list, output_dir="demos", video_name="re_create_{}".format(idx))
 
 
 def get_videos_from_lmdb(path, ub):

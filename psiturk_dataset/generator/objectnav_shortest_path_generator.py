@@ -243,7 +243,7 @@ def main():
         "--episodes", type=str, default="data/episodes/sampled.json.gz"
     )
     parser.add_argument(
-        "--output-path", type=str, default="data/episodes/s_path_objectnav/round_2_full/extended"
+        "--output-path", type=str, default="data/episodes/s_path_objectnav/round_2_full/extended_v2/"
     )
     args = parser.parse_args()
     cfg = config
