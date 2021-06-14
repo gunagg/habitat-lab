@@ -1,5 +1,5 @@
 ENVIRONMENT:
-  MAX_EPISODE_STEPS: 500
+  MAX_EPISODE_STEPS: 2500
 
 SIMULATOR:
   FORWARD_STEP_SIZE: 0.25
@@ -61,3 +61,4 @@ DATASET:
   SPLIT: train
   DATA_PATH: "data/datasets/objectnav_mp3d_v2/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
+  # CONTENT_SCENES: ["17DRP5sb8fy", "E9uDoFAP3SH"]

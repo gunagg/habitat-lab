@@ -132,7 +132,6 @@ class RolloutStorage:
             actions_batch = []
             prev_actions_batch = []
             masks_batch = []
-            # old_action_log_probs_batch = []
 
             for offset in range(num_envs_per_batch):
                 ind = perm[start_ind + offset]
@@ -149,9 +148,6 @@ class RolloutStorage:
                 actions_batch.append(self.actions[: self.step, ind])
                 prev_actions_batch.append(self.prev_actions[: self.step, ind])
                 masks_batch.append(self.masks[: self.step, ind])
-                # old_action_log_probs_batch.append(
-                #     self.action_log_probs[: self.step, ind]
-                # )
 
             T, N = self.step, num_envs_per_batch
 
@@ -164,9 +160,6 @@ class RolloutStorage:
             actions_batch = torch.stack(actions_batch, 1)
             prev_actions_batch = torch.stack(prev_actions_batch, 1)
             masks_batch = torch.stack(masks_batch, 1)
-            # old_action_log_probs_batch = torch.stack(
-            #     old_action_log_probs_batch, 1
-            # )
 
             # States is just a (num_recurrent_layers, N, -1) tensor
             recurrent_hidden_states_batch = torch.stack(
@@ -174,14 +167,14 @@ class RolloutStorage:
             )
 
             # Flatten the (T, N, ...) tensors to (T * N, ...)
-            for sensor in observations_batch:
-                observations_batch[sensor] = self._flatten_helper(
-                    T, N, observations_batch[sensor]
-                )
+            # for sensor in observations_batch:
+            #     observations_batch[sensor] = self._flatten_helper(
+            #         T, N, observations_batch[sensor]
+            #     )
 
-            actions_batch = self._flatten_helper(T, N, actions_batch)
-            prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
-            masks_batch = self._flatten_helper(T, N, masks_batch)
+            # actions_batch = self._flatten_helper(T, N, actions_batch)
+            # prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
+            # masks_batch = self._flatten_helper(T, N, masks_batch)
 
             yield (
                 observations_batch,

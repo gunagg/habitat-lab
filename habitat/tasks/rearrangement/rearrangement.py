@@ -252,7 +252,7 @@ class InflectionWeightSensor(Sensor):
             # logger.info("Reset: {}, lim: {}".format(self.timestep, len(episode.reference_replay)))
             self.timestep = 0
         
-        inflection_weight = 0.0
+        inflection_weight = 1.0
         # logger.info("Ts: {}, lim: {}".format(self.timestep, len(episode.reference_replay)))
         if self.timestep == 0:
             inflection_weight = 1.0
@@ -261,7 +261,6 @@ class InflectionWeightSensor(Sensor):
             inflection_weight = 1.0 
         elif episode.reference_replay[self.timestep - 1].action != episode.reference_replay[self.timestep].action:
             inflection_weight = self._config.INFLECTION_COEF
-        # print("{} -- {}".format(self.timestep, get_habitat_sim_action_str(action)))
         self.timestep += 1
         return inflection_weight
 

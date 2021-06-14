@@ -11,6 +11,7 @@ from torch import Tensor
 from torch import nn as nn
 from torch import optim as optim
 
+from habitat import logger
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import Policy
@@ -52,6 +53,7 @@ class BCAgent(nn.Module):
             self.num_mini_batch
         )
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
+        hidden_states = []
 
         for sample in data_generator:
             (
@@ -72,13 +74,23 @@ class BCAgent(nn.Module):
                 prev_actions_batch,
                 masks_batch,
             )
-            if len(logits.size()) == 2:
-                logits = logits.unsqueeze(1)
-            action_loss = cross_entropy_loss(logits.permute(0, 2, 1), actions_batch)
+
+            T, N, _ = actions_batch.shape
+            logits = logits.view(T, N, -1)
+            # logger.info("stats: {} {}".format(logits.shape, actions_batch.squeeze(-1).shape))
+
+            action_loss = cross_entropy_loss(logits.permute(0, 2, 1), actions_batch.squeeze(-1))
 
             self.optimizer.zero_grad()
             inflections_batch = obs_batch["inflection_weight"]
-            total_loss = ((action_loss * inflections_batch) / inflections_batch.sum(0)).mean()
+
+            # total_loss = ((inflections_batch * action_loss.squeeze(1)).sum(0) / inflections_batch.sum(0)).mean()
+            total_loss = ((inflections_batch * action_loss).sum(0) / inflections_batch.sum(0)).mean()
+            # lss = ((inflections_batch * action_loss.squeeze(1)) / inflections_batch.sum(0))
+            # logger.info("stats: {} {} {}".format(inflections_batch.shape, action_loss.shape, inflections_batch.sum(0).shape, logits.shape, actions_batch.shape))
+            # logger.info("lss: {} {} {}".format((inflections_batch * action_loss.squeeze(1)).shape, (inflections_batch * action_loss.squeeze(1)).sum(0), inflections_batch.sum(0)))
+            # logger.info("lss: {} {}".format(((inflections_batch * action_loss.squeeze(1)).sum(0) / inflections_batch), total_loss))
+            # logger.info("lss: {}".format(total_loss))
 
             self.before_backward(total_loss)
             total_loss.backward()
@@ -89,14 +101,19 @@ class BCAgent(nn.Module):
             self.after_step()
 
             total_loss_epoch += total_loss.item()
+            hidden_states.append(rnn_hidden_states)
 
-        profiling_wrapper.range_pop()  # PPO.update epoch
+        profiling_wrapper.range_pop()
 
-        num_updates = self.num_mini_batch
+        num_updates = 1
+        hidden_states = torch.cat(hidden_states, dim=0)
+        # logger.info("Any zeros: {} {}".format((obs_batch["inflection_weight"] == 0).sum(), obs_batch["inflection_weight"].size(0)))
+        # logger.info("Zeros: {} - {} - {}".format(obs_batch["inflection_weight"].sum(0), obs_batch["inflection_weight"].shape, action_loss.shape))
+        # logger.info("hiden: {}".format(hidden_states.shape))
 
         total_loss_epoch /= num_updates
 
-        return total_loss_epoch, rnn_hidden_states
+        return total_loss_epoch, hidden_states
 
     def before_backward(self, loss: Tensor) -> None:
         pass
