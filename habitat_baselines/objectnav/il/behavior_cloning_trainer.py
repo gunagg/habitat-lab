@@ -109,16 +109,12 @@ class ObjectNavBCTrainer(BaseILTrainer):
             path: to write file
         """
         rgb_frame = observations_to_image(
-                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
-                    )
-        depth_frame = observations_to_image(
-                        {"depth": observations["depth"][env_idx]}, {}
+                        {}, infos[env_idx]
                     )
         rgb_path = os.path.join(path.format(split=split, type="rgb"), "frame_{}".format(episode_id))
+        print("Saving at: {}".format(rgb_path))
         save_frame(rgb_frame, rgb_path)
 
-        depth_path = os.path.join(path.format(split=split, type="depth"), "frame_{}".format(episode_id))
-        save_frame(depth_frame, depth_path)
 
 
     METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward", "coverage"}
@@ -674,8 +670,8 @@ class ObjectNavBCTrainer(BaseILTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
-                    frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
-                    frame = append_text_to_image(frame, "Action: {}".format(action_names[i]))
+                    # frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
+                    # frame = append_text_to_image(frame, "Action: {}".format(action_names[i]))
                     rgb_frames[i].append(frame)
 
 

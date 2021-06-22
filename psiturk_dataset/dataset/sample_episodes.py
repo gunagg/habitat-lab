@@ -193,7 +193,7 @@ def sample_objectnav_episodes_custom(path, output_path):
     print("In ObjectNav episode sampler")
     # episode_ids = ["A2DDPSXH2X96RF:3DPNQGW4LNILYXAJE2Z4ZUL33AU642", "A7XL1V3G7C2VV:3QY5DC2MXTNGYOX9U1TQ64WAVJ6UFV", "A272X64FOZFYLB:3SNLUL3WO6Q2YG75GCWO1H1UQ67LUM", "AEWGY34WUIA32:32UTUBMZ7IZQYMATUPHZJ078SJ2BVE", "AOMFEAWQHU3D8:34S9DKFK75S93PUV2Q9SHUBWT7RYNA", "AOMFEAWQHU3D8:3MRNMEIQW79GHEWJUH6ZRHX66OODLI", "A1ZE52NWZPN85P:3TOK3KHVJVL86QY6GWJ5J6R4F8I7O8", "A3KC26Z78FBOJT:3NC5L260MQPLLJDCYFHH7Y4LD55FO6"]
     # train episodes
-    episode_ids = ["A1ZE52NWZPN85P:36U2A8VAG328VJ9S5DHCP2USZ2CKYX", "A2TUUIV61CR0C7:3DI28L7YXCH8JD6FX2Z0DK6D7D91EJ", "A1R0689JPSQ3OF:354GIDR5ZD99LY63TCWLEQLZ9RU009", "A1ZE52NWZPN85P:3TOK3KHVJVL86QY6GWJ5J6R4F8I7O8", "A3PFU4042GIQLE:3EFE17QCRE8KX7WB0MMQUOQZQA2HSM", "A29CNQYJWMJ7G9:33TIN5LC06DOENQ11GQNZTGCOHVY9U", "ADEMAGRRRGSPT:3TXWC2NHN1TRI1ES2AYYH7SB732S9R", "AOMFEAWQHU3D8:3MRNMEIQW79GHEWJUH6ZRHX66OODLI", "A3KC26Z78FBOJT:3CPLWGV3MQ2U2OMNUEHCIDI5KOH9NN", "A1ZE52NWZPN85P:3FE2ERCCZZBXCW26CIDMJSIPF6VOPB", "A29CNQYJWMJ7G9:3GU1KF0O4K4DT2DX8D80D8IQ8CWBPO", "A2TUUIV61CR0C7:386PBUZZXH0TK0WB4DSAUFSJB8XLJG", "A2TUUIV61CR0C7:3U5JL4WY5MCYHCUFFP8UZ7YNZ4MX4V", "A272X64FOZFYLB:3SNLUL3WO6Q2YG75GCWO1H1UQ67LUM", "A1NSHNH3MNFRGW:3QAVNHZ3EO7IJ7T7A7FX1GP0K52ALR", "A3KC26Z78FBOJT:30OG32W0SWEBXKD42PXYARJGBPCENP", "A3C7COPV48I37D:378XPAWRUEGGT6L1P4IK90X84NLIA7", "A2Q6L9LKSNU7EB:3EA3QWIZ4KYL82KAV49145N0S6YIT8", "A2TUUIV61CR0C7:33C7UALJVN1RACWOKZD0LAARXLN81Q", "A25FNSFSB048DL:3S0TNUHWKVLL27C00SXVMCB0MUKD83", "A3GWRDHAURRNK6:3SKEMFQBZ58TGDIAS9JIQP6Q6R9K8R", "A1ZE52NWZPN85P:3AAPLD8UCEKLC79QPMRG4TMLSJ7THU", "A34YDGVZKRJ0LZ:39U1BHVTDNU6IZ2RA12E0ZLB9E83TG", "A2TUUIV61CR0C7:39N5ACM9HGQU59Y0ATU4M2N0KYS9PJ", "A2DDPSXH2X96RF:3KKG4CDWKK18GGCHC92GJ4C5T8J49M", "AOG0PUCLMU0HH:3XUHV3NRVM1JR5Y0OQ9I1DG7CKFH5T", "A29CNQYJWMJ7G9:33LK57MYLV86OSW568SXUVU4M7BZS0", "A1NSHNH3MNFRGW:3LRLIPTPESC7Z1BPP73WMGCLWFEAKQ", "AIOOOO5OXWXKM:3RWE2M8QWJDC6UYAUIYJP2HCHV6N0U", "A29CNQYJWMJ7G9:3CP1TO84PV4FCFVI556BE9A5NGO25H", "A2TUUIV61CR0C7:3IUZPWIU1QA46EESQCZO459COABKWT", "AOMFEAWQHU3D8:34S9DKFK75S93PUV2Q9SHUBWT7RYNA", "A1ZE52NWZPN85P:3OS4RQUCRBI12PO3UACV1E4M6XYBFS", "AQ0YWEW29GSIJ:37M28K1J0SGCOH577M3KL1C8H5BJAR", "A2DDPSXH2X96RF:32N49TQG3ILLFC51OBH3OPN2C9RAVA", "AOMFEAWQHU3D8:3LWJHTCVCEPO6VQSDS9LW3ZLSXTFQ2", "AEWGY34WUIA32:32UTUBMZ7IZQYMATUPHZJ078SJ2BVE", "AKYXQY5IP7S0Z:3NLZY2D53RSA6N0OZ3CJRG45P32LQK", "A2DDPSXH2X96RF:3DPNQGW4LNILYXAJE2Z4ZUL33AU642", "A7XL1V3G7C2VV:3QY5DC2MXTNGYOX9U1TQ64WAVJ6UFV", "A2JQPSIVUCW92T:39GAF6DQWT3PLOS1SSOADOUZ8GRV1F", "A2TUUIV61CR0C7:3VE8AYVF8O0I0RQWRYSLACELYQ2F8K", "A2Q6L9LKSNU7EB:3OUYGIZWR91C9FANAXBBTRM7FNH0P1", "A2OFN0A5CPLH57:3QAPZX2QN6GGH89H8Z0ZXEEE6TP20E",]
+    episode_ids = ["A272X64FOZFYLB:3SNLUL3WO6Q2YG75GCWO1H1UQ67LUM", "AOMFEAWQHU3D8:34S9DKFK75S93PUV2Q9SHUBWT7RYNA", "A7XL1V3G7C2VV:3QY5DC2MXTNGYOX9U1TQ64WAVJ6UFV", "A3KC26Z78FBOJT:3NC5L260MQPLLJDCYFHH7Y4LD55FO6", "A1ZE52NWZPN85P:3AAPLD8UCEKLC79QPMRG4TMLSJ7THU"]
     for file_path in files:
         data = load_dataset(file_path)
         scene_id = file_path.split("/")[-1].split(".")[0]
@@ -206,6 +206,73 @@ def sample_objectnav_episodes_custom(path, output_path):
             dest_path = os.path.join(output_path, "{}.json".format(scene_id))
             write_json(data, dest_path)
             write_gzip(dest_path, dest_path)
+
+
+def sample_objectnav_episodes_visualization(path, output_path):
+    files = glob.glob(path + "/*.json.gz")
+    print("In ObjectNav vis episode sampler")
+    # train episodes
+    scene_ids = ['ULsKaCPVFJR.glb']
+    min_ep_length = 100
+    for file_path in files:
+        data = load_dataset(file_path)
+        scene_id = file_path.split("/")[-1].split(".")[0]
+        episodes = []
+        for episode in data["episodes"]:
+            if episode["object_category"] != "stool":
+                continue
+            if episode["scene_id"].split("/")[-1] in scene_ids and len(episode["reference_replay"]) > min_ep_length:
+                episodes.append(episode)
+        data["episodes"] = episodes
+        if len(data["episodes"]) > 0 and episode["scene_id"].split("/")[-1] in scene_ids:
+            dest_path = os.path.join(output_path, "{}.json".format(scene_id))
+            print("Wrting at: {}".format(dest_path))
+            write_json(data, dest_path)
+            write_gzip(dest_path, dest_path)
+        if episode["scene_id"].split("/")[-1] in  scene_ids:
+            print("Num episodes: {} for scene: {}".format(len(episodes), episode["scene_id"]))
+
+
+def sample_coverage_episodes(path, output_path, total_episodes=1200, task="objectnav"):
+    files = glob.glob(path + "/*.json.gz")
+    print("In coverage episode sampler")
+    # train episodes
+    scene_ids = ["ULsKaCPVFJR"]
+    ep_per_scene = 20
+    filtered_episodes = 0
+    ep_scene_map = defaultdict(list)
+    if path.split(".")[-1] == "gz":
+        files = [path]
+    for file_path in files:
+        data = load_dataset(file_path)
+        scene_id = file_path.split("/")[-1].split(".")[0]
+        episodes = []
+        print(scene)
+        if scene_id not in scene_ids and len(scene_ids) > 0:
+            continue
+        for episode in tqdm(data["episodes"]):
+            s_id = episode["scene_id"]
+            if episode["object_category"] != "stool":
+                continue
+            if len(ep_scene_map[s_id]) >= ep_per_scene:
+                continue
+            ep_scene_map[s_id].append(1)
+            episodes.append(episode)
+            filtered_episodes += 1
+
+            if filtered_episodes >= total_episodes:
+                break
+        data["episodes"] = episodes
+        if len(data["episodes"]) > 0:
+            dest_path = os.path.join(output_path, "{}.json".format(scene_id))
+            if output_path.split(".")[-1] == "json":
+                dest_path = output_path
+            
+            print("Wrting at: {}".format(dest_path))
+            # write_json(data, dest_path)
+            # write_gzip(dest_path, dest_path)
+        print("Total episodess: {}".format(len(data["episodes"])))
+
 
 
 if __name__ == "__main__":
@@ -235,11 +302,13 @@ if __name__ == "__main__":
         "--prev-tasks", type=str, default="data/datasets/objectnav_mp3d_v2/train/sampled/"
     )
     args = parser.parse_args()
-    if args.sample_episodes and not args.is_objectnav and not args.per_scene:
-        sample_episodes_by_episode_ids(args.input_path, args.output_path)
-    elif args.sample_episodes and args.is_objectnav:
-        sample_objectnav_episodes(args.input_path, args.output_path, args.prev_tasks)
-    elif args.per_scene and args.sample_episodes:
-        sample_episodes_by_scene(args.input_path, args.output_path, args.limit)
-    else:
-        sample_episodes(args.input_path, args.output_path, args.per_scene_limit)
+    # if args.sample_episodes and not args.is_objectnav and not args.per_scene:
+    #     sample_episodes_by_episode_ids(args.input_path, args.output_path)
+    # elif args.sample_episodes and args.is_objectnav:
+    #     sample_objectnav_episodes(args.input_path, args.output_path, args.prev_tasks)
+    # elif args.per_scene and args.sample_episodes:
+    #     sample_episodes_by_scene(args.input_path, args.output_path, args.limit)
+    # else:
+    #     sample_episodes(args.input_path, args.output_path, args.per_scene_limit)
+    sample_objectnav_episodes_custom(args.input_path, args.output_path)
+    # sample_coverage_episodes(args.input_path, args.output_path)

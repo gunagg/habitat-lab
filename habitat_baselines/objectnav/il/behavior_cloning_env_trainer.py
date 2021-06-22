@@ -344,9 +344,14 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         count_steps = 0
         count_checkpoints = 0
 
-        lr_scheduler = LambdaLR(
+        # lr_scheduler = LambdaLR(
+        #     optimizer=self.agent.optimizer,
+        #     lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
+        # )
+        lr_scheduler = OneCycleLR(
             optimizer=self.agent.optimizer,
-            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
+            total_steps= self.config.NUM_UPDATES,
+            lr=float(config.IL.BehaviorCloning.lr),
         )
         self.possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
 
@@ -446,6 +451,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                             ),
                         )
                     )
+
    
                 if update == self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE - 1:
                     self.save_checkpoint(
@@ -505,8 +511,10 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         logger.info(f"env config: {config}")
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         self._setup_actor_critic_agent(il_cfg, config.MODEL)
+        logger.info("model setup")
 
         self.agent.load_state_dict(ckpt_dict["state_dict"], strict=True)
+        logger.info("state dict loaded")
         self.model = self.agent.model
 
         observations = self.envs.reset()

@@ -228,9 +228,10 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
 
     if "top_down_map" in info:
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
-            info["top_down_map"], egocentric_view.shape[0]
+            info["top_down_map"], 512
         )
-        frame = np.concatenate((egocentric_view, top_down_map), axis=1)
+        #frame = np.concatenate((egocentric_view, top_down_map), axis=1)
+        frame = top_down_map
     return frame
 
 

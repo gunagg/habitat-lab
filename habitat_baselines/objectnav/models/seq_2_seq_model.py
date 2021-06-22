@@ -41,58 +41,60 @@ class Seq2SeqNet(Net):
     def __init__(self, observation_space: Space, model_config: Config, num_actions):
         super().__init__()
         self.model_config = model_config
+        rnn_input_size = 0
 
-        # Init the depth encoder
-        assert model_config.DEPTH_ENCODER.cnn_type in [
-            "SimpleDepthCNN",
-            "VlnResnetDepthEncoder",
-        ], "DEPTH_ENCODER.cnn_type must be SimpleDepthCNN or VlnResnetDepthEncoder"
-        if model_config.DEPTH_ENCODER.cnn_type == "SimpleDepthCNN":
-            self.depth_encoder = SimpleDepthCNN(
-                observation_space, model_config.DEPTH_ENCODER.output_size
-            )
-        elif model_config.DEPTH_ENCODER.cnn_type == "VlnResnetDepthEncoder":
-            self.depth_encoder = VlnResnetDepthEncoder(
-                observation_space,
-                output_size=model_config.DEPTH_ENCODER.output_size,
-                checkpoint=model_config.DEPTH_ENCODER.ddppo_checkpoint,
-                backbone=model_config.DEPTH_ENCODER.backbone,
-                trainable=model_config.DEPTH_ENCODER.trainable,
-            )
+        if not self.model_config.NO_VISION:
+            # Init the depth encoder
+            assert model_config.DEPTH_ENCODER.cnn_type in [
+                "SimpleDepthCNN",
+                "VlnResnetDepthEncoder",
+            ], "DEPTH_ENCODER.cnn_type must be SimpleDepthCNN or VlnResnetDepthEncoder"
+            if model_config.DEPTH_ENCODER.cnn_type == "SimpleDepthCNN":
+                self.depth_encoder = SimpleDepthCNN(
+                    observation_space, model_config.DEPTH_ENCODER.output_size
+                )
+            elif model_config.DEPTH_ENCODER.cnn_type == "VlnResnetDepthEncoder":
+                self.depth_encoder = VlnResnetDepthEncoder(
+                    observation_space,
+                    output_size=model_config.DEPTH_ENCODER.output_size,
+                    checkpoint=model_config.DEPTH_ENCODER.ddppo_checkpoint,
+                    backbone=model_config.DEPTH_ENCODER.backbone,
+                    trainable=model_config.DEPTH_ENCODER.trainable,
+                )
 
-        # Init the RGB visual encoder
-        assert model_config.RGB_ENCODER.cnn_type in [
-            "SimpleRGBCNN",
-            "TorchVisionResNet50",
-            "ResnetRGBEncoder",
-        ], "RGB_ENCODER.cnn_type must be either 'SimpleRGBCNN' or 'TorchVisionResNet50'."
+            # Init the RGB visual encoder
+            assert model_config.RGB_ENCODER.cnn_type in [
+                "SimpleRGBCNN",
+                "TorchVisionResNet50",
+                "ResnetRGBEncoder",
+            ], "RGB_ENCODER.cnn_type must be either 'SimpleRGBCNN' or 'TorchVisionResNet50'."
 
-        if model_config.RGB_ENCODER.cnn_type == "SimpleRGBCNN":
-            self.rgb_encoder = SimpleRGBCNN(
-                observation_space, model_config.RGB_ENCODER.output_size
-            )
-        elif model_config.RGB_ENCODER.cnn_type == "TorchVisionResNet50":
-            device = (
-                torch.device("cuda", model_config.TORCH_GPU_ID)
-                if torch.cuda.is_available()
-                else torch.device("cpu")
-            )
-            self.rgb_encoder = TorchVisionResNet50(
-                observation_space, model_config.RGB_ENCODER.output_size, device
-            )
-        elif model_config.RGB_ENCODER.cnn_type == "ResnetRGBEncoder":
-            self.rgb_encoder = ResnetRGBEncoder(
-                observation_space,
-                output_size=model_config.RGB_ENCODER.output_size,
-                backbone=model_config.RGB_ENCODER.backbone,
-                trainable=model_config.RGB_ENCODER.train_encoder,
-            )
+            if model_config.RGB_ENCODER.cnn_type == "SimpleRGBCNN":
+                self.rgb_encoder = SimpleRGBCNN(
+                    observation_space, model_config.RGB_ENCODER.output_size
+                )
+            elif model_config.RGB_ENCODER.cnn_type == "TorchVisionResNet50":
+                device = (
+                    torch.device("cuda", model_config.TORCH_GPU_ID)
+                    if torch.cuda.is_available()
+                    else torch.device("cpu")
+                )
+                self.rgb_encoder = TorchVisionResNet50(
+                    observation_space, model_config.RGB_ENCODER.output_size, device
+                )
+            elif model_config.RGB_ENCODER.cnn_type == "ResnetRGBEncoder":
+                self.rgb_encoder = ResnetRGBEncoder(
+                    observation_space,
+                    output_size=model_config.RGB_ENCODER.output_size,
+                    backbone=model_config.RGB_ENCODER.backbone,
+                    trainable=model_config.RGB_ENCODER.train_encoder,
+                )
 
-        # Init the RNN state decoder
-        rnn_input_size = (
-            model_config.DEPTH_ENCODER.output_size
-            + model_config.RGB_ENCODER.output_size
-        )
+            # Init the RNN state decoder
+            rnn_input_size += (
+                model_config.DEPTH_ENCODER.output_size
+                + model_config.RGB_ENCODER.output_size
+            )
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
@@ -159,15 +161,18 @@ class Seq2SeqNet(Net):
         depth_embedding: [batch_size x DEPTH_ENCODER.output_size]
         rgb_embedding: [batch_size x RGB_ENCODER.output_size]
         """
-        depth_embedding = self.depth_encoder(observations)
-        rgb_embedding = self.rgb_encoder(observations)
+        x = []
 
-        if self.model_config.ablate_depth:
-            depth_embedding = depth_embedding * 0
-        if self.model_config.ablate_rgb:
-            rgb_embedding = rgb_embedding * 0
+        if not self.model_config.NO_VISION:
+            depth_embedding = self.depth_encoder(observations)
+            rgb_embedding = self.rgb_encoder(observations)
 
-        x = [depth_embedding, rgb_embedding]
+            if self.model_config.ablate_depth:
+                depth_embedding = depth_embedding * 0
+            if self.model_config.ablate_rgb:
+                rgb_embedding = rgb_embedding * 0
+
+            x.extend([depth_embedding, rgb_embedding])
 
         if EpisodicGPSSensor.cls_uuid in observations:
             obs_gps = observations[EpisodicGPSSensor.cls_uuid]

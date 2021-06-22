@@ -267,8 +267,7 @@ class SemSegSeqNet(Net):
         x = [depth_embedding, rgb_embedding]
 
         if self.model_config.USE_SEMANTICS:
-            # if self.model_config.USE_PRED_SEMANTICS:
-            #     observations["semantic"] = self.get_semantic_observations(observations)
+            # observations["semantic"] = self.get_semantic_observations(observations)
             if self.model_config.embed_sge:
                 sge_embedding = self._extract_sge(observations)
                 x.append(sge_embedding)

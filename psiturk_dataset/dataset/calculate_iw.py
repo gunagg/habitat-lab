@@ -73,6 +73,7 @@ def calculate_inflection_weight_objectnav(path, stats_path):
         "episode_length": [],
         "action_frequency": {},
     }
+    mx = 0
 
     for file_path in tqdm(files):
         data = load_dataset(file_path)
@@ -83,6 +84,7 @@ def calculate_inflection_weight_objectnav(path, stats_path):
 
             data_stats["episode_length"].append(num_actions)
             reference_replay = episode["reference_replay"]
+            mx = max(mx, len(reference_replay))
             for i in range(len(reference_replay)):
                 action = reference_replay[i]["action"]
                 if action not in data_stats["action_frequency"]:
@@ -91,16 +93,16 @@ def calculate_inflection_weight_objectnav(path, stats_path):
 
             inflections += num_inflections
             total_episodes += 1
-            if len(reference_replay) < 1000:
+            total_actions += num_actions
+            if len(reference_replay) > 2500:
                 ep_lt_than_1k += 1
-                total_actions += num_actions
             
             if len(reference_replay) < 500:
                 ep_lt_than_500 += 1
 
     save_meta_for_analysis(data_stats, stats_path)
 
-    print("Total episodes: {}".format(total_episodes))
+    print("Total episodes: {} - {}".format(total_episodes, mx))
     print("Total episodes less than 1k and 0.5k: {} -- {}".format(ep_lt_than_1k, ep_lt_than_500))
     print("Inflection weight: {}".format(total_actions / inflections))
     print("Average episode length: {}".format(total_actions / total_episodes))

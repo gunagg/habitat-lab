@@ -6,10 +6,13 @@ cd /srv/share3/rramrakhya6/habitat-lab
 echo "Starting video generation"
 echo "hab sim: ${PYTHONPATH}"
 
-prefix=$1
+task=$1
+path=$2
 
-python examples/rearrangement_replay.py --replay-episode data/hit_data/sample_hits.json.gz --output-prefix $prefix
-
-python psiturk_dataset/upload_files_to_s3.py --file demos/ --s3-path data/hit_data/video/$prefix
-python psiturk_dataset/upload_files_to_s3.py --file instructions.json --s3-path data/hit_data/instructions.json
-
+if [[ $task == "objectnav" ]]; then
+    echo "in ObjectNav stats"
+    # python examples/objectnav_replay.py --replay-episode data/datasets/objectnav_mp3d_v2/coverage_sample/coverage_sample.json.gz --step-env
+    python examples/objectnav_replay.py --replay-episode data/datasets/objectnav_mp3d_v4/train/train.json.gz --step-env
+else
+    python examples/rearrangement_replay.py --replay-episode $path
+fi

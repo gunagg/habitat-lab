@@ -235,9 +235,14 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
         start_update = 0
         prev_time = 0
 
-        lr_scheduler = LambdaLR(
+        # lr_scheduler = LambdaLR(
+        #     optimizer=self.agent.optimizer,
+        #     lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
+        # )
+        lr_scheduler = OneCycleLR(
             optimizer=self.agent.optimizer,
-            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
+            total_steps= self.config.NUM_UPDATES,
+            lr=float(config.IL.BehaviorCloning.lr),
         )
 
         interrupted_state = load_interrupted_state()

@@ -106,12 +106,13 @@ class BCAgent(nn.Module):
         profiling_wrapper.range_pop()
 
         num_updates = 1
-        hidden_states = torch.cat(hidden_states, dim=0)
+        # logger.info("hiden: {}".format(hidden_states[0].shape))
+        hidden_states = torch.cat(hidden_states, dim=1)
         # logger.info("Any zeros: {} {}".format((obs_batch["inflection_weight"] == 0).sum(), obs_batch["inflection_weight"].size(0)))
         # logger.info("Zeros: {} - {} - {}".format(obs_batch["inflection_weight"].sum(0), obs_batch["inflection_weight"].shape, action_loss.shape))
         # logger.info("hiden: {}".format(hidden_states.shape))
 
-        total_loss_epoch /= num_updates
+        total_loss_epoch /= self.num_mini_batch
 
         return total_loss_epoch, hidden_states
 

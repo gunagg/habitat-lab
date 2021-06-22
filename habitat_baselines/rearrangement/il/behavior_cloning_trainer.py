@@ -114,16 +114,16 @@ class RearrangementBCTrainer(BaseILTrainer):
             path: to write file
         """
         rgb_frame = observations_to_image(
-                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
+                        {}, infos[env_idx]
                     )
-        depth_frame = observations_to_image(
-                        {"depth": observations["depth"][env_idx]}, {}
-                    )
+        # depth_frame = observations_to_image(
+        #                 {"depth": observations["depth"][env_idx]}, {}
+        #             )
         rgb_path = os.path.join(path.format(split=split, type="rgb"), "frame_{}".format(episode_id))
         save_frame(rgb_frame, rgb_path)
 
-        depth_path = os.path.join(path.format(split=split, type="depth"), "frame_{}".format(episode_id))
-        save_frame(depth_frame, depth_path)
+        # depth_path = os.path.join(path.format(split=split, type="depth"), "frame_{}".format(episode_id))
+        # save_frame(depth_frame, depth_path)
 
     METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward", "coverage"}
 
@@ -612,6 +612,15 @@ class RearrangementBCTrainer(BaseILTrainer):
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
+                        )
+
+                        self._save_results(
+                            batch,
+                            infos,
+                            config.RESULTS_DIR,
+                            i,
+                            config.EVAL.SPLIT,
+                            current_episodes[i].episode_id,
                         )
 
                         rgb_frames[i] = []

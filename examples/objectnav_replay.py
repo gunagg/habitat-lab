@@ -12,6 +12,7 @@ from habitat import Config
 from habitat_sim.utils import viz_utils as vut
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_sim.utils.common import quat_to_coeffs
+from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import make_video_cv2, observations_to_image, images_to_video, append_text_to_image
 from habitat_sim.utils.common import quat_to_coeffs, quat_from_magnum, quat_from_angle_axis
 
@@ -196,6 +197,32 @@ def create_episode_trajectory(trajectory, episode):
     return data
 
 
+def get_coverage(info):
+    top_down_map = info["map"]
+    visted_points = np.where(top_down_map <= 9, 0, 1)
+    coverage = np.sum(visted_points) / get_navigable_area(info)
+    return coverage
+
+
+def get_navigable_area(info):
+    top_down_map = info["map"]
+    navigable_area = np.where(((top_down_map == 1) | (top_down_map >= 10)), 1, 0)
+    return np.sum(navigable_area)
+
+
+def get_visible_area(info):
+    fog_of_war_mask = info["fog_of_war_mask"]
+    visible_area = fog_of_war_mask.sum() / get_navigable_area(info)
+    return visible_area
+
+
+def save_top_down_map(info):
+    top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+        info["top_down_map"], 512
+    )
+    save_image(top_down_map, "top_down_map.png")
+
+
 def run_reference_replay(
     cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None, task_cat2mpcat40=None, sem_seg=False
 ):
@@ -220,25 +247,23 @@ def run_reference_replay(
         success = 0
         spl = 0
         total_coverage = 0
-        norm_coverage = 0
-        coverage = 0
+        visible_area = 0
 
         num_episodes = 0
-        
-        # observation_space = env.observation_space
-        # action_space = env.action_space
-
-        # model = setup_model(observation_space, action_space, device)
-        # semantic_predictor_2 = model.net.semantic_predictor
-        # del model
-
         print("Total episodes: {}".format(len(env.episodes)))
         fails = []
+        # scenes = []
+        # for ep_id in range(len(env.episodes)):
+        #     episode = env.episodes[ep_id]
+        #     if ep_id in [1, 30, 43] or episode.episode_id in ["AOMFEAWQHU3D8:34S9DKFK75S93PUV2Q9SHUBWT7RYNA", "A34YDGVZKRJ0LZ:39U1BHVTDNU6IZ2RA12E0ZLB9E83TG", "A2JQPSIVUCW92T:39GAF6DQWT3PLOS1SSOADOUZ8GRV1F", "A3KC26Z78FBOJT:3NC5L260MQPLLJDCYFHH7Y4LD55FO6"]:
+        #         episode = env.episodes[ep_id]
+        #         scenes.append(episode.scene_id)
+        # print("\n\n\n")
+        # print(set(scenes))
+        # sys.exit(1)
         for ep_id in range(len(env.episodes)):
             observation_list = []
-            print("before reset")
             obs = env.reset()
-            print("after reset")
 
             print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
@@ -260,10 +285,10 @@ def run_reference_replay(
             episode = env.current_episode
             ep_success = 0
             replay_data = []
-            sys.exit(1)
 
             if len(episode.reference_replay) > 2500:
                 continue
+            print("Object category: {}".format(env.current_episode.object_category))
 
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
@@ -298,25 +323,25 @@ def run_reference_replay(
                 if action_name == "STOP":
                     break
                 i+=1
-            make_videos([observation_list], output_prefix, ep_id)
+            # make_videos([observation_list], output_prefix, ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
-            success += ep_success
-            spl += info["spl"]
-            # coverage += info["coverage"]["reached"]
-            # total_coverage += info["top_down_map"]["fog_of_war_mask"].sum()
-            # norm_coverage += (info["top_down_map"]["fog_of_war_mask"].sum() / info["top_down_map"]["fog_of_war_mask"].size)
+            if len(episode.reference_replay) <= 500:
+                success += ep_success
+                spl += info["spl"]
+
+            # visible_area += get_visible_area(info["top_down_map"])
+            # total_coverage += get_coverage(info["top_down_map"])
             num_episodes += 1
-            ## print("Coverage: {} - {}".format(info["top_down_map"]["fog_of_war_mask"].sum(), info["top_down_map"]["fog_of_war_mask"].size))
 
             if sem_seg:
                 goal_visible_area, goal_visible_area_gt = get_goal_visible_area(observations, task_cat2mpcat40, episode)
                 print("Goal visible area: {}, GT: {}".format(goal_visible_area, goal_visible_area_gt))
 
-            if episode.episode_id == "A2DDPSXH2X96RF:3DPNQGW4LNILYXAJE2Z4ZUL33AU642":
-                trajectory = create_episode_trajectory(replay_data, episode)
-                print(trajectory.keys())
-                write_json(trajectory, "data/visualizations/teaser/trajectories/{}_human_trajectory.json".format(trajectory["scene_id"].split(".")[0]))
-                break
+            # if ep_id >= 0: # in [0, 1, 9]:
+            #     trajectory = create_episode_trajectory(replay_data, episode)
+            #     print(trajectory.keys())
+            #     write_json(trajectory, "data/visualizations/teaser/trajectories/{}_{}_custom_human_trajectory.json".format(trajectory["scene_id"].split(".")[0], ep_id))
+            #     save_top_down_map(info)
 
             if ep_success == 0:
                 fails.append({
@@ -327,9 +352,8 @@ def run_reference_replay(
         print("Total episode success: {}".format(success))
         print("SPL: {}, {}, {}".format(spl/num_episodes, spl, num_episodes))
         print("Success: {}, {}, {}".format(success/num_episodes, success, num_episodes))
-        print("Coverage (Fog Of War): {}, {}, {}".format(total_coverage/num_episodes, total_coverage, num_episodes))
-        print("Norm Coverage (Fog Of War): {}, {}, {}".format(norm_coverage/num_episodes, norm_coverage, num_episodes))
-        print("Coverage: {}, {}, {}".format(coverage/num_episodes, coverage, num_episodes))
+        print("Coverage: {}, {}, {}".format(total_coverage/num_episodes, total_coverage, num_episodes))
+        print("Visible area: {}, {}, {}".format(visible_area/num_episodes, visible_area, num_episodes))
         print("Failed episodes: {}".format(fails))
         inst_file = open("instructions.json", "w")
         inst_file.write(json.dumps(instructions))
@@ -355,6 +379,7 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
     # cfg.DATASET.CONTENT_SCENES = ["D7G3Y4RVNrH"]
+    # cfg.DATASET.CONTENT_SCENES = ['i5noydFURQK']
     cfg.freeze()
 
     observations = run_reference_replay(

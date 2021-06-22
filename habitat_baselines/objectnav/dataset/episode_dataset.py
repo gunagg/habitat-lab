@@ -392,7 +392,7 @@ class ObjectNavEpisodeDatasetV2(Dataset):
                 lock=False,
             )
 
-        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 5)
+        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 6)
         self.lmdb_env.close()
         self.lmdb_env = None
     
@@ -536,6 +536,213 @@ class ObjectNavEpisodeDatasetV2(Dataset):
         pred_sem_observations = msgpack_numpy.unpackb(pred_sem_observations_binary, raw=False)
         for k, v in pred_sem_observations.items():
             obs = np.array(pred_sem_observations[k])
+            observations[k] = torch.from_numpy(obs)
+
+        next_action_idx = "{0:0=6d}_next_action".format(idx)
+        next_action_binary = self.lmdb_cursor.get(next_action_idx.encode())
+        next_action = np.frombuffer(next_action_binary, dtype="int")
+        next_action = torch.from_numpy(np.copy(next_action))
+
+        prev_action_idx = "{0:0=6d}_prev_action".format(idx)
+        prev_action_binary = self.lmdb_cursor.get(prev_action_idx.encode())
+        prev_action = np.frombuffer(prev_action_binary, dtype="int")
+        prev_action = torch.from_numpy(np.copy(prev_action))
+
+        weight_idx = "{0:0=6d}_weights".format(idx)
+        weight_binary = self.lmdb_cursor.get(weight_idx.encode())
+        weight = np.frombuffer(weight_binary, dtype="float32")
+        weight = torch.from_numpy(np.copy(weight))
+
+        return idx, observations, next_action, prev_action, weight
+
+
+class ObjectNavEpisodeDatasetV3(Dataset):
+    """Pytorch dataset for object rearrangement task for each episode"""
+
+    def __init__(self, config, content_scenes=["*"], mode="train", use_iw=False, split_name="split_1", inflection_weight_coef=1.0):
+        """
+        Args:
+            env (habitat.Env): Habitat environment
+            config: Config
+            mode: 'train'/'val'
+        """
+        scene_split_name = split_name
+
+        self.config = config.TASK_CONFIG
+        self.dataset_path = config.DATASET_PATH.format(split=mode, scene_split=scene_split_name)
+        logger.info("datasetpath: {}".format(self.dataset_path))
+
+        self.config.defrost()
+        self.config.DATASET.CONTENT_SCENES = content_scenes
+        self.config.freeze()
+
+        self.resolution = [self.config.SIMULATOR.RGB_SENSOR.WIDTH, self.config.SIMULATOR.RGB_SENSOR.HEIGHT]
+        self.possible_actions = config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+        self.count = 0
+        self.success_threshold = config.TASK_CONFIG.TASK.SUCCESS_DISTANCE
+        self.total_success = 0
+        self.inflection_weight_coef = inflection_weight_coef
+
+        if use_iw:
+            self.inflec_weight = torch.tensor([1.0, inflection_weight_coef])
+        else:
+            self.inflec_weight = torch.tensor([1.0, 1.0])
+
+        if not self.cache_exists():
+            """
+            for each scene > load scene in memory > save frames for each
+            episode corresponding to that scene
+            """
+
+            self.env = habitat.Env(config=self.config)
+            self.episodes = self.env._dataset.episodes
+
+            logger.info(
+                "No vision Dataset cache not found/ignored. Saving goal state observations"
+            )
+            logger.info(
+                "Number of {} episodes: {}".format(mode, len(self.episodes))
+            )
+            logger.info("datasetpath: {}".format(self.dataset_path))
+            logger.info("Using sem seg dataset")
+
+            self.lmdb_env = lmdb.open(
+                self.dataset_path,
+                map_size=int(2e12),
+                writemap=True,
+            )
+
+            for episode in tqdm(self.episodes):
+                observations = self.env.reset()
+                episode = self.env.current_episode
+                state_index_queue = []
+                try:
+                    # Ignore last frame as it is only used to lookup for STOP action
+                    state_index_queue.extend(range(1, len(episode.reference_replay) - 1))
+                except AttributeError as e:
+                    logger.error(e)
+                self.save_frames(state_index_queue, episode, observations)
+
+            logger.info("Total success: {}".format(self.total_success / len(self.episodes)))
+            logger.info("Objectnav dataset ready!")
+            self.env.close()
+        else:
+            logger.info("Dataset cache found.")
+            self.lmdb_env = lmdb.open(
+                self.dataset_path,
+                readonly=True,
+                lock=False,
+            )
+
+        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 4)
+        self.lmdb_env.close()
+        self.lmdb_env = None
+
+    def save_frames(
+        self, state_index_queue: List[int], episode: RearrangementEpisode, observation: Dict
+    ) -> None:
+        r"""
+        Writes rgb, seg, depth frames to LMDB.
+        """
+        next_actions = []
+        prev_actions = []
+        obs_list = []
+        observations = defaultdict(list)
+
+        observations["gps"].append(observation["gps"])
+        observations["compass"].append(observation["compass"])
+        observations["objectgoal"].append(observation["objectgoal"])
+
+        next_action = self.possible_actions.index(episode.reference_replay[1].action)
+        next_actions.append(next_action)
+        prev_action = self.possible_actions.index(episode.reference_replay[0].action)
+        prev_actions.append(prev_action)
+        
+        reference_replay = episode.reference_replay
+        success = 0
+        info = {}
+        if len(reference_replay) > 1000:
+            return
+        for state_index in state_index_queue:
+            state = reference_replay[state_index]
+
+            action = self.possible_actions.index(state.action)
+            # Step in Environment
+            observation = self.env.step(action=action)
+            info = self.env.get_metrics()
+            success = info["distance_to_goal"] < self.success_threshold
+
+            next_state = reference_replay[state_index + 1]
+            next_action = self.possible_actions.index(next_state.action)
+
+            prev_state = reference_replay[state_index]
+            prev_action = self.possible_actions.index(prev_state.action)
+
+            observations["gps"].append(observation["gps"])
+            observations["compass"].append(observation["compass"])
+            observations["objectgoal"].append(observation["objectgoal"])
+            next_actions.append(next_action)
+            prev_actions.append(prev_action)
+
+        oracle_actions = np.array(next_actions)
+        inflection_weights = np.concatenate(([1], oracle_actions[1:] != oracle_actions[:-1]))
+        inflection_weights = self.inflec_weight[torch.from_numpy(inflection_weights)].numpy()
+
+        if not success:
+            return
+
+        sample_key = "{0:0=6d}".format(self.count)
+        logger.info("Episode: {}, Success: {}, Dist: {}, Len: {}".format(self.count, success, info["distance_to_goal"], len(next_actions)))
+        self.total_success += success
+        with self.lmdb_env.begin(write=True) as txn:
+            txn.put((sample_key + "_obs").encode(), msgpack_numpy.packb(observations, use_bin_type=True))
+            txn.put((sample_key + "_next_action").encode(), np.array(next_actions).tobytes())
+            txn.put((sample_key + "_prev_action").encode(), np.array(prev_actions).tobytes())
+            txn.put((sample_key + "_weights").encode(), inflection_weights.tobytes())
+        
+        self.count += 1
+        # images_to_video(images=obs_list, output_dir="demos", video_name="dummy_{}".format(self.count))
+
+    def cache_exists(self) -> bool:
+        if os.path.exists(self.dataset_path):
+            if os.listdir(self.dataset_path):
+                return True
+        else:
+            os.makedirs(self.dataset_path)
+        return False
+
+    def load_scene(self, scene, episode) -> None:
+        self.config.defrost()
+        self.config.SIMULATOR.SCENE = scene
+        self.config.SIMULATOR.objects = episode.objects
+        self.config.freeze()
+        self.env.sim.reconfigure(self.config.SIMULATOR)
+
+    def __len__(self) -> int:
+        return self.dataset_length
+
+    def __getitem__(self, idx: int):
+        r"""Returns batches to trainer.
+
+        batch: (rgb, depth, seg)
+
+        """
+        if self.lmdb_env is None:
+            self.lmdb_env = lmdb.open(
+                self.dataset_path,
+                readonly=True,
+                lock=False,
+            )
+            self.lmdb_txn = self.lmdb_env.begin()
+            self.lmdb_cursor = self.lmdb_txn.cursor()
+        
+        height, width = int(self.resolution[0]), int(self.resolution[1])
+
+        obs_idx = "{0:0=6d}_obs".format(idx)
+        observations_binary = self.lmdb_cursor.get(obs_idx.encode())
+        observations = msgpack_numpy.unpackb(observations_binary, raw=False)
+        for k, v in observations.items():
+            obs = np.array(observations[k])
             observations[k] = torch.from_numpy(obs)
 
         next_action_idx = "{0:0=6d}_next_action".format(idx)

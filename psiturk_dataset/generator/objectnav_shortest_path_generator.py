@@ -16,6 +16,7 @@ from habitat_sim.utils.common import quat_to_coeffs, quat_from_magnum, quat_from
 
 from psiturk_dataset.utils.utils import write_json, write_gzip, load_dataset
 from scipy.spatial.transform import Rotation
+from habitat.utils.visualizations import maps
 
 from PIL import Image
 
@@ -133,26 +134,80 @@ def is_prev_action_turn_right(action):
 def get_closest_goal(episode, sim, follower):
     goals = []
     distance = []
+    min_dist = 1000.0
+    goal_location = None
     agent_position = sim.get_agent_state().position
     for goal in episode.goals:
         for view_point in goal.view_points:
             position = view_point.agent_state.position
+            # if abs(agent_position[1] - position[1]) > 0.3:
+            #     continue
+            
+            dist = sim.geodesic_distance(
+                agent_position, position, episode
+            )
+            if min_dist > dist:
+                min_dist = dist
+                goal_location = position
             # goals.append(view_point.agent_state.position)
             action = follower.get_next_action(
                 position
             )
             if action != 0:
                 goals.append(position)
-    return goals[0]
+    if goal_location is None:
+        return goals[0]
+    return goal_location
+
+
+def create_episode_trajectory(trajectory, episode):
+    goal_positions = []
+    for goal in episode.goals:
+        for view_point in goal.view_points:
+            goal_positions.append(view_point.agent_state.position)
+    data = {
+        "trajectory": trajectory,
+        "object_goal": episode.object_category,
+        "goal_locations": goal_positions,
+        "scene_id": episode.scene_id.split("/")[-1]
+    }
+    return data
+
+def get_coverage(info):
+    top_down_map = info["map"]
+    visted_points = np.where(top_down_map <= 9, 0, 1)
+    coverage = np.sum(visted_points) / get_navigable_area(info)
+    return coverage
+
+
+def get_navigable_area(info):
+    top_down_map = info["map"]
+    navigable_area = np.where(((top_down_map == 1) | (top_down_map >= 10)), 1, 0)
+    return np.sum(navigable_area)
+
+
+def get_visible_area(info):
+    fog_of_war_mask = info["fog_of_war_mask"]
+    visible_area = fog_of_war_mask.sum() / get_navigable_area(info)
+    return visible_area
+
+
+def save_top_down_map(info):
+    top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+        info["top_down_map"], 512
+    )
+    save_image(top_down_map, "top_down_map.png")
 
 
 def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="data", output_path=""):
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
         goal_radius = 0.1
-
+        spl = 0
         total_success = 0.0
         total_episodes = 0.0
+        total_coverage = 0.0
+        visible_area = 0.0
         fixed_episodes = 0
 
         dataset = load_dataset(episode_path)
@@ -174,6 +229,7 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="d
             episode = env.current_episode
             goal_position = get_closest_goal(episode, env.sim, follower)
             info = {}
+            replay_data = []
             reference_replay.append(get_action_data(HabitatSimActions.STOP, env._sim))
             while not env.episode_over:
                 best_action = follower.get_next_action(
@@ -195,33 +251,46 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="d
 
                 action_data = get_action_data(best_action, env._sim)
                 reference_replay.append(action_data)
+                replay_data.append(get_agent_pose(env._sim))
 
             ep_data = get_episode_json(env.current_episode, reference_replay)
             del ep_data["_shortest_path_cache"]
             total_success += success
+            spl += info["spl"]
             total_episodes += 1
+
+            visible_area += get_visible_area(info["top_down_map"])
+            total_coverage += get_coverage(info["top_down_map"])
 
             logger.info("Episode success: {}, Total: {}, Success: {}, Fixed episodes: {}".format(success, total_episodes, total_success/total_episodes, fixed_episodes))
             # if not success:
             #     make_videos([observation_list], output_prefix, ep_id)
             # save_image(frame, "{}_s_path.png".format(ep_data["episode_id"]))
-
             if success:
                 dataset["episodes"].append(ep_data)
             if not success:
                 failed_dataset["episodes"].append(ep_data)
+            
+            # trajectory = create_episode_trajectory(replay_data, episode)
+            # write_json(trajectory, "data/visualizations/teaser/trajectories/{}_{}_s_path_trajectory.json".format(episode.scene_id.split("/")[-1].split(".")[0], ep_id))
+            # save_top_down_map(info)
 
             if ep_id % 2000 == 0:
                 logger.info("Saving checkpoint at {} episodes".format(ep_id))
-                write_json(dataset, "{}/{}_{}.json".format(output_path, scene_id, ep_id))
-                write_gzip("{}/{}_{}.json".format(output_path, scene_id, ep_id), "{}/{}_{}.json".format(output_path, scene_id, ep_id))
+                # write_json(dataset, "{}/{}_{}.json".format(output_path, scene_id, ep_id))
+                # write_gzip("{}/{}_{}.json".format(output_path, scene_id, ep_id), "{}/{}_{}.json".format(output_path, scene_id, ep_id))
         
         print("Total episodes: {}".format(total_episodes))
 
         print("\n\nEpisode success: {}".format(total_success / total_episodes))
+        print("Total episode success: {}".format(success))
+        print("SPL: {}, {}, {}".format(spl/total_episodes, spl, total_episodes))
+        print("Success: {}, {}, {}".format(total_success/total_episodes, total_success, total_episodes))
+        print("Coverage: {}, {}, {}".format(total_coverage/total_episodes, total_coverage, total_episodes))
+        print("Visible area: {}, {}, {}".format(visible_area/total_episodes, visible_area, total_episodes))
         print("Total sample episodes: {}/{}".format(len(dataset["episodes"]), total_episodes))
-        write_json(dataset, "{}/{}.json".format(output_path, scene_id))
-        write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
+        # write_json(dataset, "{}/{}.json".format(output_path, scene_id))
+        # write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
 
         # if len(failed_dataset["episodes"]) > 0:
         #     write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
@@ -250,8 +319,8 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.episodes
     split = objectnav_scene_splits[args.split]
-    if len(split) > 1:
-        cfg.DATASET.CONTENT_SCENES = split
+    # if len(split) > 1:
+    #     cfg.DATASET.CONTENT_SCENES = split
     cfg.freeze()
 
     observations = generate_trajectories(cfg, args.episodes, scene_id=args.scene, output_path=args.output_path)

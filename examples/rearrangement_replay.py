@@ -5,6 +5,7 @@ import json
 import sys
 import time
 import os
+import numpy as np
 
 from habitat import Config
 from habitat_sim.utils import viz_utils as vut
@@ -74,6 +75,25 @@ def log_action_data(data, i):
         print("Action {} - {}".format(data.action, i))
 
 
+def get_coverage(info):
+    top_down_map = info["map"]
+    visted_points = np.where(top_down_map <= 9, 0, 1)
+    coverage = np.sum(visted_points) / get_navigable_area(info)
+    return coverage
+
+
+def get_navigable_area(info):
+    top_down_map = info["map"]
+    navigable_area = np.where(((top_down_map == 1) | (top_down_map >= 10)), 1, 0)
+    return np.sum(navigable_area)
+
+
+def get_visible_area(info):
+    fog_of_war_mask = info["fog_of_war_mask"]
+    visible_area = fog_of_war_mask.sum() / get_navigable_area(info)
+    return visible_area
+
+
 def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=False, num_episodes=None, output_prefix=None):
     instructions = []
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
@@ -82,6 +102,8 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
         total_success = 0
         total_spl = 0
         total_coverage = 0
+        visible_area = 0
+
         num_episodes = len(env.episodes)
 
         print("Total episodes: {}".format(len(env.episodes)))
@@ -140,16 +162,20 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 observation_list.append(frame)
                 i+=1
             
-            total_success += success
-            total_spl += info["spl"]
-            total_coverage += info["coverage"]["reached"]
+            if len(episode.reference_replay) < 2000:
+                total_success += success
+                total_spl += info["spl"]
+            # visible_area += get_visible_area(info["top_down_map"])
+            # total_coverage += get_coverage(info["top_down_map"])
             # save_image(frame, "s_path_{}.png".format(ep_id))
             # make_videos([observation_list], output_prefix, ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, success))
 
+        print("split: {}".format(cfg.DATASET.DATA_PATH))
         print("Average success: {} - {} - {}".format(total_success / num_episodes, total_success, num_episodes))
         print("Average SPL: {} - {} - {}".format(total_spl / num_episodes, total_spl, num_episodes))
-        print("Average Coverage: {} - {} - {}".format(total_coverage / num_episodes, total_coverage, num_episodes))
+        print("Average Coverage: {}, {}, {}".format(total_coverage/num_episodes, total_coverage, num_episodes))
+        print("Average visible area: {}, {}, {}".format(visible_area/num_episodes, visible_area, num_episodes))
 
         if os.path.isfile("instructions.json"):
             inst_file = open("instructions.json", "r")

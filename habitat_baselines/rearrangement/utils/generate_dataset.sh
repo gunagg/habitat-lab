@@ -15,6 +15,9 @@ semantic=$4
 if [[ $semantic == "semantic" ]]; then
     echo "Add semantic obs"
     python habitat_baselines/rearrangement/utils/generate_dataset.py --episodes $path --mode train --scene $scene --task $task --use-semantic
+elif [[ $semantic == "novision" ]]; then
+    echo "Add no vision obs"
+    python habitat_baselines/rearrangement/utils/generate_dataset.py --episodes $path --mode train --scene $scene --task $task --no-vision
 else
     python habitat_baselines/rearrangement/utils/generate_dataset.py --episodes $path --mode train --scene $scene --task $task
 fi

@@ -731,10 +731,13 @@ class TopDownMap(Measure):
 
     def _draw_goals_view_points(self, episode):
         if self._config.DRAW_VIEW_POINTS:
+            agent_position = self._sim.get_agent_state().position
             for goal in episode.goals:
                 try:
                     if goal.view_points is not None:
                         for view_point in goal.view_points:
+                            if abs(agent_position[1] - view_point.agent_state.position[1]) > 0.3:
+                                continue
                             self._draw_point(
                                 view_point.agent_state.position,
                                 maps.MAP_VIEW_POINT_INDICATOR,
@@ -744,8 +747,10 @@ class TopDownMap(Measure):
 
     def _draw_goals_positions(self, episode):
         if self._config.DRAW_GOAL_POSITIONS:
-
             for goal in episode.goals:
+                agent_position = self._sim.get_agent_state().position
+                if abs(agent_position[1] - goal.position[1]) > 0.3:
+                    continue
                 try:
                     if len(episode.goals) == 2 and goal.info["is_receptacle"] == True:
                         self._draw_point(

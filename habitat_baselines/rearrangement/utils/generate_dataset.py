@@ -6,10 +6,14 @@ import sys
 import time
 import os
 
-from habitat import Config
+from habitat import Config, logger
 from habitat import get_config as get_task_config
 from habitat_baselines.rearrangement.dataset.episode_dataset import RearrangementEpisodeDataset
-from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, ObjectNavEpisodeDatasetV2
+from habitat_baselines.objectnav.dataset.episode_dataset import (
+    ObjectNavEpisodeDataset,
+    ObjectNavEpisodeDatasetV2,
+    ObjectNavEpisodeDatasetV3
+)
 
 from time import sleep
 
@@ -23,7 +27,7 @@ objectnav_scene_splits = {
     "split_5": ["17DRP5sb8fy"]
 }
 
-def generate_episode_dataset(config, mode, task, split_name="split_1", use_semantic=False):
+def generate_episode_dataset(config, mode, task, split_name="split_1", use_semantic=False, no_vision=False):
     if task == "rearrangement":
         rearrangement_dataset = RearrangementEpisodeDataset(
             config,
@@ -35,6 +39,16 @@ def generate_episode_dataset(config, mode, task, split_name="split_1", use_seman
     else:
         if use_semantic:
             dataset = ObjectNavEpisodeDatasetV2(
+                config,
+                content_scenes=config.TASK_CONFIG.DATASET.CONTENT_SCENES,
+                mode=mode,
+                use_iw=config.IL.USE_IW,
+                split_name=split_name,
+                inflection_weight_coef=config.MODEL.inflection_weight_coef
+            )
+        elif no_vision:
+            logger.info("Using no vision dataset")
+            dataset = ObjectNavEpisodeDatasetV3(
                 config,
                 content_scenes=config.TASK_CONFIG.DATASET.CONTENT_SCENES,
                 mode=mode,
@@ -70,6 +84,9 @@ def main():
     parser.add_argument(
         "--use-semantic", dest='use_semantic', action='store_true'
     )
+    parser.add_argument(
+        "--no-vision", dest='no_vision', action='store_true'
+    )
     args = parser.parse_args()
 
     config = habitat.get_config("habitat_baselines/config/object_rearrangement/il_object_rearrangement.yaml")
@@ -95,7 +112,7 @@ def main():
     cfg.TASK_CONFIG = task_config
     cfg.freeze()
 
-    observations = generate_episode_dataset(cfg, args.mode, args.task, args.scene, args.use_semantic)
+    observations = generate_episode_dataset(cfg, args.mode, args.task, args.scene, args.use_semantic, args.no_vision)
 
 if __name__ == "__main__":
     main()

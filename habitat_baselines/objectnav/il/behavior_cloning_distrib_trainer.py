@@ -39,6 +39,7 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.objectnav.dataset.episode_dataset import (
     ObjectNavEpisodeDataset,
     ObjectNavEpisodeDatasetV2,
+    ObjectNavEpisodeDatasetV3,
     collate_fn,
 )
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
@@ -225,7 +226,6 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
             model = SingleResNetSeqModel(observation_space, action_space, model_config, device)
         elif model_config.USE_SEMANTICS:
             model = SemSegSeqModel(observation_space, action_space, model_config, device)
-            # model = DDPSemSegSeqModel(observation_space, action_space, model_config, device)
         else:
             model = Seq2SeqModel(observation_space, action_space, model_config)
         return model   
@@ -237,6 +237,14 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
         for scene in ["split_1", "split_2", "split_3", "split_4"]:
             if config.MODEL.USE_SEMANTICS:
                 dataset = ObjectNavEpisodeDatasetV2(
+                    config,
+                    use_iw=config.IL.USE_IW,
+                    split_name=scene,
+                    inflection_weight_coef=config.MODEL.inflection_weight_coef
+                )
+            elif config.MODEL.NO_VISION:
+                logger.info("Using DatasetV3")
+                dataset = ObjectNavEpisodeDatasetV3(
                     config,
                     use_iw=config.IL.USE_IW,
                     split_name=scene,
