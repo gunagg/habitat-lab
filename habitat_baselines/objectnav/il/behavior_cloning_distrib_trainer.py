@@ -175,6 +175,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
         prev_actions: Tensor,
         batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
+        current_episode_cross_entropy,
+        current_episode_steps,
     ) -> Tuple[
         Union[VectorEnv, RLEnv, Env],
         Tensor,
@@ -183,6 +185,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
         Tensor,
         Dict[str, Tensor],
         List[List[Any]],
+        Tensor,
+        Tensor
     ]:
         # pausing self.envs with no new episode
         if len(envs_to_pause) > 0:
@@ -199,6 +203,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
             not_done_masks = not_done_masks[state_index]
             current_episode_reward = current_episode_reward[state_index]
             prev_actions = prev_actions[state_index]
+            current_episode_cross_entropy = current_episode_cross_entropy[state_index]
+            current_episode_steps = current_episode_steps[state_index]
 
             for k, v in batch.items():
                 batch[k] = v[state_index]
@@ -213,6 +219,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
             prev_actions,
             batch,
             rgb_frames,
+            current_episode_cross_entropy,
+            current_episode_steps,
         )
     
 
@@ -618,7 +626,6 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
             {
                 k.replace("module.", ""): v
                 for k, v in ckpt_dict.items()
-                if "module" in k
             }, strict=True)
         self.model.to(self.device)
         self.model.eval()
@@ -642,6 +649,14 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
             config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
         )
+
+        current_episode_cross_entropy = torch.zeros(
+            self.envs.num_envs, 1, device=self.device
+        )
+        current_episode_steps = torch.zeros(
+            self.envs.num_envs, 1, device=self.device
+        )
+
         stats_episodes: Dict[
             Any, Any
         ] = {}  # dict of dicts that stores stats per episode
@@ -671,6 +686,7 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
         possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
         episode_count = 0
         success_episode_data = []
+        cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -688,6 +704,10 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                     not_done_masks
                 )
 
+                gt_actions = batch["demonstration"].long().to(self.device)
+                cross_entropy = cross_entropy_loss(logits, gt_actions)
+                current_episode_cross_entropy += cross_entropy.unsqueeze(1)
+                current_episode_steps += 1
                 actions = torch.argmax(logits, dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))
 
@@ -730,10 +750,13 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                     pbar.update()
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
+                    episode_stats["cross_entropy"] = current_episode_cross_entropy[i].item() / current_episode_steps[i].item()
                     episode_stats.update(
                         self._extract_scalars_from_info(infos[i])
                     )
                     current_episode_reward[i] = 0
+                    current_episode_steps[i] = 0
+                    current_episode_cross_entropy[i] = 0
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (
@@ -791,6 +814,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
+                current_episode_cross_entropy,
+                current_episode_steps,
             ) = self._pause_envs(
                 envs_to_pause,
                 self.envs,
@@ -800,6 +825,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
+                current_episode_cross_entropy,
+                current_episode_steps,
             )
 
         num_episodes = len(stats_episodes)

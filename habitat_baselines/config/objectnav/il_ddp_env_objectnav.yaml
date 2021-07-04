@@ -7,14 +7,14 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_env/sem_seg_ft_one_cycle/seed1_step17/val"
-VIDEO_DIR: "video_dir/objectnav/objectnav_env/sem_seg_ft_one_cycle/seed1_step17/val"
+TENSORBOARD_DIR: "tb/objectnav/objectnav_env/v2_rgbd/"
+VIDEO_DIR: "video_dir/objectnav/objectnav_env/v2_rgbd/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_env/sem_seg_ft/objectnav_mp3d_v4_onecyclelr_8node_17_seed1.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_env/v2_rgbd/objectnav_mp3d_v2_rgbd_8node_3_seed1.ckpt"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 10
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_env/seed1_step11"
+NUM_PROCESSES: 1
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_env/v2_rgbd/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -36,7 +36,7 @@ IL:
     lr: 0.001
     eps: 1.0e-5
     clip_param: 0.2
-    num_mini_batch: 4
+    num_mini_batch: 2
     max_grad_norm: 0.2
     num_steps: 128
     use_linear_clip_decay: False
@@ -61,8 +61,9 @@ MODEL:
   normalize_visual_inputs: False
   force_blind_policy: False
   embed_sge: True
-  USE_SEMANTICS: True
-  USE_PRED_SEMANTICS: True
+  NO_VISION: False
+  USE_SEMANTICS: False
+  USE_PRED_SEMANTICS: False
   SWITCH_TO_PRED_SEMANTICS_UPDATE: 500
   SEMANTIC_ENCODER:
     rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"

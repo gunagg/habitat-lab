@@ -112,7 +112,6 @@ class ObjectNavBCTrainer(BaseILTrainer):
                         {}, infos[env_idx]
                     )
         rgb_path = os.path.join(path.format(split=split, type="rgb"), "frame_{}".format(episode_id))
-        print("Saving at: {}".format(rgb_path))
         save_frame(rgb_frame, rgb_path)
 
 

@@ -5,7 +5,6 @@
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
 #SBATCH --partition=long
-#SBATCH --exclude=glados,olivaw,sophon
 #SBATCH --constraint=rtx_6000
 #SBATCH --output=slurm_logs/ddppo-%j.out
 #SBATCH --error=slurm_logs/ddppo-%j.err

@@ -150,12 +150,6 @@ class RearrangementEpisode(Episode):
     objects: List[RearrangementObjectSpec] = attr.ib(
         default=None, validator=not_none_validator
     )
-    # actions: List[str] = attr.ib(
-    #     default=None, validator=not_none_validator
-    # )
-    # start_index: int = attr.ib(
-    #     default=None, validator=not_none_validator
-    # )
 
 
 @registry.register_sensor(name="InstructionSensor")
@@ -212,7 +206,7 @@ class DemonstrationSensor(Sensor):
         # Fetch next action as observation
         if task.is_resetting:  # reset
             self.timestep = 1
-            # logger.info("reseting {}".format(task.is_resetting))
+            # logger.info("Episode start: {}".format(episode.episode_id))
         
         if self.timestep < len(episode.reference_replay):
             action_name = episode.reference_replay[self.timestep].action

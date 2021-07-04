@@ -284,7 +284,8 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
             episode.goals = self.goals_by_category[episode.goals_key]
 
             for i, replay_step in enumerate(episode.reference_replay):
-                replay_step["agent_state"] = AgentStateSpec(**replay_step["agent_state"])
+                # replay_step["agent_state"] = AgentStateSpec(**replay_step["agent_state"])
+                replay_step["agent_state"] = None
                 episode.reference_replay[i] = ReplayActionSpec(**replay_step)
 
             if episode.shortest_paths is not None:

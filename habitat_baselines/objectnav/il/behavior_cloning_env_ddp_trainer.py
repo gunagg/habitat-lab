@@ -107,6 +107,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
 
         self.agent = DDPBCAgent(
             model=self.model,
+            num_envs=self.envs.num_envs,
             num_mini_batch=il_cfg.num_mini_batch,
             lr=il_cfg.lr,
             eps=il_cfg.eps,
@@ -235,16 +236,10 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
         start_update = 0
         prev_time = 0
 
-        # lr_scheduler = LambdaLR(
-        #     optimizer=self.agent.optimizer,
-        #     lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
-        # )
-        lr_scheduler = OneCycleLR(
+        lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
-            total_steps= self.config.NUM_UPDATES,
-            lr=float(config.IL.BehaviorCloning.lr),
+            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
         )
-
         interrupted_state = load_interrupted_state()
         if interrupted_state is not None:
             self.agent.load_state_dict(interrupted_state["state_dict"])

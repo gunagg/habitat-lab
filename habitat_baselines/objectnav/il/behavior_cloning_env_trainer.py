@@ -103,6 +103,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         self.agent = BCAgent(
             model=self.model,
+            num_envs=self.envs.num_envs,
             num_mini_batch=il_cfg.num_mini_batch,
             lr=il_cfg.lr,
             eps=il_cfg.eps,
@@ -344,14 +345,9 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         count_steps = 0
         count_checkpoints = 0
 
-        # lr_scheduler = LambdaLR(
-        #     optimizer=self.agent.optimizer,
-        #     lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
-        # )
-        lr_scheduler = OneCycleLR(
+        lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
-            total_steps= self.config.NUM_UPDATES,
-            lr=float(config.IL.BehaviorCloning.lr),
+            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
         )
         self.possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
 
@@ -541,6 +537,13 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             Any, Any
         ] = {}  # dict of dicts that stores stats per episode
 
+        current_episode_cross_entropy = torch.zeros(
+            self.envs.num_envs, 1, device=self.device
+        )
+        current_episode_steps = torch.zeros(
+            self.envs.num_envs, 1, device=self.device
+        )
+
         rgb_frames = [
             [] for _ in range(self.config.NUM_PROCESSES)
         ]  # type: List[List[np.ndarray]]
@@ -562,6 +565,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.model.eval()
+        cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -580,7 +584,11 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     prev_actions,
                     not_done_masks,
                 )
-
+                if "demonstration" in batch:
+                    gt_actions = batch["demonstration"].long().to(self.device)
+                    cross_entropy = cross_entropy_loss(logits, gt_actions)
+                    current_episode_cross_entropy += cross_entropy.unsqueeze(1)
+                current_episode_steps += 1
                 actions = torch.argmax(logits, dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))  # type: ignore
 
@@ -624,10 +632,13 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     pbar.update()
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
+                    episode_stats["cross_entropy"] = current_episode_cross_entropy[i].item() / current_episode_steps[i].item()
                     episode_stats.update(
                         self._extract_scalars_from_info(infos[i])
                     )
                     current_episode_reward[i] = 0
+                    current_episode_steps[i] = 0
+                    current_episode_cross_entropy[i] = 0
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (

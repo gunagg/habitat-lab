@@ -134,7 +134,7 @@ class RolloutStorage:
             masks_batch = []
 
             for offset in range(num_envs_per_batch):
-                ind = start_ind + offset
+                ind = perm[start_ind + offset]
 
                 for sensor in self.observations:
                     observations_batch[sensor].append(
@@ -182,6 +182,7 @@ class RolloutStorage:
                 actions_batch,
                 prev_actions_batch,
                 masks_batch,
+                ind
             )
 
     @staticmethod
