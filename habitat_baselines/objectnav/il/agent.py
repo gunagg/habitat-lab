@@ -55,7 +55,7 @@ class BCAgent(nn.Module):
             self.num_mini_batch
         )
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
-        hidden_states = [0] * self.num_envs
+        hidden_states = []
 
         for sample in data_generator:
             (
@@ -97,12 +97,14 @@ class BCAgent(nn.Module):
             self.after_step()
 
             total_loss_epoch += total_loss.item()
-            hidden_states[idx] = rnn_hidden_states
+            hidden_states.append(rnn_hidden_states)
+            # logger.info("hid: {}, {}".format(rnn_hidden_states.shape, idx))
 
         profiling_wrapper.range_pop()
 
         num_updates = 1
         hidden_states = torch.cat(hidden_states, dim=1)
+        # logger.info("cat: {}".format(hidden_states.shape))
 
         total_loss_epoch /= self.num_mini_batch
 

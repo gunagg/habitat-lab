@@ -495,7 +495,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
-        # config.TASK_CONFIG.DATASET.TYPE = "ObjectNav-v1"
+        config.TASK_CONFIG.DATASET.TYPE = "ObjectNav-v1"
         config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:

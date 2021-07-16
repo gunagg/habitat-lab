@@ -78,6 +78,7 @@ class BaseObjectNavTrainer(BaseILTrainer):
             self.optimizer, max_lr=config.IL.BehaviorCloning.lr,
             steps_per_epoch=num_episodes, epochs=config.IL.BehaviorCloning.max_epochs
         )
+        self.cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
 
         params = sum(param.numel() for param in self.policy.parameters())
         params_t = sum(
@@ -116,33 +117,72 @@ class BaseObjectNavTrainer(BaseILTrainer):
     ):
         T, N = corrected_actions.size()
 
-        recurrent_hidden_states = torch.zeros(
+        rnn_hidden_states = torch.zeros(
             self.policy.net.num_recurrent_layers,
             N,
             self.config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
         )
 
-        logits, _ = self.policy(
-            observations, recurrent_hidden_states, prev_actions, not_done_masks
-        )
+        # logits, _ = self.policy(
+        #     observations, recurrent_hidden_states, prev_actions, not_done_masks
+        # )
 
-        logits = logits.view(T, N, -1)
+        # logits = logits.view(T, N, -1)
 
-        action_loss = F.cross_entropy(
-            logits.permute(0, 2, 1), corrected_actions, reduction="none"
-        )
-        loss = ((weights * action_loss).sum(0) / weights.sum(0)).mean()
+        # action_loss = self.cross_entropy_loss(
+        #     logits.permute(0, 2, 1), corrected_actions
+        # )
+        # loss = ((weights * action_loss).sum(0) / weights.sum(0)).mean()
 
-        loss = loss / loss_accumulation_scalar
-        loss.backward()
+        # loss = loss / loss_accumulation_scalar
+        # loss.backward()
+        
+        self.optimizer.zero_grad()
+        num_samples = corrected_actions.shape[0]
+        timestep_batch_size = self.config.IL.BehaviorCloning.timestep_batch_size
+        num_steps = num_samples // timestep_batch_size + (num_samples % timestep_batch_size != 0)
+        batch_loss = 0
+        for i in range(num_steps):
+            slice_start_time = time.time()
+            start_idx = i * timestep_batch_size
+            end_idx = start_idx + timestep_batch_size
+            observations_batch_sample = {
+                k: v[start_idx:end_idx].to(device=self.device)
+                for k, v in observations.items()
+            }
+
+            gt_next_action_sample = corrected_actions[start_idx:end_idx].long().to(self.device)
+            gt_prev_action_sample = prev_actions[start_idx:end_idx].long().to(self.device)
+            episode_not_dones_sample = not_done_masks[start_idx:end_idx].long().to(self.device)
+            inflec_weights_sample = weights[start_idx:end_idx].long().to(self.device)
+
+            logits, rnn_hidden_states = self.policy(
+                observations_batch_sample,
+                rnn_hidden_states,
+                gt_prev_action_sample,
+                episode_not_dones_sample
+            )
+
+            T, N = gt_next_action_sample.shape
+            logits = logits.view(T, N, -1)
+
+            action_loss = self.cross_entropy_loss(logits.permute(0, 2, 1), gt_next_action_sample)
+            denom = inflec_weights_sample.sum(0)
+            denom[denom == 0.0] = 1
+            action_loss = ((inflec_weights_sample * action_loss).sum(0) / denom).mean()
+            loss = (action_loss / num_steps)
+            loss.backward()
+            batch_loss += loss.item()
+            rnn_hidden_states = rnn_hidden_states.detach()
+
 
         if step_grad:
             self.optimizer.step()
             self.scheduler.step()
             self.optimizer.zero_grad()
 
-        return loss.item()
+        return batch_loss #loss.item()
 
     @staticmethod
     def _pause_envs(
@@ -153,6 +193,7 @@ class BaseObjectNavTrainer(BaseILTrainer):
         prev_actions,
         batch,
         rgb_frames=None,
+        current_episode_reward=None,
     ):
         # pausing envs with no new episode
         if len(envs_to_pause) > 0:
@@ -165,6 +206,7 @@ class BaseObjectNavTrainer(BaseILTrainer):
             recurrent_hidden_states = recurrent_hidden_states[state_index]
             not_done_masks = not_done_masks[state_index]
             prev_actions = prev_actions[state_index]
+            current_episode_reward = current_episode_reward[state_index]
 
             for k, v in batch.items():
                 batch[k] = v[state_index]
@@ -179,4 +221,6 @@ class BaseObjectNavTrainer(BaseILTrainer):
             prev_actions,
             batch,
             rgb_frames,
+            current_episode_reward,
         )
+    

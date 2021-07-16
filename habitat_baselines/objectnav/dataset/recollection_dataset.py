@@ -1,5 +1,6 @@
 import gzip
 import json
+import random
 from collections import defaultdict, deque
 from logging import info
 
@@ -7,7 +8,7 @@ import numpy as np
 import torch
 import tqdm
 from gym import Space
-from habitat import make_dataset
+from habitat import make_dataset, logger
 from habitat.config.default import Config
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_baselines.common.environments import get_env_class
@@ -23,7 +24,7 @@ class TeacherRecollectionDataset(torch.utils.data.IterableDataset):
     def __init__(self, config: Config):
         super().__init__()
         self.config = config
-        self._preload = deque()
+        self._preload = [] # deque()
 
         assert (
             config.IL.BehaviorCloning.preload_size >= config.IL.BehaviorCloning.batch_size
@@ -150,7 +151,8 @@ class TeacherRecollectionDataset(torch.utils.data.IterableDataset):
         """
 
         if len(self._preload):
-            return self._preload.popleft()
+            idx = random.randint(0, len(self._preload) - 1)
+            return self._preload[idx] #.popleft()
 
         while (
             len(self._preload) < self.config.IL.BehaviorCloning.preload_size
@@ -199,8 +201,10 @@ class TeacherRecollectionDataset(torch.utils.data.IterableDataset):
                     len(self._env_observations[i])
                     <= self.config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS
                 ), "Trajectories should be no more than the maximum episode steps."
+        
+        logger.info("collect {}".format(len(self._preload)))
 
-        return self._preload.popleft()
+        return self._preload[-1] #.popleft()
 
     def __next__(self):
         """Takes about 1s to once self._load_next() has finished with a batch

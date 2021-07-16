@@ -132,9 +132,14 @@ class RolloutStorage:
             actions_batch = []
             prev_actions_batch = []
             masks_batch = []
+            index_batch = []
 
             for offset in range(num_envs_per_batch):
-                ind = perm[start_ind + offset]
+                # ind = perm[start_ind + offset]
+                ind = start_ind + offset
+                # Ignore OOB index
+                if ind >= num_processes:
+                    continue
 
                 for sensor in self.observations:
                     observations_batch[sensor].append(
@@ -148,6 +153,7 @@ class RolloutStorage:
                 actions_batch.append(self.actions[: self.step, ind])
                 prev_actions_batch.append(self.prev_actions[: self.step, ind])
                 masks_batch.append(self.masks[: self.step, ind])
+                index_batch.append(ind)
 
             T, N = self.step, num_envs_per_batch
 
@@ -182,7 +188,7 @@ class RolloutStorage:
                 actions_batch,
                 prev_actions_batch,
                 masks_batch,
-                ind
+                index_batch
             )
 
     @staticmethod

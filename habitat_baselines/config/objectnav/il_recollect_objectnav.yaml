@@ -7,18 +7,18 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_env/v2_rgbd/"
-VIDEO_DIR: "video_dir/objectnav/objectnav_env/v2_rgbd/"
+TENSORBOARD_DIR: "tb/objectnav/overfitting/recollect/"
+VIDEO_DIR: "video_dir/objectnav/overfitting/recollect/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_env/v2_rgbd/objectnav_mp3d_v2_rgbd_8node_3_seed1.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/overfitting/recollect/ckpt.499.pth"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_env/v2_rgbd/"
+NUM_PROCESSES: 2
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting/recollect/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
-CHECKPOINT_INTERVAL: 100
+CHECKPOINT_INTERVAL: 1
 SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/{split}/{type}"
@@ -26,7 +26,7 @@ EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "val"
+  SPLIT: "train_sub_sample"
 NUM_UPDATES: 1000
 
 IL:
@@ -35,19 +35,17 @@ IL:
   distrib_backend: GLOO
   load_from_ckpt: False
 
-  updates: 1
-
   BehaviorCloning:
     lr: 0.001
-    max_epochs: 10
-    batch_size: 2
+    max_epochs: 20
+    batch_size: 8
     preload_size: 8
     timestep_batch_size: 128
     freeze_encoder: False
     preload_trajectories_file: False
     max_traj_len: 500
-    trajectories_file: "data/dataset/objectnav_mp3d_v2/train/trajectories.json.gz"
-    effective_batch_size: 4
+    trajectories_file: "data/datasets/objectnav_mp3d_v2/train/trajectories.json.gz"
+    effective_batch_size: 0
 
 RL:
   SUCCESS_REWARD: 2.5
