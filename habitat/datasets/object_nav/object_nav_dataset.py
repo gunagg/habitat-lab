@@ -299,6 +299,9 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
                             }
 
                         path[p_index] = ShortestPathPoint(**point)
+            
+            if len(episode.reference_replay) > 501:
+                continue
 
             self.episodes.append(episode)  # type: ignore [attr-defined]
 

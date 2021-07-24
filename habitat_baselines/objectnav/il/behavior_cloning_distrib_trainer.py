@@ -62,6 +62,7 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
 from habitat_baselines.utils.visualizations.utils import (
     save_frame,
 )
+from habitat_baselines.objectnav.models.rednet import load_rednet
 from PIL import Image
 
 
@@ -242,8 +243,10 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
         config = self.config
 
         datasets = []
-        for scene in ["split_1", "split_2", "split_3", "split_4"]:
+        # for scene in ["split_1", "split_2", "split_3", "split_4"]:
+        for scene in ["split_5"]:
             if config.MODEL.USE_SEMANTICS:
+                logger.info("Using DatasetV2")
                 dataset = ObjectNavEpisodeDatasetV2(
                     config,
                     use_iw=config.IL.USE_IW,
@@ -458,7 +461,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
                     optim.zero_grad()
 
                     if config.MODEL.USE_PRED_SEMANTICS and epoch >= config.MODEL.SWITCH_TO_PRED_SEMANTICS_EPOCH:
-                        observations_batch["semantic"] = observations_batch["pred_semantic"].clone()
+                        # observations_batch["semantic"] = observations_batch["pred_semantic"].clone()
+                        del observations_batch["semantic"]
 
                     num_samples = gt_prev_action.shape[0]
                     timestep_batch_size = config.IL.BehaviorCloning.timestep_batch_size

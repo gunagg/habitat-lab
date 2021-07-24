@@ -123,20 +123,6 @@ class BaseObjectNavTrainer(BaseILTrainer):
             self.config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
         )
-
-        # logits, _ = self.policy(
-        #     observations, recurrent_hidden_states, prev_actions, not_done_masks
-        # )
-
-        # logits = logits.view(T, N, -1)
-
-        # action_loss = self.cross_entropy_loss(
-        #     logits.permute(0, 2, 1), corrected_actions
-        # )
-        # loss = ((weights * action_loss).sum(0) / weights.sum(0)).mean()
-
-        # loss = loss / loss_accumulation_scalar
-        # loss.backward()
         
         self.optimizer.zero_grad()
         num_samples = corrected_actions.shape[0]
@@ -203,7 +189,7 @@ class BaseObjectNavTrainer(BaseILTrainer):
                 envs.pause_at(idx)
 
             # indexing along the batch dimensions
-            recurrent_hidden_states = recurrent_hidden_states[state_index]
+            recurrent_hidden_states = recurrent_hidden_states[:, state_index]
             not_done_masks = not_done_masks[state_index]
             prev_actions = prev_actions[state_index]
             current_episode_reward = current_episode_reward[state_index]

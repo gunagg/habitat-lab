@@ -114,7 +114,7 @@ class RearrangementBCTrainer(BaseILTrainer):
             path: to write file
         """
         rgb_frame = observations_to_image(
-                        {}, infos[env_idx]
+                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
                     )
         # depth_frame = observations_to_image(
         #                 {"depth": observations["depth"][env_idx]}, {}

@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=ddp_onav
-#SBATCH --gres gpu:8
+#SBATCH --gres gpu:1
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --partition=long
+#SBATCH --account=overcap
+#SBATCH --partition=overcap
 #SBATCH --constraint=rtx_6000
+#SBATCH --exclude=olivaw
 #SBATCH --output=slurm_logs/ddppo-%j.out
 #SBATCH --error=slurm_logs/ddppo-%j.err
 
@@ -30,9 +32,9 @@ if [[ $sensor == "env" ]]; then
     --exp-config habitat_baselines/config/objectnav/il_ddp_env_objectnav.yaml \
     --run-type train
 elif [[ $sensor == "recollect" ]]; then
-    echo "In ObjectNav Env DDP"
+    echo "In ObjectNav Recollect DDP"
     srun python -u -m habitat_baselines.run \
-    --exp-config habitat_baselines/config/objectnav/il_recollect_objectnav.yaml \
+    --exp-config habitat_baselines/config/objectnav/il_recollect_ddp_objectnav.yaml \
     --run-type train
 else
     echo "In ObjectNav IL DDP"

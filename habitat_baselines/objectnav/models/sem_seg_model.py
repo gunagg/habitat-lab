@@ -100,15 +100,15 @@ class SemSegSeqNet(Net):
         sem_seg_output_size = 0
         self.semantic_predictor = None
         if model_config.USE_SEMANTICS:
-            # self.semantic_predictor = load_rednet(
-            #     device,
-            #     ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
-            #     resize=True # since we train on half-vision
-            # )
-            # self.semantic_predictor.eval()
-            # # Disable gradients
-            # for param in self.semantic_predictor.parameters():
-            #     param.requires_grad_(False)
+            self.semantic_predictor = load_rednet(
+                device,
+                ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
+                resize=True # since we train on half-vision
+            )
+            self.semantic_predictor.eval()
+            # Disable gradients
+            for param in self.semantic_predictor.parameters():
+                param.requires_grad_(False)
 
             sem_embedding_size = model_config.SEMANTIC_ENCODER.embedding_size
             # self.semantic_embedder = nn.Embedding(40 + 2, sem_embedding_size)
@@ -239,7 +239,6 @@ class SemSegSeqNet(Net):
 
         rgb_obs = observations["rgb"]
         depth_obs = observations["depth"]
-        semantic_obs = observations["semantic"]
 
         if len(rgb_obs.size()) == 5:
             observations["rgb"] = rgb_obs.contiguous().view(
@@ -250,6 +249,11 @@ class SemSegSeqNet(Net):
             observations["depth"] = depth_obs.contiguous().view(
                 -1, depth_obs.size(2), depth_obs.size(3), depth_obs.size(4)
             )
+        # Use predicted semantic annotations if none
+        if "semantic" not in observations:
+            observations["semantic"] = self.get_semantic_observations(observations)
+
+        semantic_obs = observations["semantic"]
 
         if len(semantic_obs.size()) == 4:
             observations["semantic"] = semantic_obs.contiguous().view(

@@ -7,20 +7,20 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/resnet18_challenge/seed_1/train_sample"
-VIDEO_DIR: "video_dir/objectnav/resnet18_challenge/seed_1/train_sample"
+TENSORBOARD_DIR: "tb/objectnav/overfitting/seed_1/"
+VIDEO_DIR: "video_dir/objectnav/overfitting/seed_1/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/resnet18_challenge/seed_1/model_9.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/overfitting/seed_1/model_9.ckpt"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/resnet18_challenge/seed_1"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting/seed_1"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 1
 SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
-DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v5/{split}/{scene_split}.db"
+DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
@@ -32,8 +32,8 @@ IL:
   USE_IW: True
   BehaviorCloning:
     lr: 0.001
-    max_epochs: 10
-    batch_size: 8
+    max_epochs: 1
+    batch_size: 4
     timestep_batch_size: 128
     freeze_encoder: False
 

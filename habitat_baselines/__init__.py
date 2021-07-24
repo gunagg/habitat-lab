@@ -24,6 +24,7 @@ from habitat_baselines.objectnav.il.behavior_cloning_distrib_trainer import Obje
 from habitat_baselines.objectnav.il.behavior_cloning_env_trainer import ObjectNavBCEnvTrainer
 from habitat_baselines.objectnav.il.behavior_cloning_env_ddp_trainer import ObjectNavBCEnvDDPTrainer
 from habitat_baselines.objectnav.il.recollect_trainer import RecollectTrainer
+from habitat_baselines.objectnav.il.recollect_ddp_trainer import RecollectDDPTrainer
 
 
 __all__ = [
@@ -46,4 +47,5 @@ __all__ = [
     "ObjectNavBCEnvTrainer",
     "ObjectNavBCEnvDDPTrainer",
     "RecollectTrainer",
+    "RecollectDDPTrainer",
 ]

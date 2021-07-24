@@ -11,7 +11,7 @@ TENSORBOARD_DIR: "tb/objectnav/overfitting/recollect/"
 VIDEO_DIR: "video_dir/objectnav/overfitting/recollect/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/overfitting/recollect/ckpt.499.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/overfitting/recollect/ckpt.199.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 2
 CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting/recollect/"
@@ -26,7 +26,7 @@ EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "train_sub_sample"
+  SPLIT: "train_sample"
 NUM_UPDATES: 1000
 
 IL:

@@ -24,7 +24,7 @@ objectnav_scene_splits = {
     "split_2": ['EDJbREhghzL', 'GdvgFV5R1Z5', 'HxpKQynjfin', 'JF19kD82Mey', 'JeFG25nYj2p', 'PX4nDJXEHrG', 'Pm6F8kyY3z2', 'PuKPg4mmafe', 'S9hNv5qa7GM', 'ULsKaCPVFJR', 'Uxmj2M2itWa', 'V2XKFyX4ASd', 'VFuaQ6m2Qom', 'VLzqgDo317F'],
     "split_3": ['VVfe2KiqLaN', 'Vvot9Ly1tCj', 'XcA2TqTSSAj', 'YmJkqBEsHnH', 'ZMojNkEp431', 'aayBHfsNo7d', 'ac26ZMwG7aT', 'b8cTxDM8gDG', 'cV4RVeZvu5T', 'dhjEzFoUFzH', 'e9zR4mvMWw7', 'gZ6f7yhEvPG', 'i5noydFURQK', 'jh4fc5c5qoQ'],
     "split_4": ['kEZ7cmS4wCh', 'mJXqzFtmKg4', 'p5wJjkQkbXX', 'pRbA3pwrgk9', 'qoiz87JEwZ2', 'r1Q1Z4BcV1o', 'r47D5H71a5s', 'rPc6DW4iMge', 's8pcmisQ38h', 'sKLMLpTHeUy', 'sT4fr6TAbpF', 'uNb9QFRL6hY', 'ur6pFq6Qu1A', 'vyrNrziPKCB'],
-    "split_5": ["17DRP5sb8fy"]
+    "split_5": ['17DRP5sb8fy', 'mJXqzFtmKg4']
 }
 
 def generate_episode_dataset(config, mode, task, split_name="split_1", use_semantic=False, no_vision=False):
@@ -38,6 +38,7 @@ def generate_episode_dataset(config, mode, task, split_name="split_1", use_seman
         )
     else:
         if use_semantic:
+            logger.info("Using RBGD + semantic dataset")
             dataset = ObjectNavEpisodeDatasetV2(
                 config,
                 content_scenes=config.TASK_CONFIG.DATASET.CONTENT_SCENES,

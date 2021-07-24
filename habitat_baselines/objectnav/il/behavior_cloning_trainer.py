@@ -36,7 +36,7 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, collate_fn
+from habitat_baselines.objectnav.dataset.episode_dataset import ObjectNavEpisodeDataset, ObjectNavEpisodeDatasetV2, collate_fn
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
 from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
@@ -232,7 +232,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
         for scene in ["split_1", "split_2", "split_3", "split_4"]:
-            dataset = ObjectNavEpisodeDataset(
+            dataset = ObjectNavEpisodeDatasetV2(
                 config,
                 use_iw=config.IL.USE_IW,
                 split_name=scene,
@@ -323,6 +323,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
                 avg_load_time = 0.0
                 avg_slice_time = 0.0
                 avg_train_time = 0.0
+                avg_collate_time = 0.0
 
                 batch_start_time = time.time()
 
@@ -338,10 +339,12 @@ class ObjectNavBCTrainer(BaseILTrainer):
                      gt_prev_action,
                      episode_not_done,
                      gt_next_action,
-                     inflec_weights
+                     inflec_weights,
+                     collate_time
                     ) = batch
 
-                    avg_load_time += ((time.time() - batch_start_time) / 60)
+                    avg_load_time += ((time.time() - batch_start_time))
+                    avg_collate_time += collate_time
 
                     rnn_hidden_states = torch.zeros(
                         config.MODEL.STATE_ENCODER.num_recurrent_layers,
@@ -373,7 +376,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
                         episode_not_dones_sample = episode_not_done[start_idx:end_idx].long().to(self.device)
                         inflec_weights_sample = inflec_weights[start_idx:end_idx].long().to(self.device)
 
-                        avg_slice_time += ((time.time() - slice_start_time) / 60)
+                        avg_slice_time += ((time.time() - slice_start_time))
 
                         train_time = time.time()
 
@@ -396,14 +399,14 @@ class ObjectNavBCTrainer(BaseILTrainer):
                         batch_loss += loss.item()
                         rnn_hidden_states = rnn_hidden_states.detach()
 
-                        avg_train_time += ((time.time() - train_time) / 60)
+                        avg_train_time += ((time.time() - train_time) )
 
                     avg_loss += batch_loss
 
                     if t % config.LOG_INTERVAL == 0:
                         logger.info(
-                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; avg loss: {:.3f};]".format(
-                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_loss / t
+                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; collate tine: {:.3f};]".format(
+                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_collate_time / t
                             )
                         )
                         writer.add_scalar("train_loss", loss, t)

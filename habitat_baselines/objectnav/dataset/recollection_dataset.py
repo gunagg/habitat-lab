@@ -17,14 +17,14 @@ from habitat_baselines.common.obs_transformers import (
     get_active_obs_transforms,
 )
 
-from habitat_baselines.utils.env_utils import construct_envs
+from habitat_baselines.utils.env_utils import construct_envs, construct_ddp_envs
 
 
 class TeacherRecollectionDataset(torch.utils.data.IterableDataset):
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, is_ddp=False):
         super().__init__()
         self.config = config
-        self._preload = [] # deque()
+        self._preload = deque()
 
         assert (
             config.IL.BehaviorCloning.preload_size >= config.IL.BehaviorCloning.batch_size
@@ -45,6 +45,7 @@ class TeacherRecollectionDataset(torch.utils.data.IterableDataset):
                 self.trajectories = json.load(f)
         else:
             self.trajectories = self.collect_dataset()
+        self.is_ddp = is_ddp
 
         self.initialize_sims()
 
@@ -54,10 +55,18 @@ class TeacherRecollectionDataset(torch.utils.data.IterableDataset):
         config.TASK_CONFIG.MEASUREMENTS = []
         config.freeze()
 
-        self.envs = construct_envs(
-            config,
-            get_env_class(config.ENV_NAME),
-        )
+        if self.is_ddp:
+            self.envs = construct_ddp_envs(
+                config,
+                get_env_class(config.ENV_NAME),
+                world_rank=self.config.world_rank,
+                world_size=self.config.world_size,
+            )
+        else:
+            self.envs = construct_envs(
+                config,
+                get_env_class(config.ENV_NAME),
+            )
         self.length = sum(self.envs.number_of_episodes)
         self.obs_transforms = get_active_obs_transforms(self.config)
         self._observation_space = apply_obs_transforms_obs_space(
@@ -151,8 +160,8 @@ class TeacherRecollectionDataset(torch.utils.data.IterableDataset):
         """
 
         if len(self._preload):
-            idx = random.randint(0, len(self._preload) - 1)
-            return self._preload[idx] #.popleft()
+            # idx = random.randint(0, len(self._preload) - 1)
+            return self._preload.popleft()
 
         while (
             len(self._preload) < self.config.IL.BehaviorCloning.preload_size
@@ -202,9 +211,10 @@ class TeacherRecollectionDataset(torch.utils.data.IterableDataset):
                     <= self.config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS
                 ), "Trajectories should be no more than the maximum episode steps."
         
-        logger.info("collect {}".format(len(self._preload)))
+        # logger.info("collect {}".format(len(self._preload)))
 
-        return self._preload[-1] #.popleft()
+        return self._preload.popleft()
+        #return self._preload[-1] #.popleft()
 
     def __next__(self):
         """Takes about 1s to once self._load_next() has finished with a batch

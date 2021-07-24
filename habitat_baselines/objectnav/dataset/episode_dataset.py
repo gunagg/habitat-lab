@@ -4,6 +4,7 @@ import os
 import random
 import sys
 import torch
+import time
 from collections import defaultdict
 from typing import List, Dict
 
@@ -40,7 +41,7 @@ def collate_fn(batch):
             inflec_weight,
         )
     """
-
+    collate_start_time = time.time()
     def _pad_helper(t, max_len, fill_val=0):
         pad_amount = max_len - t.size(0)
         if pad_amount == 0:
@@ -84,6 +85,8 @@ def collate_fn(batch):
     not_done_masks[0] = 0
 
     observations_batch = ObservationsDict(observations_batch)
+
+    collate_time = (time.time() - collate_start_time)
 
     return (
         observations_batch,
@@ -413,8 +416,6 @@ class ObjectNavEpisodeDatasetV2(Dataset):
         obs_list = []
         observations = defaultdict(list)
         sem_observations = defaultdict(list)
-        pred_sem_observations = defaultdict(list)
-        pred_semantic_obs = self.get_pred_semantic_obs(observation)
 
         observations["depth"].append(observation["depth"])
         observations["rgb"].append(observation["rgb"])
@@ -422,7 +423,6 @@ class ObjectNavEpisodeDatasetV2(Dataset):
         observations["compass"].append(observation["compass"])
         observations["objectgoal"].append(observation["objectgoal"])
         sem_observations["semantic"].append(observation["semantic"])
-        pred_sem_observations["pred_semantic"].append(pred_semantic_obs)
 
         next_action = self.possible_actions.index(episode.reference_replay[1].action)
         next_actions.append(next_action)
@@ -449,7 +449,7 @@ class ObjectNavEpisodeDatasetV2(Dataset):
             prev_state = reference_replay[state_index]
             prev_action = self.possible_actions.index(prev_state.action)
 
-            pred_semantic_obs = self.get_pred_semantic_obs(observation)
+            # pred_semantic_obs = self.get_pred_semantic_obs(observation)
 
             observations["depth"].append(observation["depth"])
             observations["rgb"].append(observation["rgb"])
@@ -457,7 +457,6 @@ class ObjectNavEpisodeDatasetV2(Dataset):
             observations["compass"].append(observation["compass"])
             observations["objectgoal"].append(observation["objectgoal"])
             sem_observations["semantic"].append(observation["semantic"])
-            pred_sem_observations["pred_semantic"].append(pred_semantic_obs)
             next_actions.append(next_action)
             prev_actions.append(prev_action)
 
@@ -474,7 +473,6 @@ class ObjectNavEpisodeDatasetV2(Dataset):
         with self.lmdb_env.begin(write=True) as txn:
             txn.put((sample_key + "_obs").encode(), msgpack_numpy.packb(observations, use_bin_type=True))
             txn.put((sample_key + "_sobs").encode(), msgpack_numpy.packb(sem_observations, use_bin_type=True))
-            txn.put((sample_key + "_pobs").encode(), msgpack_numpy.packb(pred_sem_observations, use_bin_type=True))
             txn.put((sample_key + "_next_action").encode(), np.array(next_actions).tobytes())
             txn.put((sample_key + "_prev_action").encode(), np.array(prev_actions).tobytes())
             txn.put((sample_key + "_weights").encode(), inflection_weights.tobytes())
@@ -529,13 +527,6 @@ class ObjectNavEpisodeDatasetV2(Dataset):
         sem_observations = msgpack_numpy.unpackb(sem_observations_binary, raw=False)
         for k, v in sem_observations.items():
             obs = np.array(sem_observations[k])
-            observations[k] = torch.from_numpy(obs)
-        
-        pred_sem_obs_idx = "{0:0=6d}_pobs".format(idx)
-        pred_sem_observations_binary = self.lmdb_cursor.get(pred_sem_obs_idx.encode())
-        pred_sem_observations = msgpack_numpy.unpackb(pred_sem_observations_binary, raw=False)
-        for k, v in pred_sem_observations.items():
-            obs = np.array(pred_sem_observations[k])
             observations[k] = torch.from_numpy(obs)
 
         next_action_idx = "{0:0=6d}_next_action".format(idx)

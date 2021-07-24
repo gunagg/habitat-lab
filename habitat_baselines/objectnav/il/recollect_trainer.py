@@ -323,9 +323,14 @@ class RecollectTrainer(BaseObjectNavTrainer):
 
         # Map location CPU is almost always better than mapping to a CUDA device.
         ckpt_dict = torch.load(checkpoint_path, map_location=self.device)
+        ckpt_dict["state_dict"] = {
+            k.replace("module.", ""): v
+            for k, v in ckpt_dict["state_dict"].items()
+        }
         self.policy.load_state_dict(ckpt_dict["state_dict"], strict=True)
         self.policy.to(self.device)
         self.policy.eval()
+        logger.info("Loading recollect ddp model")
 
         self.semantic_predictor = None
         if config.MODEL.USE_SEMANTICS:
