@@ -58,6 +58,7 @@ def generate_episode_dataset(config, mode, task, split_name="split_1", use_seman
                 inflection_weight_coef=config.MODEL.inflection_weight_coef
             )
         else:
+            logger.info("Using RGBD dataset")
             rearrangement_dataset = ObjectNavEpisodeDataset(
                 config,
                 content_scenes=config.TASK_CONFIG.DATASET.CONTENT_SCENES,
@@ -107,7 +108,7 @@ def main():
     if args.task == "objectnav":
         task_config.ENVIRONMENT.MAX_EPISODE_STEPS = 1800
         task_config.DATASET.TYPE = "ObjectNav-v2"
-        task_config.DATASET.DATA_PATH = args.episodes
+        # task_config.DATASET.DATA_PATH = args.episodes
         task_config.DATASET.CONTENT_SCENES = objectnav_scene_splits[args.scene]
     task_config.freeze()
     cfg.TASK_CONFIG = task_config

@@ -57,8 +57,8 @@ class RecollectDDPTrainer(RecollectTrainer):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
         for s_type in ["rgb", "seg", "depth", "top_down_map"]:
             dir_name = self.config.RESULTS_DIR.format(split=split, type=s_type)
-            if not os.path.isdir(dir_name):
-                os.makedirs(dir_name)
+            # if not os.path.isdir(dir_name):
+            #     os.makedirs(dir_name)
 
     def _make_dirs(self) -> None:
         self._make_ckpt_dir()

@@ -49,6 +49,7 @@ from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
+    linear_decay,
 )
 from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     EXIT,
@@ -243,8 +244,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
         config = self.config
 
         datasets = []
-        # for scene in ["split_1", "split_2", "split_3", "split_4"]:
-        for scene in ["split_5"]:
+        for scene in ["split_1", "split_2", "split_3", "split_4"]:
+        # for scene in ["split_5"]:
             if config.MODEL.USE_SEMANTICS:
                 logger.info("Using DatasetV2")
                 dataset = ObjectNavEpisodeDatasetV2(
@@ -324,7 +325,7 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
             objectnav_dataset,
             num_replicas=self.world_size,
             rank=self.world_rank,
-            shuffle=True,
+            shuffle=False,
             drop_last=True,
         )
         logger.info("Setting up dataloader...")
@@ -334,8 +335,8 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
             collate_fn=collate_fn,
             batch_size=batch_size,
             shuffle=False,
-            sampler=train_sampler,
-            num_workers=0,
+            #sampler=train_sampler,
+            num_workers=4,
         )
         logger.info("Dataloader setup done")
 

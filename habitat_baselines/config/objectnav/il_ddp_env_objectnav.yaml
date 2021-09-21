@@ -1,5 +1,5 @@
 # Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
-# for better hyperparameters for actual training
+# for better hyperparameters for actual trainingrgbd
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il.yaml"
 TRAINER_NAME: "ddp-objectnav-bc-env"
@@ -7,18 +7,18 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_env/v4_rgbd/step17/"
-VIDEO_DIR: "video_dir/objectnav/objectnav_env/v4_rgbd/step17/"
+TENSORBOARD_DIR: "tb/objectnav/overfitting/rgbd/seed_2/"
+VIDEO_DIR: "video_dir/objectnav/overfitting/rgbd/seed_2/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/objectnav_mp3d_v4_rgbd_8node_17_seed1.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/overfitting/rgbd/seed_2/ckpt.19.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 8
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/step17/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting/rgbd/seed_2/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
-CHECKPOINT_INTERVAL: 100
+CHECKPOINT_INTERVAL: 500
 SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/{split}/{type}"
@@ -26,8 +26,8 @@ EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "val"
-NUM_UPDATES: 1000
+  SPLIT: "train"
+NUM_UPDATES: 500
 
 IL:
   USE_IW: True
@@ -50,7 +50,6 @@ RL:
   SLACK_REWARD: -1e-3
 
 MODEL:
-  inflection_weight_coef: 3.5332856905538788
   ablate_depth: False
   ablate_rgb: False
   hidden_size: 512
@@ -64,7 +63,7 @@ MODEL:
   NO_VISION: False
   USE_SEMANTICS: False
   USE_PRED_SEMANTICS: False
-  SWITCH_TO_PRED_SEMANTICS_UPDATE: 500
+  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
   SEMANTIC_ENCODER:
     rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"
     cnn_type: "ResnetSemSegEncoder"

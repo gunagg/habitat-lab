@@ -72,6 +72,7 @@ def calculate_inflection_weight_objectnav(path, stats_path):
     data_stats = {
         "episode_length": [],
         "action_frequency": {},
+        "object_frequency": {}
     }
     mx = 0
 
@@ -90,6 +91,11 @@ def calculate_inflection_weight_objectnav(path, stats_path):
                 if action not in data_stats["action_frequency"]:
                     data_stats["action_frequency"][action] = 0
                 data_stats["action_frequency"][action] += 1
+
+            object_category = episode['object_category']
+            if object_category not in data_stats['object_frequency']:
+                data_stats['object_frequency'][object_category] = 0
+            data_stats['object_frequency'][object_category] += 1
 
             inflections += num_inflections
             total_episodes += 1

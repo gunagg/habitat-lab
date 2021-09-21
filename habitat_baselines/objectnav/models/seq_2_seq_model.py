@@ -237,3 +237,72 @@ class Seq2SeqModel(nn.Module):
         distribution = self.action_distribution(features)
 
         return distribution.logits, rnn_hidden_states
+    
+    # def evaluate_actions(
+    #     self, observations, rnn_hidden_states, prev_actions, masks
+    # ) -> CustomFixedCategorical:
+
+    #     features, rnn_hidden_states = self.net(
+    #         observations, rnn_hidden_states, prev_actions, masks
+    #     )
+    #     distribution = self.action_distribution(features)
+
+    #     return distribution, rnn_hidden_states
+
+
+# class ILPolicy(nn.Module, metaclass=abc.ABCMeta):
+#     def __init__(self, net, dim_actions):
+#         super().__init__()
+#         self.net = net
+#         self.dim_actions = dim_actions
+
+#         self.action_distribution = CategoricalNet(
+#             self.net.output_size, self.dim_actions
+#         )
+
+#     def forward(self, *x):
+#         raise NotImplementedError
+
+#     def evaluate_actions(
+#         self, observations, rnn_hidden_states, prev_actions, masks
+#     ):
+#         features, rnn_hidden_states = self.net(
+#             observations, rnn_hidden_states, prev_actions, masks
+#         )
+#         distribution = self.action_distribution(features)
+#         return distribution.logits, rnn_hidden_states
+
+#     @classmethod
+#     @abc.abstractmethod
+#     def from_config(cls, config, observation_space, action_space):
+#         pass
+
+
+# @baseline_registry.register_policy
+# class ObjecNavILPolicy(ILPolicy):
+#     def __init__(
+#         self,
+#         observation_space: spaces.Dict,
+#         action_space,
+#         hidden_size: int = 512,
+#         **kwargs
+#     ):
+#         super().__init__(
+#             Seq2SeqNet(  # type: ignore
+#                 observation_space=observation_space,
+#                 hidden_size=hidden_size,
+#                 num_actions=action_space.n,
+#                 **kwargs,
+#             ),
+#             action_space.n,
+#         )
+
+#     @classmethod
+#     def from_config(
+#         cls, config: Config, observation_space: spaces.Dict, action_space
+#     ):
+#         return cls(
+#             observation_space=observation_space,
+#             action_space=action_space,
+#             hidden_size=config.MODEL.hidden_size,
+#         )

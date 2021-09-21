@@ -7,14 +7,14 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/overfitting/seed_2/train_ckpt_9"
-VIDEO_DIR: "video_dir/objectnav/overfitting/seed_2/train_ckpt_9"
+TENSORBOARD_DIR: "tb/objectnav/resnet18_challenge/seed_3/"
+VIDEO_DIR: "video_dir/objectnav/resnet18_challenge/seed_3/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/overfitting/seed_2/model_9.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/resnet18_challenge/seed_3/model_9.ckpt"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting/seed_2"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/resnet18_challenge/seed_3/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -25,6 +25,7 @@ RESULTS_DIR: "data/objectnav/results/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
+NUM_UPDATES: 450
 EVAL:
   SPLIT: "train"
 
@@ -34,7 +35,8 @@ IL:
   BehaviorCloning:
     lr: 0.001
     max_epochs: 20
-    batch_size: 8
+    batch_size: 4
+    num_batches_per_epoch: 450
     timestep_batch_size: 128
     freeze_encoder: False
 
@@ -55,8 +57,8 @@ MODEL:
   force_blind_policy: False
   embed_sge: True
   NO_VISION: False
-  USE_SEMANTICS: True
-  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: False
+  USE_PRED_SEMANTICS: False
   SWITCH_TO_PRED_SEMANTICS_EPOCH: 150
   SEMANTIC_ENCODER:
     rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"

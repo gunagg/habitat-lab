@@ -496,6 +496,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.TASK_CONFIG.DATASET.TYPE = "ObjectNav-v1"
+        config.TASK_CONFIG.TASK.SENSORS = ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
         config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:
@@ -566,6 +567,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.model.eval()
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
+        logger.info("Start eval")
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0

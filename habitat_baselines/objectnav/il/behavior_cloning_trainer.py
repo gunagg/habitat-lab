@@ -108,11 +108,12 @@ class ObjectNavBCTrainer(BaseILTrainer):
             pred_depth: depth map output
             path: to write file
         """
-        rgb_frame = observations_to_image(
-                        {}, infos[env_idx]
-                    )
-        rgb_path = os.path.join(path.format(split=split, type="rgb"), "frame_{}".format(episode_id))
-        save_frame(rgb_frame, rgb_path)
+        # rgb_frame = observations_to_image(
+        #                 {}, infos[env_idx]
+        #             )
+        # rgb_path = os.path.join(path.format(split=split, type="rgb"), "frame_{}".format(episode_id))
+        # save_frame(rgb_frame, rgb_path)
+        pass
 
 
 
@@ -232,7 +233,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
             content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
         for scene in ["split_1", "split_2", "split_3", "split_4"]:
-            dataset = ObjectNavEpisodeDatasetV2(
+            dataset = ObjectNavEpisodeDataset(
                 config,
                 use_iw=config.IL.USE_IW,
                 split_name=scene,
@@ -339,12 +340,11 @@ class ObjectNavBCTrainer(BaseILTrainer):
                      gt_prev_action,
                      episode_not_done,
                      gt_next_action,
-                     inflec_weights,
-                     collate_time
+                     inflec_weights
                     ) = batch
 
                     avg_load_time += ((time.time() - batch_start_time))
-                    avg_collate_time += collate_time
+                    # avg_collate_time += collate_time
 
                     rnn_hidden_states = torch.zeros(
                         config.MODEL.STATE_ENCODER.num_recurrent_layers,
@@ -405,8 +405,8 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
                     if t % config.LOG_INTERVAL == 0:
                         logger.info(
-                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f}; collate tine: {:.3f};]".format(
-                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t, avg_collate_time / t
+                            "[ Epoch: {}; iter: {}; loss: {:.3f}; load time: {:.3f}; train time: {:.3f};]".format(
+                                epoch, t, batch_loss, avg_load_time / t, avg_train_time / t,
                             )
                         )
                         writer.add_scalar("train_loss", loss, t)
@@ -469,6 +469,7 @@ class ObjectNavBCTrainer(BaseILTrainer):
 
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
+        config.TASK_CONFIG.DATASET.TYPE = "ObjectNav-v1"
         config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:

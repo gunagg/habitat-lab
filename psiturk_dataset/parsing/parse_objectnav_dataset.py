@@ -287,6 +287,10 @@ def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_le
                 if len(episode_lengths) >= max_episodes:
                     break
     objectnav_dataset_path = "data/datasets/objectnav_mp3d_v1/train/content/{}.json.gz"
+    if "_val" in output_path:
+        objectnav_dataset_path = objectnav_dataset_path.replace("train", "val")
+        print("Using val path")
+    print(output_path, "val" in output_path, objectnav_dataset_path)
     for scene, episodes in scene_episode_map.items():
         scene = scene.split("/")[-1].split(".")[0]
         episode_data = load_dataset(objectnav_dataset_path.format(scene))

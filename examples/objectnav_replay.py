@@ -252,15 +252,6 @@ def run_reference_replay(
         num_episodes = 0
         print("Total episodes: {}".format(len(env.episodes)))
         fails = []
-        # scenes = []
-        # for ep_id in range(len(env.episodes)):
-        #     episode = env.episodes[ep_id]
-        #     if ep_id in [1, 30, 43] or episode.episode_id in ["AOMFEAWQHU3D8:34S9DKFK75S93PUV2Q9SHUBWT7RYNA", "A34YDGVZKRJ0LZ:39U1BHVTDNU6IZ2RA12E0ZLB9E83TG", "A2JQPSIVUCW92T:39GAF6DQWT3PLOS1SSOADOUZ8GRV1F", "A3KC26Z78FBOJT:3NC5L260MQPLLJDCYFHH7Y4LD55FO6"]:
-        #         episode = env.episodes[ep_id]
-        #         scenes.append(episode.scene_id)
-        # print("\n\n\n")
-        # print(set(scenes))
-        # sys.exit(1)
         for ep_id in range(len(env.episodes)):
             observation_list = []
             obs = env.reset()
@@ -323,7 +314,7 @@ def run_reference_replay(
                 if action_name == "STOP":
                     break
                 i+=1
-            # make_videos([observation_list], output_prefix, ep_id)
+            make_videos([observation_list], output_prefix, ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
             if len(episode.reference_replay) <= 500:
                 success += ep_success

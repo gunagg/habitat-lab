@@ -180,6 +180,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
 
         self._setup_actor_critic_agent(il_cfg, self.config.MODEL)
         self.agent.init_distributed(find_unused_params=True)
+        self.agent.train()
 
         if self.world_rank == 0:
             logger.info(
@@ -268,10 +269,10 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
                 profiling_wrapper.range_push("train update")
                 self.current_update = update
 
-                if il_cfg.use_linear_lr_decay:
+                if update > 0 and il_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore
 
-                if il_cfg.use_linear_clip_decay:
+                if update > 0 and  il_cfg.use_linear_clip_decay:
                     self.agent.clip_param = il_cfg.clip_param * linear_decay(
                         update, self.config.NUM_UPDATES
                     )

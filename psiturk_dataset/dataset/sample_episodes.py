@@ -10,6 +10,7 @@ import gzip
 
 from collections import defaultdict
 from psiturk_dataset.utils.utils import write_json, write_gzip, load_dataset, load_json_dataset
+from sklearn.model_selection import StratifiedShuffleSplit
 from tqdm import tqdm
 
 # eval success episodes
@@ -188,12 +189,14 @@ def sample_episodes_by_scene(path, output_path, limit=500):
     write_gzip(output_path, output_path)
 
 
-def sample_objectnav_episodes_custom(path, output_path):
+def sample_objectnav_episodes_custom(path, output_path, episode_list_json_path):
     files = glob.glob(path + "/*.json.gz")
     print("In ObjectNav episode sampler")
     # episode_ids = ["A2DDPSXH2X96RF:3DPNQGW4LNILYXAJE2Z4ZUL33AU642", "A7XL1V3G7C2VV:3QY5DC2MXTNGYOX9U1TQ64WAVJ6UFV", "A272X64FOZFYLB:3SNLUL3WO6Q2YG75GCWO1H1UQ67LUM", "AEWGY34WUIA32:32UTUBMZ7IZQYMATUPHZJ078SJ2BVE", "AOMFEAWQHU3D8:34S9DKFK75S93PUV2Q9SHUBWT7RYNA", "AOMFEAWQHU3D8:3MRNMEIQW79GHEWJUH6ZRHX66OODLI", "A1ZE52NWZPN85P:3TOK3KHVJVL86QY6GWJ5J6R4F8I7O8", "A3KC26Z78FBOJT:3NC5L260MQPLLJDCYFHH7Y4LD55FO6"]
     # train episodes
-    episode_ids = ["A272X64FOZFYLB:3SNLUL3WO6Q2YG75GCWO1H1UQ67LUM", "AOMFEAWQHU3D8:34S9DKFK75S93PUV2Q9SHUBWT7RYNA", "A7XL1V3G7C2VV:3QY5DC2MXTNGYOX9U1TQ64WAVJ6UFV", "A3KC26Z78FBOJT:3NC5L260MQPLLJDCYFHH7Y4LD55FO6", "A1ZE52NWZPN85P:3AAPLD8UCEKLC79QPMRG4TMLSJ7THU"]
+    f = open(episode_list_json_path)
+    episode_ids = json.loads(f.read())
+    print("Total episodes to sample: {}".format(len(episode_ids)))
     for file_path in files:
         data = load_dataset(file_path)
         scene_id = file_path.split("/")[-1].split(".")[0]
@@ -204,6 +207,7 @@ def sample_objectnav_episodes_custom(path, output_path):
         data["episodes"] = episodes
         if len(data["episodes"]) > 0:
             dest_path = os.path.join(output_path, "{}.json".format(scene_id))
+            print("Writing at: {} - {} episodes".format(dest_path, len(episodes)))
             write_json(data, dest_path)
             write_gzip(dest_path, dest_path)
 
@@ -274,6 +278,56 @@ def sample_coverage_episodes(path, output_path, total_episodes=1200, task="objec
         print("Total episodess: {}".format(len(data["episodes"])))
 
 
+def sample_stratified_objectnav_dataset(path, output_path, total_episodes=1200, task="objectnav"):
+    files = glob.glob(path + "/*.json.gz")
+    print("In stratified episode sampler")
+    # train episodes
+    df = []
+    filtered_episodes = 0
+    ep_scene_map = defaultdict(list)
+    if path.split(".")[-1] == "gz":
+        files = [path]
+    for file_path in files:
+        data = load_dataset(file_path)
+        scene_id = file_path.split("/")[-1].split(".")[0]
+        for episode in tqdm(data["episodes"]):
+            scene_goal = "{}_{}".format(episode["scene_id"], episode["object_category"])
+            df.append(([episode["episode_id"], scene_goal]))
+
+    df = pd.DataFrame(df, columns=['episode_id', 'goal'])
+    test_size = total_episodes / df.shape[0]
+    s_split = StratifiedShuffleSplit(n_splits=1, test_size=test_size)
+
+    train_splits, val_splits = [], []
+    for train_split, val_split in s_split.split(df['episode_id'], df['goal']):
+        train_splits.append(train_split)
+        val_splits.append(val_split)
+    
+    indices = val_splits[0]
+
+    filtered_episode_ids = df['episode_id'][indices].values
+    for file_path in files:
+        data = load_dataset(file_path)
+        scene_id = file_path.split("/")[-1].split(".")[0]
+        episodes = []
+        for episode in tqdm(data["episodes"]):
+            if episode["episode_id"] in filtered_episode_ids:
+                episodes.append(episode)
+                filtered_episodes += 1
+
+        data["episodes"] = episodes
+        if len(data["episodes"]) > 0:
+            dest_path = os.path.join(output_path, "{}.json".format(scene_id))
+            if output_path.split(".")[-1] == "json":
+                dest_path = output_path
+            
+            print("Wrting at: {}".format(dest_path))
+            write_json(data, dest_path)
+            write_gzip(dest_path, dest_path)
+        print("Total episodess: {}".format(len(data["episodes"])))
+    print("Sampled dataset size: {}".format(len(filtered_episode_ids)))
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -301,6 +355,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--prev-tasks", type=str, default="data/datasets/objectnav_mp3d_v2/train/sampled/"
     )
+    parser.add_argument(
+        "--total-episodes", type=int, default=10
+    )
+    parser.add_argument(
+        "--ep-list", type=str, default="data/tasks/objectnav_train_split.json"
+    )
     args = parser.parse_args()
     # if args.sample_episodes and not args.is_objectnav and not args.per_scene:
     #     sample_episodes_by_episode_ids(args.input_path, args.output_path)
@@ -310,5 +370,7 @@ if __name__ == "__main__":
     #     sample_episodes_by_scene(args.input_path, args.output_path, args.limit)
     # else:
     #     sample_episodes(args.input_path, args.output_path, args.per_scene_limit)
-    sample_objectnav_episodes_custom(args.input_path, args.output_path)
+    # sample_objectnav_episodes_custom(args.input_path, args.output_path)
     # sample_coverage_episodes(args.input_path, args.output_path)
+    #sample_stratified_objectnav_dataset(args.input_path, args.output_path, args.total_episodes)
+    sample_objectnav_episodes_custom(args.input_path, args.output_path, args.ep_list)
