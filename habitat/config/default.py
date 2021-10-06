@@ -208,6 +208,12 @@ _C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
 # -----------------------------------------------------------------------------
 _C.TASK.ANSWER_ACCURACY = CN()
 _C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
+
+_C.TASK.OBJ_GEN_NEAR_DIST = 1.0
+_C.TASK.OBJ_GEN_FAR_DIST = 5.0
+_C.TASK.INCREASE_DIST = False
+_C.TASK.NUM_UNIQ_SELECTED_OBJECTS = 5
+_C.TASK.NUM_OBJECT_COPIES = 3
 # -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------

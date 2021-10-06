@@ -335,9 +335,11 @@ class ResnetSemSeqEncoder(nn.Module):
         spatial_output: bool = False,
         semantic_embedding_size=4,
         use_pred_semantics=False,
+        use_goal_seg=False,
     ):
         super().__init__()
-        self.semantic_embedder = nn.Embedding(40 + 2, semantic_embedding_size)
+        if not use_goal_seg:
+            self.semantic_embedder = nn.Embedding(40 + 2, semantic_embedding_size)
 
         self.visual_encoder = ResNetEncoder(
             spaces.Dict({"semantic": observation_space.spaces["semantic"]}),
@@ -351,6 +353,7 @@ class ResnetSemSeqEncoder(nn.Module):
             param.requires_grad_(trainable)
 
         self.spatial_output = spatial_output
+        self.use_goal_seg = use_goal_seg
 
         if not self.spatial_output:
             self.output_shape = (output_size,)
@@ -390,8 +393,10 @@ class ResnetSemSeqEncoder(nn.Module):
         if "semantic_features" in observations:
             x = observations["semantic_features"]
         else:
-            categories = observations["semantic"].long() + 1
-            observations["semantic"] = self.semantic_embedder(categories)
+            # Embed input when using all object categories
+            if not self.use_goal_seg:
+                categories = observations["semantic"].long() + 1
+                observations["semantic"] = self.semantic_embedder(categories)
             x = self.visual_encoder(observations)
 
         if self.spatial_output:

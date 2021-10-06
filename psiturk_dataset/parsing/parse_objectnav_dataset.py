@@ -247,7 +247,9 @@ def convert_to_episode(csv_reader):
     return episode, episode_length
 
 
-def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_length=1000, sample=False):
+def replay_to_episode(
+    replay_path, output_path, max_episodes=16,  max_episode_length=1000, sample=False, append_dataset=False
+    ):
     all_episodes = {
         "episodes": []
     }
@@ -290,12 +292,18 @@ def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_le
     if "_val" in output_path:
         objectnav_dataset_path = objectnav_dataset_path.replace("train", "val")
         print("Using val path")
-    print(output_path, "val" in output_path, objectnav_dataset_path)
     for scene, episodes in scene_episode_map.items():
         scene = scene.split("/")[-1].split(".")[0]
         episode_data = load_dataset(objectnav_dataset_path.format(scene))
         episode_data["episodes"] = episodes
+
         path = output_path + "/{}.json".format(scene)
+
+        if append_dataset:
+            existing_episodes = load_dataset(path + ".gz")
+            len_before = len(episode_data["episodes"])
+            episode_data["episodes"].extend(existing_episodes["episodes"])
+            print("Appending new episodes to existing scene: {} -- {} -- {}".format(scene, len_before, len(episode_data["episodes"])))
 
         write_json(episode_data, path)
         write_gzip(path, path)
@@ -357,8 +365,14 @@ def main():
     parser.add_argument(
         "--max-episode-length", type=int, default=15000
     )
+    parser.add_argument(
+        "--append-dataset", dest='append_dataset', action='store_true'
+    )
     args = parser.parse_args()
-    replay_to_episode(args.replay_path, args.output_path, args.max_episodes, args.max_episode_length)
+    replay_to_episode(
+        args.replay_path, args.output_path, args.max_episodes,
+        args.max_episode_length, append_dataset=args.append_dataset
+    )
     list_missing_episodes()
 
 

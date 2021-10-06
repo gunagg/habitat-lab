@@ -7,14 +7,14 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/overfitting/rgbd/seed_2/"
-VIDEO_DIR: "video_dir/objectnav/overfitting/rgbd/seed_2/"
+TENSORBOARD_DIR: "tb/objectnav/objectnav_mp3d_12k/rgbd/seed_1_140M_h1024/val_14/"
+VIDEO_DIR: "video_dir/objectnav/objectnav_mp3d_12k/rgbd/seed_1_140M_h1024/val_14/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/overfitting/rgbd/seed_2/ckpt.19.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_mp3d_12k/rgbd/seed_1_140M_h1024/ckpt.14.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 8
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting/rgbd/seed_2/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_mp3d_12k/rgbd/seed_1_140M_h1024/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -26,8 +26,8 @@ EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "train"
-NUM_UPDATES: 500
+  SPLIT: "val"
+NUM_UPDATES: 8000
 
 IL:
   USE_IW: True
@@ -60,9 +60,10 @@ MODEL:
   normalize_visual_inputs: False
   force_blind_policy: False
   embed_sge: True
+  embed_goal_seg: False
   NO_VISION: False
-  USE_SEMANTICS: False
-  USE_PRED_SEMANTICS: False
+  USE_SEMANTICS: True
+  USE_PRED_SEMANTICS: True
   SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
   SEMANTIC_ENCODER:
     rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"

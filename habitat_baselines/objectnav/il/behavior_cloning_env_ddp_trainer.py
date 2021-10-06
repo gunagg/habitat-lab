@@ -131,6 +131,11 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
         )
 
+        interrupted_state = load_interrupted_state()
+        if interrupted_state is not None:
+            logger.info("Overriding current config with interrupted state config")
+            self.config = interrupted_state["config"]
+
         # Stores the number of workers that have finished their rollout
         num_rollouts_done_store = distrib.PrefixStore(
             "rollout_tracker", tcp_store
@@ -241,7 +246,6 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             optimizer=self.agent.optimizer,
             lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
         )
-        interrupted_state = load_interrupted_state()
         if interrupted_state is not None:
             self.agent.load_state_dict(interrupted_state["state_dict"])
             self.agent.optimizer.load_state_dict(

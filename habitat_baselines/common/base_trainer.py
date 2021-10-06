@@ -53,8 +53,6 @@ class BaseTrainer:
         eval_cmd_opts = config.CMD_TRAILING_OPTS
 
         try:
-            print(config)
-            print("\n\n\n\n")
             config.merge_from_other_cfg(checkpoint_config)
             config.merge_from_other_cfg(self.config)
             config.merge_from_list(ckpt_cmd_opts)
@@ -208,6 +206,7 @@ class BaseRLTrainer(BaseTrainer):
         prev_actions: Tensor,
         batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
+        current_episode_cross_entropy=None,
     ) -> Tuple[
         Union[VectorEnv, RLEnv, Env],
         Tensor,
@@ -231,11 +230,25 @@ class BaseRLTrainer(BaseTrainer):
             not_done_masks = not_done_masks[state_index]
             current_episode_reward = current_episode_reward[state_index]
             prev_actions = prev_actions[state_index]
+            if current_episode_cross_entropy is not None:
+                current_episode_cross_entropy = current_episode_cross_entropy[state_index]
 
             for k, v in batch.items():
                 batch[k] = v[state_index]
 
             rgb_frames = [rgb_frames[i] for i in state_index]
+
+        if current_episode_cross_entropy is not None:
+            return (
+                envs,
+                test_recurrent_hidden_states,
+                not_done_masks,
+                current_episode_reward,
+                prev_actions,
+                batch,
+                rgb_frames,
+                current_episode_cross_entropy,
+            )
 
         return (
             envs,

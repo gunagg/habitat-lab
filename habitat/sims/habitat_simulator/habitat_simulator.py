@@ -217,6 +217,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         )
         self._prev_sim_obs: Optional[Observations] = None
 
+        self.navmesh_settings = habitat_sim.NavMeshSettings()
+        self.navmesh_settings.set_defaults()
+        self.navmesh_settings.agent_radius = agent_config.RADIUS
+        self.navmesh_settings.agent_height = agent_config.HEIGHT
+
     def create_sim_config(
         self, _sensor_suite: SensorSuite
     ) -> habitat_sim.Configuration:
@@ -333,6 +338,115 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             super().reconfigure(self.sim_config)
 
         self._update_agents_state()
+
+        self.sim_object_to_objid_mapping = {}
+        self.objid_to_sim_object_mapping = {}
+        self.obj_sem_id_to_sem_category_mapping = {}
+
+        self._initialize_THDA_scene()
+
+    def remove_all_objects(self):
+        for id in self.get_existing_object_ids():
+            self.remove_object(id)
+
+    def get_rotation_vec(self, object_id):
+        quat = self.get_rotation(object_id)
+        return np.array(quat.vector).tolist() + [quat.scalar]
+
+    # THDA Initialization
+    def _initialize_THDA_scene(self):
+        # Retrieving scene state from config
+        if (
+            not hasattr(self.habitat_config, "scene_state")
+            or self.habitat_config.scene_state is None
+        ):
+            return
+        objects = self.habitat_config.scene_state[0]["objects"]
+        obj_templates_mgr = self.get_object_template_manager()
+
+        self.remove_all_objects()
+        self.recompute_navmesh(self.pathfinder, self.navmesh_settings, True)
+
+        self.sim_object_to_objid_mapping = {}
+        self.objid_to_sim_object_mapping = {}
+        self.obj_sem_id_to_sem_category_mapping = {}
+
+        if objects is not None:
+            for object in objects:
+                object_template = f"{object.object_template}"
+                object_pos = object.position
+                object_rot = object.rotation
+                object_template_handles = (
+                    obj_templates_mgr.get_file_template_handles(
+                        object_template
+                    )
+                )
+
+                if len(object_template_handles) >= 1:
+                    object_template_handle = object_template_handles[0]
+                    # logger.info(f"Reusing template handle.{object_template_handle} | {obj_templates_mgr.get_num_templates()}")
+                else:
+                    # if obj_templates_mgr.get_num_templates() < 20:
+                    # logger.info(f"Creating new template handle. {object_template} | {obj_templates_mgr.get_num_templates()}")
+                    _object_template_ids = (
+                        obj_templates_mgr.load_object_configs(object_template)
+                    )
+                    assert (
+                        len(_object_template_ids) > 0
+                    ), f"Object template '{object_template}' wasn't found."
+                    object_template_id = _object_template_ids[0]
+                    object_attr = obj_templates_mgr.get_template_by_ID(
+                        object_template_id
+                    )
+                    if object.scale:
+                        object_attr.scale = mn.Vector3(object.scale)
+                        # print(f"object.scale: {object.scale}")
+                    else:
+                        object_attr.scale = mn.Vector3(5)
+                    obj_templates_mgr.register_template(object_attr)
+
+                    # logger.error(f"SCENE: {self.habitat_config.SCENE}")
+                    object_template_handle = object_attr.handle
+                    # else:
+                    # object_template_handle = obj_templates_mgr.get_random_template_handle()
+                    # logger.info(f"Random object {object_template_handle} instead of {object_template}")
+
+                object_id = self.add_object_by_handle(object_template_handle)
+
+                self.sim_object_to_objid_mapping[object_id] = object.object_id
+                self.objid_to_sim_object_mapping[object.object_id] = object_id
+
+                # Return back
+                self.set_object_semantic_id(int(object.object_id), object_id)
+                # [self.get_object_scene_node(id).semantic_id for id in self.get_existing_object_ids()]
+                self.obj_sem_id_to_sem_category_mapping[
+                    int(object.object_id)
+                ] = object.semantic_category_id
+
+                if object_pos is not None:
+                    self.set_translation(object_pos, object_id)
+                    if isinstance(object_rot, list):
+                        object_rot = quat_from_coeffs(object_rot)
+                    if object_rot is not None:
+                        object_rot = quat_to_magnum(object_rot)
+                        self.set_rotation(object_rot, object_id)
+                else:
+                    self.sample_object_state(object_id)
+                    self.recompute_navmesh(
+                        self.pathfinder, self.navmesh_settings, True
+                    )
+
+                # self.sample_object_state(object_id)
+
+                self.set_object_motion_type(MotionType.STATIC, object_id)
+                # print(f"rotation: {self.get_rotation_vec(object_id)}")
+                # print(f"position: {np.array(self.get_translation(object_id)).tolist()}")
+                # print(f"{self.sample_navigable_point()}")
+
+            # Recompute the navmesh after placing all the objects.
+            self.recompute_navmesh(
+                self.pathfinder, self.navmesh_settings, True
+            )
 
     def geodesic_distance(
         self,

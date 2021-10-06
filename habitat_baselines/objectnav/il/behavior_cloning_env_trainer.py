@@ -8,7 +8,7 @@ import os
 import sys
 import time
 from collections import defaultdict, deque
-from typing import Any, DefaultDict, Dict, List, Optional
+from typing import Any, DefaultDict, Dict, List, Optional, Union
 
 import numpy as np
 import torch
@@ -495,8 +495,11 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
-        config.TASK_CONFIG.DATASET.TYPE = "ObjectNav-v1"
-        config.TASK_CONFIG.TASK.SENSORS = ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
+
+        if "human_val" not in config.TASK_CONFIG.DATASET.SPLIT:
+            logger.info("Setting up human val {}".format(config.TASK_CONFIG.DATASET.SPLIT))
+            config.TASK_CONFIG.DATASET.TYPE = "ObjectNav-v1"
+            config.TASK_CONFIG.TASK.SENSORS = ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
         config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:
@@ -589,6 +592,9 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 if "demonstration" in batch:
                     gt_actions = batch["demonstration"].long().to(self.device)
                     cross_entropy = cross_entropy_loss(logits, gt_actions)
+                    # Handle overflow actions for cross entropy computation
+                    gt_actions[gt_actions != 0.0] = 1
+                    cross_entropy = cross_entropy * gt_actions
                     current_episode_cross_entropy += cross_entropy.unsqueeze(1)
                 current_episode_steps += 1
                 actions = torch.argmax(logits, dim=1)
@@ -634,6 +640,14 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     pbar.update()
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
+                    if "human_val" in config.TASK_CONFIG.DATASET.SPLIT:
+                        divide_by = len(current_episodes[i].reference_replay)
+                        if divide_by > current_episode_steps[i].item():
+                            logitss = torch.zeros_like(logits[i]).unsqueeze(0)
+                            logitss[0] = 1.0
+                            cross_entropy = cross_entropy_loss(logitss, gt_actions[i].unsqueeze(0))
+                            missing_steps = (divide_by - current_episode_steps[i].item())
+                            current_episode_cross_entropy[i] += missing_steps * cross_entropy
                     episode_stats["cross_entropy"] = current_episode_cross_entropy[i].item() / current_episode_steps[i].item()
                     episode_stats.update(
                         self._extract_scalars_from_info(infos[i])
@@ -678,6 +692,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
+                current_episode_cross_entropy,
             ) = self._pause_envs(
                 envs_to_pause,
                 self.envs,
@@ -687,6 +702,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
+                current_episode_cross_entropy,
             )
 
         num_episodes = len(stats_episodes)

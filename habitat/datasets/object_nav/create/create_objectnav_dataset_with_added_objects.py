@@ -122,7 +122,7 @@ with open("examples/mpcat40.tsv", "r") as f:
 
 def read_ycb_google_objects(
     path="habitat/datasets/object_nav/create/ycb_google_16k_meta.csv",
-    ycb_objects_dir="data/assets/objects/ycb_google_16k/configs_gltf/",
+    ycb_objects_dir="data/assets/objects/ycb_google_16k_v2/configs_gltf/",
 ):
     with open(path, "r") as f:
         csv_r = csv.reader(f)
@@ -203,8 +203,8 @@ def sample_scene_state(selected_objects):
     )
 
 
-with open("examples/coco_to_synset_edited.json", "r") as f:
-    coco_map = json.load(f)
+# with open("examples/coco_to_synset_edited.json", "r") as f:
+#     coco_map = json.load(f)
 
 mp3d_valid_ids = np.array(
     [3]
@@ -332,7 +332,8 @@ def get_goals_view_points(sim, goal_objects, agent_state):
                         position=np.array(
                             sim.pathfinder.snap_point(object["position"])
                         )
-                    )
+                    ),
+                    iou=0.5 # TODO add some legit value
                 )
             ],
         )
@@ -444,7 +445,6 @@ def reset_episode(
         ISLAND_RADIUS_LIMIT,
     )
 
-    # logger.info(f"Looking for objects and agent positions generated")
     s = sim.sample_navigable_point()
     while sim.island_radius(s) < ISLAND_RADIUS_LIMIT:
         s = sim.sample_navigable_point()
@@ -473,9 +473,7 @@ def reset_episode(
         goals, closest_goal_targets = get_goals_view_points(
             sim, goal_objects=category_to_object[goal_category], agent_state=s
         )
-        # logger.info(f"closest_goal_targets with changed agent pose: {closest_goal_targets} rt {retries}")
 
-    # logger.info(f"Objects and agent positions generated {goal_category} {len(goals)} goals")
     fill_episode(
         episode,
         s,
@@ -628,7 +626,7 @@ def generate_scene(args):
                                                         object["position"]
                                                     )
                                                 )
-                                            )
+                                            ),
                                         )
                                     ],
                                 )

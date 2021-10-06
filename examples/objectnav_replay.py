@@ -315,14 +315,19 @@ def run_reference_replay(
                     break
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
+            print(info["distance_to_goal"])
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
-            if len(episode.reference_replay) <= 500:
+            if len(episode.reference_replay) <= 5000:
                 success += ep_success
                 spl += info["spl"]
 
-            # visible_area += get_visible_area(info["top_down_map"])
-            # total_coverage += get_coverage(info["top_down_map"])
+            if "top_down_map" in info.keys():
+                visible_area += get_visible_area(info["top_down_map"])
+                total_coverage += get_coverage(info["top_down_map"])
             num_episodes += 1
+
+            if num_episodes % 100 == 0:
+                print("Total succes: {}, {}, {}".format(success/num_episodes, success, num_episodes))
 
             if sem_seg:
                 goal_visible_area, goal_visible_area_gt = get_goal_visible_area(observations, task_cat2mpcat40, episode)
@@ -346,6 +351,16 @@ def run_reference_replay(
         print("Coverage: {}, {}, {}".format(total_coverage/num_episodes, total_coverage, num_episodes))
         print("Visible area: {}, {}, {}".format(visible_area/num_episodes, visible_area, num_episodes))
         print("Failed episodes: {}".format(fails))
+        stats = {
+            "spl": spl/num_episodes,
+            "success": success/num_episodes,
+            "coverage": total_coverage/num_episodes,
+            "visible_area": visible_area/num_episodes,
+            "num_episodes": num_episodes
+        }
+        stats_file = open("data/stats/stats.json", "w")
+        stats_file.write(json.dumps(stats))
+
         inst_file = open("instructions.json", "w")
         inst_file.write(json.dumps(instructions))
         return obs_list

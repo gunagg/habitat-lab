@@ -51,7 +51,6 @@ class SceneState:
     objects: List[ObjectInScene] = attr.ib(default=None)
 
 
-
 @attr.s(auto_attribs=True, kw_only=True)
 class Episode:
     r"""Base class for episode specification that includes initial position and

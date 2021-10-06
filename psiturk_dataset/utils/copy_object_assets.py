@@ -19,26 +19,29 @@ def copy_glb_assets(src_path, dest_path):
 
 
 def copy_object_configs(src_path, dest_path):
-    print("ola")
     object_config_files = glob.glob(src_path + "/*.phys_properties.json")
+    print(len(object_config_files))
     for object_config_file in object_config_files:
         config_file = object_config_file.split("/")[-1]
         # Read existing physics config
         f = open(object_config_file, "r")
+        org_object_config = json.loads(f.read())
         object_config = {}
-        object_config["render_asset"] = config_file.split(".")[0][4:] + ".glb"
+        object_config["render_asset"] = config_file.split(".")[0] + ".glb"
         object_config["use_bounding_box_for_collision"] = True
-        object_config["requires_lighting"] = True
-        object_config["scale"] = [2.0, 2.0, 2.0]
-        object_config["margin"] = 0
+        
+        if org_object_config.get("scale") is not None:
+            object_config["scale"] = org_object_config["scale"]
+        if org_object_config.get("margin") is not None:
+            object_config["margin"] = org_object_config["margin"]
 
         config_file = config_file.split(".")
-        config_file[0] = config_file[0][4:]
         config_file[1] = "object_config"
         config_file = ".".join(config_file)
 
         f = open(dest_path + "/" + config_file, "w")
         f.write(json.dumps(object_config))
+        print(dest_path + "/" + config_file)
 
 
 def write_object_meta(src_path):
@@ -143,7 +146,7 @@ def get_object_name_map(path="object-meta.json"):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--src-glb-path", type=str, default="../ycb_google_16k/configs_gltf"
+        "--src-path", type=str, default="../ycb_google_16k/configs_gltf"
     )
     parser.add_argument(
         "--src-object-conf-path", type=str, default="../ycb_google_16k/configs"
@@ -159,5 +162,5 @@ if __name__ == "__main__":
     # copy_using_object_meta_file(args.src_glb_path, args.src_object_conf_path, args.dest_path)
     # get_object_name_map()
     # get_object_name_map_from_directory("../habitat-sim/data/objects")
-    filter_objects_in_directory("../habitat-sim/data/test_assets/objects")
+    copy_object_configs(args.src_path, args.dest_path)
 

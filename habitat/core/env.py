@@ -217,10 +217,10 @@ class Env:
             self._current_episode._shortest_path_cache = None
 
         self._current_episode = next(self._episode_iterator)
+
         self.reconfigure(self._config)
-
+ 
         observations = self.task.reset(episode=self.current_episode)
-
         # obtain mapping from instance id to semantic label id
         scene = self.sim.semantic_annotations()
 

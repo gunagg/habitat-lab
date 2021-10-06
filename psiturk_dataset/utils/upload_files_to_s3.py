@@ -17,7 +17,7 @@ def upload_file(file_path, bucket, dest_path):
         file_paths = glob.glob(file_path + "/*.mp4")
         for file_path in file_paths:
             file_name = file_path.split("/")[-1]
-            print(file_path)
+            # print(file_path)
             dest_file_path = os.path.join(dest_path, file_name)
             response = client.upload_file(file_path, bucket, dest_file_path, ExtraArgs={'ACL':'public-read'})
     else:

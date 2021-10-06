@@ -242,3 +242,126 @@ class ObjectNavigationTask(NavigationTask):
     def _check_episode_is_active(self,  action, *args: Any, **kwargs: Any) -> bool:
         return not getattr(self, "is_stop_called", False)
 
+
+@registry.register_task(name="ObjectNavAddedObj-v1")
+class ObjectNavAddedObj(ObjectNavigationTask):
+    r"""An Object Navigation Task class for a task specific methods.
+    Used to explicitly state a type of the task in config.
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        from habitat.datasets.object_nav.create.create_objectnav_dataset_with_added_objects import (
+            read_ycb_google_objects,
+        )
+
+        self.ycb_objects_lib, _ = read_ycb_google_objects(
+            "habitat/datasets/object_nav/create/ycb_google_16k_19_objs_meta.csv"
+        )
+        self.selected_objects = None
+        self.episode_counter = 0
+        self.prev_episode = None
+        self.is_generated_episode = False
+
+        from habitat.datasets.object_nav.create.create_objectnav_dataset_with_added_objects import (
+            category_to_mp3d_category_id,
+            category_to_task_category_id,
+        )
+
+        self._dataset.category_to_scene_annotation_category_id = (
+            category_to_mp3d_category_id
+        )
+        self._dataset.category_to_task_category_id = (
+            category_to_task_category_id
+        )
+
+        self.near_dist = (
+            self._config.OBJ_GEN_NEAR_DIST
+            if hasattr(self._config, "OBJ_GEN_NEAR_DIST")
+            else 1
+        )
+        self.far_dist = (
+            self._config.OBJ_GEN_FAR_DIST
+            if hasattr(self._config, "OBJ_GEN_FAR_DIST")
+            else 5
+        )
+
+    def overwrite_sim_config(self, sim_config, episode):
+        from habitat.datasets.object_nav.create.create_objectnav_dataset_with_added_objects import (
+            sample_objects_for_episode,
+            sample_scene_state,
+        )
+
+        super().overwrite_sim_config(sim_config, episode)
+
+        # if hasattr(episode, "scene_state") and episode.scene_state is not None:
+        sim_config.defrost()
+        self.selected_objects = sample_objects_for_episode(
+            objects_lib=self.ycb_objects_lib,
+            num_uniq_selected_objects=self._config.NUM_UNIQ_SELECTED_OBJECTS,
+            num_copies=self._config.NUM_OBJECT_COPIES,
+        )
+        # logger.info(f"new selected_objects {len(self.selected_objects)}")
+        sim_config.scene_state = [
+            sample_scene_state(self.selected_objects).__dict__
+        ]
+        sim_config.freeze()
+
+        if (
+            not self.is_generated_episode
+        ):  # Agent position isn't important if episode wasn't generated on the fly
+            sim_config.defrost()
+            agent_name = sim_config.AGENTS[sim_config.DEFAULT_AGENT_ID]
+            agent_cfg = getattr(sim_config, agent_name)
+            agent_cfg.IS_SET_START_STATE = False
+            sim_config.freeze()
+
+        return sim_config
+
+    def reset(self, episode):
+        from habitat.datasets.object_nav.create.create_objectnav_dataset_with_added_objects import (
+            category_to_mp3d_category_id,
+            category_to_task_category_id,
+            reset_episode,
+        )
+
+        original_episode = episode
+        episode_with_goal = reset_episode(
+            episode=episode,
+            sim=self._sim,
+            selected_objects=self.selected_objects,
+            near_dist=self.near_dist,
+            far_dist=self.far_dist,
+            episode_counter=self.episode_counter,
+        )
+        self.episode_counter += 1
+        
+        if episode_with_goal is None:
+            # Clone states from previous episode
+            episode.start_position = self.prev_episode.start_position
+            episode.start_rotation = self.prev_episode.start_rotation
+            episode.goals = self.prev_episode.goals
+            episode.scene_state = self.prev_episode.scene_state
+            episode.object_category = self.prev_episode.object_category
+
+            if episode is None:
+                episode = original_episode
+                logger.error(
+                    f"Prev episode doesn't exist, falling back to original episode {episode.scene_id}"
+                )
+            episode.episode_id = str(
+                self.episode_counter - 1
+            )  # set unique id even if episode is old
+            # raise BaseException #used to test for scenes that can't generate episode
+        else:
+            episode = episode_with_goal
+
+        self.prev_episode = episode
+        self.is_generated_episode = True
+        sim_config = super().overwrite_sim_config(
+            self._sim.habitat_config, episode
+        )
+
+        self._sim.reconfigure(sim_config)
+        self.is_generated_episode = False
+        return super().reset(episode)
