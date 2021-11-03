@@ -1,4 +1,5 @@
 import argparse
+import glob
 import gzip
 import json
 
@@ -6,6 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+from collections import defaultdict
 from psiturk_dataset.utils.utils import (
     load_dataset,
     load_json_dataset,
@@ -303,6 +305,58 @@ def validate_existing_split_overlap(train_data_path, eval_data_path, train_ep_id
     print("Unique eval episodes new: {}".format(len(set(eval_ep_ids))))
 
 
+def convert_objectnav_episodes_to_scene_split(input_path, output_path):
+    files = glob.glob(input_path + "/*json.gz")
+    print("Reading files: {}".format(len(files)))
+    scene_ep_map = defaultdict(list)
+    total = 0
+    for f in files:
+        if "_failed" in f:
+            continue
+        d = load_dataset(f)
+        for ep in d['episodes']:
+            scene_id = ep['scene_id'].split("/")[-1].split(".")[0]
+            ep['scene_id'] = ep['scene_id'].replace("data/scene_datasets/", "")
+            scene_ep_map[scene_id].append(ep)
+        total +=  len(d['episodes'])
+    
+    print("Total episodes: {}".format(total))
+    objectnav_episodes = "data/datasets/objectnav_mp3d_v1/train/content"
+    for scene_id, episodes in scene_ep_map.items():
+        input_file = "{}/{}.json.gz".format(objectnav_episodes, scene_id)
+        d = load_dataset(input_file)
+        d["episodes"] = episodes
+        output_file = "{}/{}.json".format(output_path, scene_id)
+        print("Writing at: {}".format(output_file))
+        write_json(d, output_file)
+        write_gzip(output_file, output_file)
+
+
+def split_from_file(input_path, split_type, file, output_path):
+    dataset = load_dataset(input_path)
+    split_json = load_json_dataset(file)
+
+    print("Total episodes: {}".format(len(dataset["episodes"])))
+    print("Split type: {}".format(split_type))
+
+    if split_type == "instructions_holdout":
+        instructions = split_json["instructions"]
+        episodes = []
+        for ep in dataset["episodes"]:
+            if ep["instruction"]["instruction_text"] in instructions:
+                episodes.append(ep)
+    elif split_type == "scene_holdout":
+        scenes = split_json["scenes"]
+        episodes = []
+        for ep in dataset["episodes"]:
+            if ep["scene_id"] in scenes:
+                episodes.append(ep)
+    dataset["episodes"] = episodes
+    print("Total episodes after filtering: {}".format(len(episodes)))
+    write_json(dataset, output_path)
+    write_gzip(output_path, output_path)
+    
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -332,6 +386,12 @@ def main():
     parser.add_argument(
         "--scene-holdout", dest='scene_holdout', action='store_true'
     )
+    parser.add_argument(
+        "--objectnav-spath", dest='objectnav_spath', action='store_true'
+    )
+    parser.add_argument(
+        "--split-type", type=str, default='none'
+    )
     args = parser.parse_args()
 
     if args.create_split:
@@ -340,6 +400,10 @@ def main():
         validate_split_data(args.input_path, args.train_data_path, args.eval_data_path)
     elif args.validate:
         validate_data(args.input_path, args.train_data_path, args.eval_data_path)
+    elif args.objectnav_spath:
+        convert_objectnav_episodes_to_scene_split(args.input_path, args.output_path)
+    elif args.split_type != "none":
+        split_from_file(args.input_path, args.split_type, "data/datasets/object_rearrangement/split.json", args.output_path)
     else:
         split_data(args.input_path, args.output_path, args.instruction_holdout, args.scene_holdout)
 

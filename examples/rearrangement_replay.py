@@ -168,7 +168,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             # visible_area += get_visible_area(info["top_down_map"])
             # total_coverage += get_coverage(info["top_down_map"])
             # save_image(frame, "s_path_{}.png".format(ep_id))
-            # make_videos([observation_list], output_prefix, ep_id)
+            make_videos([observation_list], output_prefix, ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, success))
 
         print("split: {}".format(cfg.DATASET.DATA_PATH))

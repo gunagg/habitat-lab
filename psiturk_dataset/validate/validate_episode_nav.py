@@ -110,6 +110,38 @@ def run_validation(cfg, num_steps=5):
         write_json(non_navigable_episodes, "data/hit_data/non_navigable_episodes_ll.json")
 
 
+def validate_objectnav_episodes(cfg):
+    with habitat.Env(cfg) as env:
+        easy_episodes = []
+        counter = 0
+        print("Total episodes: {}".format(len(env.episodes)))
+        visited_eps = {}
+        duplicates = 0
+        for ep_id in range(len(env.episodes)):
+            obs = env.reset()
+
+            info = env.get_metrics()
+            current_episode = env._current_episode
+            episode_key = str(current_episode.start_position) + "_{}".format(current_episode.scene_id)
+            if visited_eps.get(episode_key) != 1:
+                visited_eps[episode_key] = 1
+            else:
+                duplicates += 1
+
+            if info["distance_to_goal"] >= 15.0:
+                easy_episodes.append(env.current_episode.episode_id)
+                # print(info["distance_to_goal"])
+            counter += 1
+
+            if ep_id % 10 == 0:
+                print("Total {}/{} episodes are navigable".format(len(easy_episodes), counter))
+                print("Total {}/{} episodes are duplicates".format(duplicates, counter))
+        print("Total {}/{} episodes are navigable".format(len(easy_episodes), len(env.episodes)))
+        print(easy_episodes)
+        write_json(easy_episodes, "data/hit_data/easy_episodes_thda.json")
+
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -121,14 +153,22 @@ def main():
     parser.add_argument(
         "--config", type=str, default="configs/tasks/object_rearrangement.yaml"
     )
+    parser.add_argument(
+        "--objectnav", dest="is_objectnav", action="store_true"
+    )
     args = parser.parse_args()
     config = habitat.get_config(args.config)
     cfg = config
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.episodes
+    cfg.TASK.SENSORS = ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
+    cfg.DATASET.CONTENT_SCENES = ["XcA2TqTSSAj"]
     cfg.freeze()
     print(args)
-    run_validation(cfg, args.num_steps)
+    if args.is_objectnav:
+        validate_objectnav_episodes(cfg)
+    else:
+        run_validation(cfg, args.num_steps)
 
 if __name__ == "__main__":
     main()

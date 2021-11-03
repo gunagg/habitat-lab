@@ -241,9 +241,9 @@ def rejection_sampling(
 
     if sum(bad_points) > 0:
         print("\n Error generating unique points, try using bigger retries")
-        sys.exit(1)
+        # sys.exit(1)
 
-    return points
+    return points, bad_points
 
 
 def get_random_point(sim):
@@ -379,6 +379,7 @@ def generate_points(
     prev_episodes="data/tasks",
     scene_id="empty_house.glb",
     use_google_objects=False,
+    output_path="data/tasks/big_house.json",
 ):
     # Initialize simulator
     sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
@@ -433,12 +434,15 @@ def generate_points(
                 is_tilted_or_colliding.append(is_invalid)
             
             points = np.array(points)
-            points = rejection_sampling(
+            points, bad_points = rejection_sampling(
                 sim, points, rotations, d_lower_lim, d_upper_lim,
                 geodesic_to_euclid_min_ratio, xlim=x_limit, ylim=y_limit,
                 num_tries=number_retries_per_target, object_names=object_list,
                 is_tilted_or_colliding=is_tilted_or_colliding
             )
+
+            if sum(bad_points) > 0:
+                continue
 
             # Mark valid points as visited to get unique points
             print("Total unique points: {}".format(len(VISITED_POINT_DICT.keys())))
@@ -467,6 +471,12 @@ def generate_points(
             remove_all_objects(sim)
             episode_count += 1
 
+            if episode_count % 10 == 0:
+                dataset = {
+                    "episodes": episodes
+                }
+                write_episode(dataset, output_path)
+
     dataset = {
         "episodes": episodes
     }
@@ -474,8 +484,8 @@ def generate_points(
 
 
 def write_episode(dataset, filename):
-    prefix = "data/tasks/" + filename
-    with open(prefix, "w") as output_file:
+    #prefix = "data/tasks/" + filename
+    with open(filename, "w") as output_file:
         output_file.write(json.dumps(dataset))
 
 
@@ -579,7 +589,8 @@ if __name__ == "__main__":
             args.geodesic_to_euclid_min_ratio,
             args.prev_episodes,
             scene_id,
-            args.use_google_objects
+            args.use_google_objects,
+            args.output
         )
         write_episode(dataset, args.output)
     else:

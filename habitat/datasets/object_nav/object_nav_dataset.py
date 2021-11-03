@@ -6,9 +6,11 @@
 
 import json
 import os
+import random
 from typing import Any, Dict, List, Optional, Sequence
 
 from habitat.config import Config
+from habitat.core.dataset import ObjectInScene, SceneState
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.utils import DatasetFloatJSONEncoder
@@ -33,6 +35,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
     episodes: List[ObjectGoalNavEpisode] = []  # type: ignore
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
     goals_by_category: Dict[str, Sequence[ObjectGoal]]
+    count = 0
 
     @staticmethod
     def dedup_goals(dataset: Dict[str, Any]) -> Dict[str, Any]:
@@ -142,7 +145,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
 
         for i, episode in enumerate(deserialized["episodes"]):
             episode = ObjectGoalNavEpisode(**episode)
-            episode.episode_id = str(i)
+            episode.episode_id = "{}_{}".format(episode.scene_id.split("/")[-1].split(".")[0], str(i))
 
             if scenes_dir is not None:
                 if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
@@ -167,6 +170,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
                         path[p_index] = ShortestPathPoint(**point)
 
             self.episodes.append(episode)  # type: ignore [attr-defined]
+        # random.shuffle(self.episodes)
 
 
 @registry.register_dataset(name="ObjectNav-v2")
@@ -270,6 +274,8 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
             self.goals_by_category[k] = [self.__deserialize_goal(g) for g in v]
 
         for i, episode in enumerate(deserialized["episodes"]):
+            if "_shortest_path_cache" in episode:
+                del episode["_shortest_path_cache"]
             episode = ObjectGoalNavEpisode(**episode)
             # episode.episode_id = str(i)
 
@@ -281,12 +287,28 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
 
                 episode.scene_id = os.path.join(scenes_dir, episode.scene_id)
 
-            episode.goals = self.goals_by_category[episode.goals_key]
+            if not episode.is_thda:
+                episode.goals = self.goals_by_category[episode.goals_key]
+            else:
+                goals = []
+                for g in episode.goals:
+                    g = ObjectGoal(**g)
+                    for vidx, view in enumerate(g.view_points):
+                        view_location = ObjectViewLocation(**view)  # type: ignore
+                        view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore
+                        g.view_points[vidx] = view_location
+                    goals.append(g)
+                episode.goals = goals
 
-            for i, replay_step in enumerate(episode.reference_replay):
-                # replay_step["agent_state"] = AgentStateSpec(**replay_step["agent_state"])
-                replay_step["agent_state"] = None
-                episode.reference_replay[i] = ReplayActionSpec(**replay_step)
+                objects = [ObjectInScene(**o) for o in episode.scene_state["objects"]]
+                scene_state = [SceneState(objects=objects).__dict__]
+                episode.scene_state = scene_state
+
+            if episode.reference_replay is not None:
+                for i, replay_step in enumerate(episode.reference_replay):
+                    # replay_step["agent_state"] = AgentStateSpec(**replay_step["agent_state"])
+                    replay_step["agent_state"] = None
+                    episode.reference_replay[i] = ReplayActionSpec(**replay_step)
 
             if episode.shortest_paths is not None:
                 for path in episode.shortest_paths:
@@ -300,8 +322,8 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
 
                         path[p_index] = ShortestPathPoint(**point)
             
-            if len(episode.reference_replay) > 501:
-                continue
+            # if len(episode.reference_replay) > 501:
+            #     continue
 
             self.episodes.append(episode)  # type: ignore [attr-defined]
 

@@ -78,8 +78,6 @@ class ShortestPathFollower:
             next_action = self._follower.next_action_along(goal_pos)
             # print('follower: {}'.format(next_action))
         except habitat_sim.errors.GreedyFollowerError as e:
-            # print('follower error: {}'.format(e))
-            # print(e)
             if self._stop_on_error:
                 next_action = HabitatSimActions.STOP
             else:

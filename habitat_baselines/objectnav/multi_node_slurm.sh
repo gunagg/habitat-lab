@@ -5,16 +5,17 @@
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
 #SBATCH --signal=USR1@300
-#SBATCH --partition=overcap
-#SBATCH --account=overcap
-#SBATCH --constraint=rtx_6000
+#SBATCH --partition=long
+#SBATCH --qos=ram-special
+#SBATCH --constraint=a40
 #SBATCH --output=slurm_logs/ddppo-%j.out
 #SBATCH --error=slurm_logs/ddppo-%j.err
 #SBATCH --requeue
 
-source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+#source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+source /srv/share3/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate
-conda activate habitat
+conda activate habitat-3
 
 cd /srv/share3/rramrakhya6/habitat-lab
 
@@ -25,12 +26,18 @@ MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 export MASTER_ADDR
 
 sensor=$1
+config=$2
 set -x
 
 if [[ $sensor == "env" ]]; then
     echo "In ObjectNav Env DDP"
     srun python -u -m habitat_baselines.run \
-    --exp-config habitat_baselines/config/objectnav/il_ddp_env_objectnav.yaml \
+    --exp-config $config \
+    --run-type train
+elif [[ $sensor == "env_single" ]]; then
+    echo "In ObjectNav Env DDP"
+    srun python -u -m habitat_baselines.run \
+    --exp-config habitat_baselines/config/objectnav/il_ddp_env_single_resnet.yaml \
     --run-type train
 elif [[ $sensor == "recollect" ]]; then
     echo "In ObjectNav Recollect DDP"

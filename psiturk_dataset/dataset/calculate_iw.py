@@ -36,6 +36,8 @@ def calculate_inflection_weight(path, stats_path):
         "episode_length": [],
         "action_frequency": {},
     }
+    ep_success_count = 0
+    actions_lt_2k = 0
     for episode in tqdm(episodes):
         num_inflections, num_actions = caclulate_inflections(episode)
         data["episode_length"].append(num_actions)
@@ -45,6 +47,11 @@ def calculate_inflection_weight(path, stats_path):
             if action not in data["action_frequency"]:
                 data["action_frequency"][action] = 0
             data["action_frequency"][action] += 1
+        
+        if len(reference_replay) <= 1500:
+            ep_success_count += 1
+        if len(reference_replay) < 1000:
+            actions_lt_2k += num_actions
 
         inflections += num_inflections
         total_actions += num_actions
@@ -55,6 +62,8 @@ def calculate_inflection_weight(path, stats_path):
     print("Inflection weight: {}".format(total_actions / inflections))
     print("Average episode length: {}".format(total_actions / total_episodes))
     print("Total actions: {}".format(total_actions))
+    print("Total success: {}".format(ep_success_count / len(episodes)))
+    print("Total actions less than 2k: {}".format(actions_lt_2k))
 
     instructions = convert_instruction_tokens(episodes)
     print("Num of distinct instructions: {}".format(len(set(instructions))))
@@ -75,6 +84,7 @@ def calculate_inflection_weight_objectnav(path, stats_path):
         "object_frequency": {}
     }
     mx = 0
+    actions_lt_2k = 0
 
     for file_path in tqdm(files):
         data = load_dataset(file_path)
@@ -103,6 +113,9 @@ def calculate_inflection_weight_objectnav(path, stats_path):
             if len(reference_replay) > 2500:
                 ep_lt_than_1k += 1
             
+            if len(reference_replay) < 2000:
+                actions_lt_2k += num_actions
+            
             if len(reference_replay) < 500:
                 ep_lt_than_500 += 1
 
@@ -113,6 +126,7 @@ def calculate_inflection_weight_objectnav(path, stats_path):
     print("Inflection weight: {}".format(total_actions / inflections))
     print("Average episode length: {}".format(total_actions / total_episodes))
     print("Total actions: {}".format(total_actions))
+    print("Total actions less than 2k: {}".format(actions_lt_2k))
 
 
 def convert_instruction_tokens(episodes):

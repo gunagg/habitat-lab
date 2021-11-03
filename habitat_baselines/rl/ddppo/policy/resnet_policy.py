@@ -91,6 +91,7 @@ class ResNetEncoder(nn.Module):
         spatial_size: int = 128,
         make_backbone=None,
         normalize_visual_inputs: bool = False,
+        sem_embedding_size=4,
     ):
         super().__init__()
 
@@ -112,7 +113,7 @@ class ResNetEncoder(nn.Module):
         
         if "semantic" in observation_space.spaces:
             self._frame_size = tuple(observation_space.spaces["semantic"].shape[:2])
-            self._n_input_semantics = observation_space.spaces["semantic"].shape[2]
+            self._n_input_semantics = sem_embedding_size # observation_space.spaces["semantic"].shape[2]
         else:
             self._n_input_semantics = 0
         

@@ -17,7 +17,16 @@ from habitat.datasets.object_nav.create.create_objectnav_dataset_with_added_obje
 )
 from psiturk_dataset.utils.utils import load_dataset, write_json, write_gzip
 
+def get_scenes(split):
+    mp3d_scenes = get_mp3d_scenes(split)
+    disabled_scenes = {
+        "17DRP5sb8fy",
+    }
+    filtered_scenes = list(filter(lambda x: not x in disabled_scenes, mp3d_scenes))
+    return filtered_scenes
+
 def read_config(path):
+    filtered_scenes = get_scenes("train")
     objnav_config = get_config(path)
     objnav_config.defrost()
     objnav_config.TASK.TYPE = "ObjectNavAddedObj-v1"
@@ -25,7 +34,10 @@ def read_config(path):
     objnav_config.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR', 'DEPTH_SENSOR']
     objnav_config.DATASET.TYPE = "ObjectNav-v1"
     objnav_config.ENVIRONMENT.ITERATOR_OPTIONS.SHUFFLE = False
+    objnav_config.TASK.OBJ_GEN_NEAR_DIST = 15.0
     objnav_config.TASK.OBJ_GEN_FAR_DIST = 35.0
+    objnav_config.TASK.NUM_UNIQ_SELECTED_OBJECTS = 5
+    # objnav_config.DATASET.CONTENT_SCENES = filtered_scenes
     objnav_config.freeze()
     return objnav_config
 
@@ -57,11 +69,12 @@ def get_episode_json(episode):
 
 
 def generate_objectnav_dataset_with_inserted_objects(
-    objnav_config, split, output_path
+    objnav_config, split, output_path, num_episodes
 ):
     mp3d_scenes = get_mp3d_scenes(split)
     disabled_scenes = {
-        '2n8kARJN3HM', 'JmbYfDe2QKZ', 'SN83YJsR3w2', 'gTV8FGcVJC9', 'VzqfbhrpDEA',
+        '2n8kARJN3HM', 'JmbYfDe2QKZ', 'SN83YJsR3w2', 'gTV8FGcVJC9', 'VzqfbhrpDEA', '17DRP5sb8fy', 'GdvgFV5R1Z5',
+        'HxpKQynjfin', 'gZ6f7yhEvPG', 'ur6pFq6Qu1A', 'Pm6F8kyY3z2', '17DRP5sb8fy', 'D7G3Y4RVNrH', 'GdvgFV5R1Z5', 'B6ByNegPMKs', 'dhjEzFoUFzH', 'V2XKFyX4ASd'
     }
 
     filtered_scenes = list(filter(lambda x: not x in disabled_scenes, mp3d_scenes))
@@ -73,7 +86,8 @@ def generate_objectnav_dataset_with_inserted_objects(
         for scene in filtered_scenes
     ]
 
-    episodes_per_scene = 2
+    episodes_per_scene = int(num_episodes / len(filtered_scenes))
+
     dataset = _construct_dataset(
         episodes_per_scene=episodes_per_scene, scenes=mp3d_scenes
     )
@@ -103,13 +117,14 @@ def generate_objectnav_dataset_with_inserted_objects(
 
     for episode in dataset.episodes:
         scene_id = episode.scene_id.split("/")[-1]
-        episode.scene_id = scene_id
         episode_json = get_episode_json(episode)
-        
+        episode_json["scene_id"] = "mp3d/{}/{}".format(scene_id.split(".")[0], scene_id)
+        episode_json["is_thda"] = True
+
         if hasattr(episode, "goals") and len(episode.goals) > 0:
             scene_episode_map[scene_id].append(episode_json)
 
-    output_train_gz_path = output_path.replace("content", "train.json")
+    output_train_gz_path = "/".join(output_path.split("/")[:-1]) + "/train.json"
     write_json(dataset_json, output_train_gz_path)
     write_gzip(output_train_gz_path, output_train_gz_path)
 
@@ -117,6 +132,9 @@ def generate_objectnav_dataset_with_inserted_objects(
     for scene, episodes in scene_episode_map.items():
         scene = scene.split("/")[-1].split(".")[0]
         episode_data = load_dataset(objectnav_dataset_path.format(scene))
+        episode_data["category_to_task_category_id"] = dataset.category_to_task_category_id
+        episode_data["category_to_mp3d_category_id"] = dataset.category_to_mp3d_category_id
+
         print("Loaded {} episodes for scene {}".format(len(episode_data["episodes"]), scene))
         if len(episodes) == 0:
             continue
@@ -141,9 +159,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config", type=str, default="configs/tasks/objectnav_mp3d_il.yaml"
     )
+    parser.add_argument(
+        "--num-episodes", type=int, default=1000
+    )
     args = parser.parse_args()
     cfg = read_config(args.config)
 
-    generate_objectnav_dataset_with_inserted_objects(cfg, args.split, args.output_path)
+    generate_objectnav_dataset_with_inserted_objects(cfg, args.split, args.output_path, args.num_episodes)
 
 

@@ -358,9 +358,9 @@ class BatchNormalize(nn.Module):
         # return x
 
 class RedNetResizeWrapper(nn.Module):
-    def __init__(self, device, resize=True, stabilize=False):
+    def __init__(self, device, resize=True, stabilize=False, num_classes=40):
         super().__init__()
-        self.rednet = RedNet()
+        self.rednet = RedNet(num_classes=num_classes)
         self.semmap_rgb_norm = BatchNormalize(
             mean=[0.493, 0.468, 0.438],
             std=[0.544, 0.521, 0.499],
@@ -415,11 +415,11 @@ class RedNetResizeWrapper(nn.Module):
 
         return pred.long().squeeze(1)
 
-def load_rednet(device, ckpt="", resize=True, stabilize=False):
+def load_rednet(device, ckpt="", resize=True, stabilize=False, num_classes=40):
     if not os.path.isfile(ckpt):
         raise Exception(f"invalid path {ckpt} provided for rednet weights")
 
-    model = RedNetResizeWrapper(device, resize=resize, stabilize=stabilize).to(device)
+    model = RedNetResizeWrapper(device, resize=resize, stabilize=stabilize, num_classes=num_classes).to(device)
 
     print("=> loading RedNet checkpoint '{}'".format(ckpt))
     if device.type == 'cuda':

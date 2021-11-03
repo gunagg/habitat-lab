@@ -83,7 +83,11 @@ class RearrangementDatasetV1(Dataset):
 
             episode.instruction = InstructionData(**episode.instruction)
             for i, goal in enumerate(episode.goals):
-                episode.goals[i] = RearrangementSpec(**goal)
+                if goal["info"]["is_receptacle"]:
+                    episode.goals[1] = RearrangementSpec(**goal)
+                else:
+                    episode.goals[0] = RearrangementSpec(**goal)
+
             for i, obj in enumerate(episode.objects):
                 episode.objects[i]["semantic_object_id"] = (episode.objects[i]["object_id"] + (1<<16))
                 episode.objects[i] = RearrangementObjectSpec(**obj)
@@ -130,6 +134,7 @@ class RearrangementDatasetV2(Dataset):
         )
 
         for episode in deserialized["episodes"]:
+            # del episode["task"]
             episode = RearrangementEpisode(**episode)
 
             if scenes_dir is not None:
@@ -151,7 +156,11 @@ class RearrangementDatasetV2(Dataset):
                         replay_step["object_states"][j] = ObjectStateSpec(**replay_step["object_states"][j])
                 episode.reference_replay[i] = ReplayActionSpec(**replay_step)
             for i, goal in enumerate(episode.goals):
-                episode.goals[i] = RearrangementSpec(**goal)
+                if goal["info"]["is_receptacle"]:
+                    episode.goals[1] = RearrangementSpec(**goal)
+                else:
+                    episode.goals[0] = RearrangementSpec(**goal)
+
             for i, obj in enumerate(episode.objects):
                 episode.objects[i]["semantic_object_id"] = (episode.objects[i]["object_id"] + (1<<16))
                 episode.objects[i] = RearrangementObjectSpec(**obj)

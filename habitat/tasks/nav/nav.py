@@ -528,11 +528,15 @@ class Success(Measure):
         distance_to_target = task.measurements.measures[
             DistanceToGoal.cls_uuid
         ].get_metric()
+        success_distance = self._config.SUCCESS_DISTANCE
+
+        if hasattr(episode, "is_thda") and episode.is_thda:
+            success_distance = self._config.THDA_SUCCESS_DISTANCE
 
         if (
             hasattr(task, "is_stop_called")
             and task.is_stop_called  # type: ignore
-            and distance_to_target < self._config.SUCCESS_DISTANCE
+            and distance_to_target < success_distance
         ):
             self._metric = 1.0
         else:
@@ -593,13 +597,13 @@ class SPL(Measure):
         )
 
         self._previous_position = current_position
-
         self._metric = ep_success * (
             self._start_end_episode_distance
             / max(
                 self._start_end_episode_distance, self._agent_episode_distance
             )
         )
+        # print(self._start_end_episode_distance, self._agent_episode_distance, self._metric)
 
 
 @registry.register_measure
@@ -959,6 +963,9 @@ class DistanceToGoal(Measure):
             ]
         self.update_metric(episode=episode, *args, **kwargs)  # type: ignore
 
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(position_b - position_a, ord=2)
+
     def update_metric(
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
@@ -968,15 +975,31 @@ class DistanceToGoal(Measure):
             self._previous_position, current_position, atol=1e-4
         ):
             if self._config.DISTANCE_TO == "POINT":
-                distance_to_target = self._sim.geodesic_distance(
-                    current_position,
-                    [goal.position for goal in episode.goals],
-                    episode,
-                )
+                if hasattr(episode, "is_thda") and episode.is_thda:
+                    distance_to_target = np.inf
+                    for goal in episode.goals:
+                        distance_to_goal = self._euclidean_distance(
+                            current_position, goal.position
+                        )
+                        distance_to_target = min(distance_to_target, distance_to_goal)
+                else:
+                    distance_to_target = self._sim.geodesic_distance(
+                        current_position,
+                        [goal.position for goal in episode.goals],
+                        episode,
+                    )
             elif self._config.DISTANCE_TO == "VIEW_POINTS":
-                distance_to_target = self._sim.geodesic_distance(
-                    current_position, self._episode_view_points, episode
-                )
+                if hasattr(episode, "is_thda") and episode.is_thda:
+                    distance_to_target = np.inf
+                    for goal in episode.goals:
+                        distance_to_goal = self._euclidean_distance(
+                            current_position, goal.position
+                        )
+                        distance_to_target = min(distance_to_target, distance_to_goal)
+                else:
+                    distance_to_target = self._sim.geodesic_distance(
+                        current_position, self._episode_view_points, episode
+                    )
             else:
                 logger.error(
                     f"Non valid DISTANCE_TO parameter was provided: {self._config.DISTANCE_TO}"

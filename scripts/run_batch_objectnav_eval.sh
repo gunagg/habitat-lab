@@ -1,13 +1,14 @@
 #!/bin/bash
 #SBATCH --job-name=ddp_onav
-#SBATCH --gres gpu:4
+#SBATCH --gres gpu:1
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --partition=long
+#SBATCH --partition=short
+#SBATCH --qos=ram-special
 #SBATCH --constraint=rtx_6000
-#SBATCH --output=slurm_logs/ddppo-%j.out
-#SBATCH --error=slurm_logs/ddppo-%j.err
+#SBATCH --output=slurm_logs/eval/eval-%j.out
+#SBATCH --error=slurm_logs/eval/eval-%j.err
 
 source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate
@@ -21,9 +22,10 @@ export MAGNUM_LOG=quiet
 MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 export MASTER_ADDR
 
-sensor=$1
-
+path=$1
 set -x
+
+echo "In ObjectNav Env DDP"
 srun python -u -m habitat_baselines.run \
-    --exp-config habitat_baselines/config/object_rearrangement/il_distrib_object_rearrangement.yaml \
-    --run-type train
+--exp-config  $path \
+--run-type eval

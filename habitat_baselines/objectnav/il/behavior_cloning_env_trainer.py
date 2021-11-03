@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from logging import log
+import copy
 import os
 import sys
 import time
@@ -11,6 +13,7 @@ from collections import defaultdict, deque
 from typing import Any, DefaultDict, Dict, List, Optional, Union
 
 import numpy as np
+from numpy.core.numeric import roll
 import torch
 import tqdm
 from torch.optim.lr_scheduler import LambdaLR
@@ -18,7 +21,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from gym import Space
 from habitat import Config, logger
 from habitat.utils import profiling_wrapper
-from habitat.utils.visualizations.utils import observations_to_image
+from habitat.utils.visualizations.utils import observations_to_image, append_text_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import get_env_class
@@ -35,11 +38,15 @@ from habitat_baselines.utils.common import (
     generate_video,
     linear_decay,
 )
+from habitat_baselines.utils.visualizations.utils import (
+    save_frame,
+)
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
 from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
 from habitat_baselines.objectnav.models.rednet import load_rednet
+from psiturk_dataset.utils.utils import write_json
 
 
 @baseline_registry.register_trainer(name="objectnav-bc-env")
@@ -68,6 +75,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         model = None
         if hasattr(model_config, "VISUAL_ENCODER"):
             model = SingleResNetSeqModel(observation_space, action_space, model_config, device)
+            logger.info("Setting up single visual encoder")
         elif model_config.USE_SEMANTICS:
             model = SemSegSeqModel(observation_space, action_space, model_config, device)
         else:
@@ -87,6 +95,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         observation_space = self.envs.observation_spaces[0]
         self.obs_space = observation_space
+        self.obs_transforms = get_active_obs_transforms(self.config)
         self.model = self._setup_model(
             observation_space, self.envs.action_spaces[0], model_config, self.device
         )
@@ -97,7 +106,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             self.semantic_predictor = load_rednet(
                 self.device,
                 ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
-                resize=True # since we train on half-vision
+                resize=True, # since we train on half-vision
+                num_classes=model_config.SEMANTIC_ENCODER.num_classes
             )
             self.semantic_predictor.eval()
 
@@ -109,6 +119,40 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             eps=il_cfg.eps,
             max_grad_norm=il_cfg.max_grad_norm,
         )
+    
+    def _save_results(
+        self,
+        observations,
+        infos,
+        path: str,
+        env_idx: int,
+        split: str,
+        episode_id: int
+    ) -> None:
+        r"""For saving EQA-CNN-Pretrain reconstruction results.
+
+        Args:
+            gt_rgb: rgb ground truth
+            preg_rgb: autoencoder output rgb reconstruction
+            gt_seg: segmentation ground truth
+            pred_seg: segmentation output
+            gt_depth: depth map ground truth
+            pred_depth: depth map output
+            path: to write file
+        """
+        rgb_frame = observations_to_image(
+                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
+                    )
+        rgb_path = os.path.join(path.format(split=split, type="rgb"), "frame_{}".format(episode_id))
+        save_frame(rgb_frame, rgb_path)
+
+
+    def _make_results_dir(self, split="val"):
+        r"""Makes directory for saving eqa-cnn-pretrain eval results."""
+        for s_type in ["rgb", "seg", "depth", "top_down_map"]:
+            dir_name = self.config.RESULTS_DIR.format(split=split, type=s_type)
+            if not os.path.isdir(dir_name):
+                os.makedirs(dir_name)
 
 
     @profiling_wrapper.RangeContext("save_checkpoint")
@@ -147,7 +191,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "room_visitation_map"}
 
     @classmethod
     def _extract_scalars_from_info(
@@ -217,6 +261,9 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         batch = batch_obs(observations, device=self.device)
         if self.config.MODEL.USE_PRED_SEMANTICS and self.current_update >= self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE:
             batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+            # Subtract 1 from class labels for THDA YCB categories
+            if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                batch["semantic"] = batch["semantic"] - 1
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         rewards = torch.tensor(
@@ -300,6 +347,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         )
         if not os.path.isdir(self.config.CHECKPOINT_FOLDER):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
+
         self._setup_actor_critic_agent(il_cfg, self.config.MODEL)
         logger.info(
             "agent number of parameters: {}".format(
@@ -312,7 +360,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             self.envs.num_envs,
             self.obs_space,
             self.envs.action_spaces[0],
-            il_cfg.hidden_size,
+            self.config.MODEL.STATE_ENCODER.hidden_size,
             self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
         )
         rollouts.to(self.device)
@@ -323,6 +371,13 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
+            # Use first semantic observations from RedNet predictor as well
+            if sensor == "semantic" and self.config.MODEL.USE_PRED_SEMANTICS:
+                semantic_obs = self.semantic_predictor(batch["rgb"], batch["depth"])
+                # Subtract 1 from class labels for THDA YCB categories
+                if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                    semantic_obs = semantic_obs - 1
+                rollouts.observations[sensor][0].copy_(semantic_obs)
 
         # batch and observations may contain shared PyTorch CUDA
         # tensors.  We must explicitly clear them here otherwise
@@ -485,6 +540,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         # Map location CPU is almost always better than mapping to a CUDA device.
         ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
 
+        self._make_results_dir(self.config.EVAL.SPLIT)
+
         if self.config.EVAL.USE_CKPT_CONFIG:
             conf = ckpt_dict["config"]
             config = self._setup_eval_config(ckpt_dict["config"])
@@ -495,11 +552,18 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
+        config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = 500
 
         if "human_val" not in config.TASK_CONFIG.DATASET.SPLIT:
-            logger.info("Setting up human val {}".format(config.TASK_CONFIG.DATASET.SPLIT))
+            logger.info("Not setting up human val {}".format(config.TASK_CONFIG.DATASET.SPLIT))
             config.TASK_CONFIG.DATASET.TYPE = "ObjectNav-v1"
             config.TASK_CONFIG.TASK.SENSORS = ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
+        else:
+            logger.info("Setting up human val {}".format(config.TASK_CONFIG.DATASET.SPLIT))            
+        
+        if hasattr(config.EVAL, "semantic_metrics") and config.EVAL.semantic_metrics:
+            config.TASK_CONFIG.TASK.MEASUREMENTS = config.TASK_CONFIG.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP"]
+            logger.info("Setting up semantic exploration metrics")
         config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:
@@ -528,7 +592,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         test_recurrent_hidden_states = torch.zeros(
             self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
             self.config.NUM_PROCESSES,
-            il_cfg.hidden_size,
+            config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
         )
         prev_actions = torch.zeros(
@@ -571,6 +635,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         self.model.eval()
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
         logger.info("Start eval")
+        evaluation_meta = []
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -580,6 +645,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             with torch.no_grad():
                 if self.semantic_predictor is not None:
                     batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+                    if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                        batch["semantic"] = batch["semantic"] - 1
                 (
                     logits,
                     test_recurrent_hidden_states,
@@ -597,6 +664,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     cross_entropy = cross_entropy * gt_actions
                     current_episode_cross_entropy += cross_entropy.unsqueeze(1)
                 current_episode_steps += 1
+
                 actions = torch.argmax(logits, dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))  # type: ignore
 
@@ -655,6 +723,14 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     current_episode_reward[i] = 0
                     current_episode_steps[i] = 0
                     current_episode_cross_entropy[i] = 0
+
+                    ep_metrics = copy.deepcopy(episode_stats)
+                    ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
+                    evaluation_meta.append({
+                        "scene_id": current_episodes[i].scene_id,
+                        "episode_id": current_episodes[i].episode_id,
+                        "metrics": ep_metrics,
+                    })
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (
@@ -674,6 +750,15 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                             tb_writer=writer,
                         )
 
+                        self._save_results(
+                            batch,
+                            infos,
+                            config.RESULTS_DIR,
+                            i,
+                            config.EVAL.SPLIT,
+                            current_episodes[i].episode_id,
+                        )
+
                         rgb_frames[i] = []
 
                 # episode continues
@@ -682,6 +767,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
+                    frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
                     rgb_frames[i].append(frame)
 
             (
@@ -725,6 +811,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             {"average reward": aggregated_stats["reward"]},
             step_id,
         )
+
+        write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
 
         metrics = {k: v for k, v in aggregated_stats.items() if k not in ["reward", "pred_reward"]}
         if len(metrics) > 0:

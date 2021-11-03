@@ -5,6 +5,7 @@ import habitat
 import copy
 import numpy as np
 import magnum as mn
+import sys
 
 from habitat import Config, logger, get_config as get_task_config
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
@@ -105,6 +106,7 @@ def get_action_data(action, sim):
 def get_episode_json(episode, reference_replay):
     episode.reference_replay = reference_replay
     episode._shortest_path_cache = None
+    episode.goals []
     episode.scene_id = episode.scene_id
     return attr.asdict(episode)
 
@@ -140,23 +142,13 @@ def get_closest_goal(episode, sim, follower):
     for goal in episode.goals:
         for view_point in goal.view_points:
             position = view_point.agent_state.position
-            # if abs(agent_position[1] - position[1]) > 0.3:
-            #     continue
             
             dist = sim.geodesic_distance(
-                agent_position, position, episode
+                agent_position, position
             )
             if min_dist > dist:
                 min_dist = dist
                 goal_location = position
-            # goals.append(view_point.agent_state.position)
-            action = follower.get_next_action(
-                position
-            )
-            if action != 0:
-                goals.append(position)
-    if goal_location is None:
-        return goals[0]
     return goal_location
 
 
@@ -231,6 +223,9 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="d
             info = {}
             replay_data = []
             reference_replay.append(get_action_data(HabitatSimActions.STOP, env._sim))
+            i = 0
+            if goal_position is None:
+                continue
             while not env.episode_over:
                 best_action = follower.get_next_action(
                     goal_position
@@ -252,6 +247,7 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="d
                 action_data = get_action_data(best_action, env._sim)
                 reference_replay.append(action_data)
                 replay_data.append(get_agent_pose(env._sim))
+                i += 1
 
             ep_data = get_episode_json(env.current_episode, reference_replay)
             del ep_data["_shortest_path_cache"]
@@ -259,10 +255,10 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="d
             spl += info["spl"]
             total_episodes += 1
 
-            visible_area += get_visible_area(info["top_down_map"])
-            total_coverage += get_coverage(info["top_down_map"])
+            #visible_area += get_visible_area(info["top_down_map"])
+            # total_coverage += get_coverage(info["top_down_map"])
 
-            logger.info("Episode success: {}, Total: {}, Success: {}, Fixed episodes: {}".format(success, total_episodes, total_success/total_episodes, fixed_episodes))
+            logger.info("Episode success: {}, Total: {}, Success: {}, Fixed episodes: {}, Steps: {}".format(success, total_episodes, total_success/total_episodes, fixed_episodes, i))
             # if not success:
             #     make_videos([observation_list], output_prefix, ep_id)
             # save_image(frame, "{}_s_path.png".format(ep_data["episode_id"]))
@@ -275,26 +271,27 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="d
             # write_json(trajectory, "data/visualizations/teaser/trajectories/{}_{}_s_path_trajectory.json".format(episode.scene_id.split("/")[-1].split(".")[0], ep_id))
             # save_top_down_map(info)
 
-            if ep_id % 2000 == 0:
+            if (ep_id + 1) % 1000 == 0:
                 logger.info("Saving checkpoint at {} episodes".format(ep_id))
-                # write_json(dataset, "{}/{}_{}.json".format(output_path, scene_id, ep_id))
-                # write_gzip("{}/{}_{}.json".format(output_path, scene_id, ep_id), "{}/{}_{}.json".format(output_path, scene_id, ep_id))
+                write_json(dataset, "{}/{}.json".format(output_path, scene_id))
+                write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
         
         print("Total episodes: {}".format(total_episodes))
 
         print("\n\nEpisode success: {}".format(total_success / total_episodes))
-        print("Total episode success: {}".format(success))
+        print("Total episode success: {}".format(total_success))
         print("SPL: {}, {}, {}".format(spl/total_episodes, spl, total_episodes))
+        print("SPL: {}, {}, {}".format(spl/total_success, spl, total_success))
         print("Success: {}, {}, {}".format(total_success/total_episodes, total_success, total_episodes))
         print("Coverage: {}, {}, {}".format(total_coverage/total_episodes, total_coverage, total_episodes))
         print("Visible area: {}, {}, {}".format(visible_area/total_episodes, visible_area, total_episodes))
         print("Total sample episodes: {}/{}".format(len(dataset["episodes"]), total_episodes))
-        # write_json(dataset, "{}/{}.json".format(output_path, scene_id))
-        # write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
+        write_json(dataset, "{}/{}.json".format(output_path, scene_id))
+        write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
 
-        # if len(failed_dataset["episodes"]) > 0:
-        #     write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
-        #     write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
+        if len(failed_dataset["episodes"]) > 0:
+            write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
+            write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
 
 
 def main():
@@ -319,8 +316,8 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.episodes
     split = objectnav_scene_splits[args.split]
-    # if len(split) > 1:
-    #     cfg.DATASET.CONTENT_SCENES = split
+    if len(split) > 1:
+        cfg.DATASET.CONTENT_SCENES = split
     cfg.freeze()
 
     observations = generate_trajectories(cfg, args.episodes, scene_id=args.scene, output_path=args.output_path)

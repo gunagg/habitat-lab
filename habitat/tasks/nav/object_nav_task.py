@@ -2,6 +2,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from collections import defaultdict
+from logging import currentframe
 import os
 from typing import Any, List, Optional
 
@@ -9,16 +11,19 @@ import attr
 import numpy as np
 from gym import spaces
 
-from habitat.config import Config
+from habitat.config import Config, default
+from habitat.core.dataset import SceneState
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-from habitat.core.simulator import AgentState, Sensor, SensorTypes
+from habitat.core.simulator import AgentState, Sensor, SensorTypes, Simulator
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import (
     NavigationEpisode,
     NavigationGoal,
     NavigationTask,
 )
+from habitat.core.embodied_task import Measure
+from habitat_sim.geo import OBB
 
 try:
     from habitat.datasets.object_nav.object_nav_dataset import (
@@ -59,6 +64,37 @@ task_cat2mpcat40 = [
     49,  # ('kitchenware', 48, 27)
 ]
 
+mapping_mpcat40_to_goal21 = {
+    3: 1,
+    5: 2,
+    6: 3,
+    7: 4,
+    8: 5,
+    10: 6,
+    11: 7,
+    13: 8,
+    14: 9,
+    15: 10,
+    18: 11,
+    19: 12,
+    20: 13,
+    22: 14,
+    23: 15,
+    25: 16,
+    26: 17,
+    27: 18,
+    33: 19,
+    34: 20,
+    38: 21,
+    43: 22,  #  ('foodstuff', 42, task_cat: 21)
+    44: 28,  #  ('stationery', 43, task_cat: 22)
+    45: 26,  #  ('fruit', 44, task_cat: 23)
+    46: 25,  #  ('plaything', 45, task_cat: 24)
+    47: 24,  # ('hand_tool', 46, task_cat: 25)
+    48: 23,  # ('game_equipment', 47, task_cat: 26)
+    49: 27,  # ('kitchenware', 48, task_cat: 27)
+}
+
 
 @attr.s(auto_attribs=True, kw_only=True)
 class AgentStateSpec:
@@ -85,6 +121,8 @@ class ObjectGoalNavEpisode(NavigationEpisode):
     """
     object_category: Optional[str] = None
     reference_replay: Optional[List[ReplayActionSpec]] = None
+    scene_state: Optional[List[SceneState]] = None
+    is_thda: Optional[bool] = False
 
     @property
     def goals_key(self) -> str:
@@ -239,6 +277,15 @@ class ObjectNavigationTask(NavigationTask):
         super().__init__(**kwargs)
         self._is_episode_active = False
 
+    def overwrite_sim_config(self, sim_config, episode):
+        super().overwrite_sim_config(sim_config, episode)
+
+        sim_config.defrost()
+        sim_config.scene_state = episode.scene_state
+        sim_config.freeze()
+        
+        return sim_config
+
     def _check_episode_is_active(self,  action, *args: Any, **kwargs: Any) -> bool:
         return not getattr(self, "is_stop_called", False)
 
@@ -335,6 +382,19 @@ class ObjectNavAddedObj(ObjectNavigationTask):
             episode_counter=self.episode_counter,
         )
         self.episode_counter += 1
+
+        # count = 3
+        # while count > 0 and episode_with_goal is None:
+        #     episode_with_goal = reset_episode(
+        #         episode=episode,
+        #         sim=self._sim,
+        #         selected_objects=self.selected_objects,
+        #         near_dist=self.near_dist,
+        #         far_dist=self.far_dist,
+        #         episode_counter=self.episode_counter,
+        #     )
+        #     logger.info("retrying times: {}".format(count))
+        #     count -= 1
         
         if episode_with_goal is None:
             # Clone states from previous episode
@@ -365,3 +425,164 @@ class ObjectNavAddedObj(ObjectNavigationTask):
         self._sim.reconfigure(sim_config)
         self.is_generated_episode = False
         return super().reset(episode)
+
+
+@registry.register_measure
+class RoomVisitationMap(Measure):
+    """Semantic exploration measure."""
+
+    cls_uuid: str = "room_visitation_map"
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._config = config
+        self.goal_rooms = defaultdict(list)
+        self.room_aabbs = defaultdict(list)
+        self.goal_room_visitation_map = defaultdict(int)
+        self.room_visitation_map = defaultdict(int)
+
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args: Any, **kwargs: Any):
+        return RoomVisitationMap.cls_uuid
+
+    def aabb_contains(self, position, aabb):
+        aabb_min = aabb.min()
+        aabb_max = aabb.max()
+        if aabb_min[0] <= position[0] and aabb_max[0] >= position[0] and aabb_min[2] <= position[2] and aabb_max[2] >= position[2] and aabb_min[1] <= position[1] and aabb_max[1] >= position[1]:
+            return True
+        return False
+
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
+        self.update_metric(*args, episode=episode, **kwargs)
+        self.room_aabbs = defaultdict(list)
+        self.room_visitation_map = defaultdict(int)
+        self.goal_room_visitation_map = defaultdict(int)
+        self.goal_rooms = defaultdict(list)
+
+        semantic_scene = self._sim.semantic_scene
+        for region in semantic_scene.regions:
+            region_name = region.category.name()
+            aabb = region.aabb
+            self.room_aabbs[region_name].append(aabb)
+
+            contains = False
+            for goal in episode.goals:
+                goal_position = np.array(goal.view_points[0].agent_state.position)
+                if self.aabb_contains(goal_position, aabb):
+                    contains = True
+            
+            if contains:
+                self.goal_rooms[region_name].append(aabb)
+
+        self._metric = self.room_visitation_map
+
+    def update_metric(self, episode, *args: Any, **kwargs: Any):        
+        agent_state = self._sim.get_agent_state()
+        agent_position = agent_state.position
+        
+        for region, room_aabbs in self.room_aabbs.items():
+            for aabb in room_aabbs:
+                if self.aabb_contains(agent_position, aabb):
+                    self.room_visitation_map[region] += 1
+
+        for region, room_aabbs in self.goal_rooms.items():
+            for aabb in room_aabbs:
+                if self.aabb_contains(agent_position, aabb):
+                    self.goal_room_visitation_map[region] += 1
+        
+        self._metric =  {
+            "time_spent_goal_room": sum(self.goal_room_visitation_map.values()),
+            "room_visitation_map": self.room_visitation_map,
+        }
+
+
+@registry.register_measure
+class RoomRevisitationMap(Measure):
+    """Semantic exploration measure."""
+
+    cls_uuid: str = "room_revisitation_map"
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._config = config
+        self.room_obbs = defaultdict(list)
+        self.previous_room = None
+        self.steps_between_rooms = 0
+        self.room_visitation_map = defaultdict(int)
+        self.room_revisitation_map = defaultdict(int)
+
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args: Any, **kwargs: Any):
+        return RoomRevisitationMap.cls_uuid
+
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
+        self.update_metric(*args, episode=episode, **kwargs)
+        self.room_aabbs = defaultdict(list)
+        self.room_visitation_map = defaultdict(int)
+        self.room_revisitation_map = defaultdict(int)
+        semantic_scene = self._sim.semantic_scene
+        current_room = None
+        self.steps_between_rooms = 0
+        for level in semantic_scene.levels:
+            for region in level.regions:
+                region_name = region.category.name()
+                aabb = region.aabb
+                self.room_aabbs[region_name].append(aabb)
+
+                contains = False
+                for goal in episode.goals:
+                    goal_position = np.array(goal.view_points[0].agent_state.position)
+                    if self.aabb_contains(goal_position, aabb):
+                        contains = True
+                
+                if contains:
+                    current_room = region_name
+
+        self._metric = self.room_revisitation_map
+        self.previous_room = current_room
+    
+    def aabb_contains(self, position, aabb):
+        aabb_min = aabb.min()
+        aabb_max = aabb.max()
+        if aabb_min[0] <= position[0] and aabb_max[0] >= position[0] and aabb_min[2] <= position[2] and aabb_max[2] >= position[2] and aabb_min[1] <= position[1] and aabb_max[1] >= position[1]:
+            return True
+        return False
+    
+    def _geo_dist(self, src_pos, goal_pos: np.array) -> float:
+        return self._sim.geodesic_distance(src_pos, [goal_pos])
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(
+            np.array(position_b) - np.array(position_a), ord=2
+        )
+
+    def update_metric(self, episode, *args: Any, **kwargs: Any):        
+        agent_state = self._sim.get_agent_state()
+        agent_position = agent_state.position
+        
+        current_room = None
+        for region, room_aabbs in self.room_obbs.items():
+            for aabb in room_aabbs:
+                if self.aabb_contains(agent_position, aabb):
+                    self.room_visitation_map[region] += 1
+                    current_room = region
+
+        if current_room != self.previous_room and self.room_visitation_map[current_room] >= 1 and self.steps_between_rooms >= 0:
+            # Count total visits to the room
+            if self.room_revisitation_map[current_room] == 0:
+                self.room_revisitation_map[current_room] += 1
+            self.room_revisitation_map[current_room] += 1
+        self.previous_room = current_room
+        self.steps_between_rooms += 1
+        if current_room != self.previous_room:
+            self.steps_between_rooms = 0
+
+        self._metric = self.room_revisitation_map

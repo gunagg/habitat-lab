@@ -22,6 +22,7 @@ This module API is experimental and likely to change
 """
 import abc
 import copy
+from logging import log
 import numbers
 from enum import Enum
 from typing import Dict, Iterable, List, Optional, Tuple, Union
@@ -215,6 +216,65 @@ class CenterCropper(ObservationTransformer):
                 cc_config.HEIGHT,
                 cc_config.WIDTH,
             )
+        )
+
+@baseline_registry.register_obs_transformer(name="RGBRandomNoise")
+class RGBRandomNoise(ObservationTransformer):
+    """An observation transformer is a simple nn module that adds random noise to your input."""
+
+    def __init__(
+        self,
+        mean: float,
+        std: float,
+        trans_keys: Tuple[str] = ("rgb"),
+    ):
+        """Args:
+        size: A sequence (h, w) or int of the size you wish to resize/center_crop.
+                If int, assumes square crop
+        channels_list: indicates if channels is the last dimension
+        trans_keys: The list of sensors it will try to centercrop.
+        """
+        super().__init__()
+        self.mean = mean
+        self.std = std
+        self.trans_keys = trans_keys  # TODO: Add to from_config constructor
+
+    def transform_observation_space(
+        self,
+        observation_space: spaces.Dict,
+    ):
+        size = self._size
+        observation_space = copy.deepcopy(observation_space)
+        return observation_space
+
+    def _transform_obs(self, obs: torch.Tensor) -> torch.Tensor:
+        obs_shape = obs.size()
+        mean_vector = torch.ones(obs_shape) * self.mean
+        std_vector = torch.ones(obs_shape) * self.std
+        random_noise = torch.normal(mean=mean_vector, std=std_vector)
+        transformed_obs = random_noise + obs      
+        return transformed_obs
+
+    @torch.no_grad()
+    def forward(
+        self, observations: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        if self.mean is not None:
+            observations.update(
+                {
+                    sensor: self._transform_obs(observations[sensor])
+                    for sensor in self.trans_keys
+                    if sensor in observations
+                }
+            )
+        return observations
+
+    @classmethod
+    def from_config(cls, config: Config):
+        cc_config = config.IL.OBS_TRANSFORMS.RGBRandomNoise
+        return cls(
+            cc_config.MEAN,
+            cc_config.STD,
         )
 
 
@@ -1196,6 +1256,17 @@ def get_active_obs_transforms(config: Config) -> List[ObservationTransformer]:
     if hasattr(config.RL.POLICY, "OBS_TRANSFORMS"):
         obs_transform_names = (
             config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS
+        )
+        for obs_transform_name in obs_transform_names:
+            obs_trans_cls = baseline_registry.get_obs_transformer(
+                obs_transform_name
+            )
+            obs_transform = obs_trans_cls.from_config(config)
+            active_obs_transforms.append(obs_transform)
+    
+    if hasattr(config.IL, "OBS_TRANSFORMS"):
+        obs_transform_names = (
+            config.IL.OBS_TRANSFORMS.ENABLED_TRANSFORMS, 
         )
         for obs_transform_name in obs_transform_names:
             obs_trans_cls = baseline_registry.get_obs_transformer(

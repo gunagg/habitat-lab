@@ -2,6 +2,7 @@ import math
 import sys
 from typing import Dict, Iterable, Tuple
 
+import copy
 import numpy as np
 import torch
 import torch.nn as nn
@@ -46,27 +47,14 @@ class SingleResnetSeqNet(Net):
         self.model_config = model_config
 
         # Init the visual encoder        
-        sem_seg_output_size = 0
-        self.semantic_predictor = None
         if model_config.USE_SEMANTICS:
-            self.semantic_predictor = load_rednet(
-                device,
-                ckpt=model_config.VISUAL_ENCODER.rednet_ckpt,
-                resize=True # since we train on half-vision
-            )
-            # Disable gradients
-            for param in self.semantic_predictor.parameters():
-                param.requires_grad_(False)
-            self.semantic_predictor.eval()
+            sem_embedding_size = model_config.SEMANTIC_ENCODER.embedding_size
+            self.embed_goal_seg = hasattr(model_config, "embed_goal_seg") and model_config.embed_goal_seg 
+            if self.embed_goal_seg:
+                sem_embedding_size = 1
+            else:
+                logger.info("Not setting up goal seg")
 
-            rgb_shape = observation_space.spaces["rgb"].shape
-            sem_embedding_size = model_config.VISUAL_ENCODER.embedding_size
-            observation_space.spaces["semantic"] = Box(
-                    low=0,
-                    high=255,
-                    shape=(rgb_shape[0], rgb_shape[1], sem_embedding_size),
-                    dtype=np.uint8,
-            )
             self.semantic_embedder = nn.Embedding(40 + 2, sem_embedding_size)
 
         self.visual_encoder = ResnetEncoder(
@@ -74,6 +62,7 @@ class SingleResnetSeqNet(Net):
             output_size=model_config.VISUAL_ENCODER.output_size,
             backbone=model_config.VISUAL_ENCODER.backbone,
             trainable=model_config.VISUAL_ENCODER.train_encoder,
+            sem_embedding_size=model_config.SEMANTIC_ENCODER.embedding_size,
         )
         logger.info("Setting up visual encoder")
 
@@ -146,24 +135,30 @@ class SingleResnetSeqNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
-    def get_semantic_observations(self, observations_batch):
-        with torch.no_grad():
-            semantic_observations = self.semantic_predictor(observations_batch["rgb"], observations_batch["depth"])
-            return semantic_observations
-    
     def _extract_sge(self, observations):
         # recalculating to keep this self-contained instead of depending on training infra
         if "semantic" in observations and "objectgoal" in observations:
-            obj_semantic = observations["semantic"].flatten(start_dim=1)
+            goal_semantic = observations["semantic"].contiguous()
+            obj_semantic = observations["semantic"].contiguous().flatten(start_dim=1)
+            
+            if len(observations["objectgoal"].size()) == 3:
+                observations["objectgoal"] = observations["objectgoal"].contiguous().view(
+                    -1, observations["objectgoal"].size(2)
+                )
             idx = self.task_cat2mpcat40[
                 observations["objectgoal"].long()
             ]
             idx = idx.to(obj_semantic.device)
+            if len(idx.size()) == 3:
+                idx = idx.squeeze(1)
 
-            goal_visible_pixels = (obj_semantic == idx.squeeze(1)).sum(dim=1) # Sum over all since we're not batched
+            goal_visible_pixels = (obj_semantic == idx).sum(dim=1) # Sum over all since we're not batched
             goal_visible_area = torch.true_divide(goal_visible_pixels, obj_semantic.size(-1))
-
-            return goal_visible_area.unsqueeze(-1)
+            
+            # logger.info("goal sem shape : {}, object gaol shape: {}".format(goal_semantic.shape, observations["objectgoal"].shape))
+            goal_sem_seg_mask = (goal_semantic == observations["objectgoal"].contiguous().unsqueeze(-1)).float()
+            # logger.info("goal visible shape: {}".format(goal_sem_seg_mask.shape))
+            return goal_visible_area.unsqueeze(-1), goal_sem_seg_mask.unsqueeze(-1)
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         r"""
@@ -183,12 +178,23 @@ class SingleResnetSeqNet(Net):
             observations["depth"] = depth_obs.contiguous().view(
                 -1, depth_obs.size(2), depth_obs.size(3), depth_obs.size(4)
             )
+        
+        semantic_obs = observations["semantic"]
+        if len(semantic_obs.size()) == 4:
+            observations["semantic"] = semantic_obs.contiguous().view(
+                -1, semantic_obs.size(2), semantic_obs.size(3)
+            )
+        
         if self.model_config.USE_SEMANTICS:
-            observations["semantic"] = self.get_semantic_observations(observations)
-            if self.model_config.embed_sge:
-                sge_embedding = self._extract_sge(observations)
-                x.append(sge_embedding)
-            observations["semantic"] = self.semantic_embedder(observations["semantic"])
+            sge_embedding, goal_sem_seg_mask = self._extract_sge(observations)
+            x.append(sge_embedding)
+            # Use goal segmentation instead of full segmentation mask
+            # for all object categories
+            if self.embed_goal_seg:
+                observations["semantic"] = goal_sem_seg_mask
+            else:
+                categories = observations["semantic"].long() + 1
+                observations["semantic"] = self.semantic_embedder(categories)
 
         visual_embedding = self.visual_encoder(observations)
 

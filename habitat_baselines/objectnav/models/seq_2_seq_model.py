@@ -237,8 +237,8 @@ class Seq2SeqModel(nn.Module):
         distribution = self.action_distribution(features)
 
         return distribution.logits, rnn_hidden_states
-    
-    # def evaluate_actions(
+
+    # def act(
     #     self, observations, rnn_hidden_states, prev_actions, masks
     # ) -> CustomFixedCategorical:
 

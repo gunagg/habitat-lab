@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import contextlib
+from logging import log
 import os
 import random
 import time
@@ -24,6 +25,7 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
+    get_active_obs_transforms
 )
 from habitat_baselines.rearrangement.common.il_rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -91,6 +93,8 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
 
         observation_space = self.envs.observation_spaces[0]
         self.obs_space = observation_space
+        self.obs_transforms = get_active_obs_transforms(self.config)
+        logger.info("obs transforms: {}".format(self.obs_transforms))
         self.model = self._setup_model(
             observation_space, self.envs.action_spaces[0], model_config, self.device
         )
@@ -101,7 +105,8 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             self.semantic_predictor = load_rednet(
                 self.device,
                 ckpt=model_config.SEMANTIC_ENCODER.rednet_ckpt,
-                resize=True # since we train on half-vision
+                resize=True, # since we train on half-vision
+                num_classes=model_config.SEMANTIC_ENCODER.num_classes
             )
             self.semantic_predictor.eval()
 
@@ -209,13 +214,20 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             self.envs.num_envs,
             obs_space,
             self.envs.action_spaces[0],
-            il_cfg.hidden_size,
+            self.config.MODEL.STATE_ENCODER.hidden_size,
             num_recurrent_layers=self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
         )
         rollouts.to(self.device)
 
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
+            # Use first semantic observations from RedNet predictor as well
+            if sensor == "semantic" and self.config.MODEL.USE_PRED_SEMANTICS:
+                semantic_obs = self.semantic_predictor(batch["rgb"], batch["depth"])
+                # Subtract 1 from class labels for THDA YCB categories
+                if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                    semantic_obs = semantic_obs - 1
+                rollouts.observations[sensor][0].copy_(semantic_obs)
 
         # batch and observations may contain shared PyTorch CUDA
         # tensors.  We must explicitly clear them here otherwise
@@ -312,7 +324,6 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
                 self.agent.eval()
                 profiling_wrapper.range_push("rollouts loop")
                 for step in range(il_cfg.num_steps):
-
                     (
                         delta_pth_time,
                         delta_env_time,
@@ -338,9 +349,6 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
                 num_rollouts_done_store.add("num_done", 1)
 
                 self.agent.train()
-                if self._static_encoder:
-                    self._encoder.eval()
-
                 (
                     delta_pth_time,
                     total_loss

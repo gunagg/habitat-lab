@@ -228,11 +228,10 @@ def calculate_turnn_angle(env, goal_idx, best_action):
     return np.rad2deg(turn_angle), stop, turn_angle
 
 
-
 def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id="", output_path=""):
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
-        goal_radius = 0.7
+        goal_radius = 0.9
 
         total_success = 0.0
         total_episodes = 0.0
@@ -380,11 +379,19 @@ def generate_trajectories(cfg, num_episodes=1, output_prefix="s_path", scene_id=
 
             ep_data = get_episode_json(env.current_episode, reference_replay)
             del ep_data["_shortest_path_cache"]
-            print("Episode success: {}, Total episodes: {}".format(success, total_episodes))
+            print(info)
+            print(prev_action, success, success != 0 and prev_action == HabitatSimActions.STOP)
+            print("Episode success: {}, Total episodes: {}, Total success: {}".format(success, total_episodes, total_success))
             total_success += success
             total_episodes += 1
             # if not success:
             #     make_videos([observation_list], output_prefix, ep_id)
+
+            if total_episodes % 500 == 0:
+                print("Checkpointing at {} episodes".format(total_episodes))
+                write_json(dataset, "{}/{}.json".format(output_path, scene_id))
+                write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
+
 
             if success:
                 dataset["episodes"].append(ep_data)

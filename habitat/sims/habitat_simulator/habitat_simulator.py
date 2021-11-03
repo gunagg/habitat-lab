@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from logging import Logger
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -16,7 +17,9 @@ from typing import (
 )
 
 import numpy as np
+import math
 import magnum as mn
+import random
 from gym import spaces
 from gym.spaces.box import Box
 from numpy import ndarray
@@ -355,6 +358,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     # THDA Initialization
     def _initialize_THDA_scene(self):
+        self.remove_all_objects()
+        self.recompute_navmesh(self.pathfinder, self.navmesh_settings, True)
         # Retrieving scene state from config
         if (
             not hasattr(self.habitat_config, "scene_state")
@@ -364,8 +369,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         objects = self.habitat_config.scene_state[0]["objects"]
         obj_templates_mgr = self.get_object_template_manager()
 
-        self.remove_all_objects()
-        self.recompute_navmesh(self.pathfinder, self.navmesh_settings, True)
+        # self.remove_all_objects()
+        # self.recompute_navmesh(self.pathfinder, self.navmesh_settings, True)
 
         self.sim_object_to_objid_mapping = {}
         self.objid_to_sim_object_mapping = {}
@@ -447,6 +452,81 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             self.recompute_navmesh(
                 self.pathfinder, self.navmesh_settings, True
             )
+            # logger.info("Inserting objects and recompute navmesh")
+    
+    def sample_object_state(
+        sim,
+        object_id,
+        from_navmesh=True,
+        maintain_object_up=True,
+        max_tries=100,
+        bb=None,
+    ):
+        # check that the object is not STATIC
+        if (
+            sim.get_object_motion_type(object_id)
+            is habitat_sim.physics.MotionType.STATIC
+        ):
+            print("sample_object_state : Object is STATIC, aborting.")
+        if from_navmesh:
+            if not sim.pathfinder.is_loaded:
+                print("sample_object_state : No pathfinder, aborting.")
+                return False
+        elif not bb:
+            print(
+                "sample_object_state : from_navmesh not specified and no bounding box provided, aborting."
+            )
+            return False
+        tries = 0
+        valid_placement = False
+        # Note: following assumes sim was not reconfigured without close
+        scene_collision_margin = 0.04
+        while not valid_placement and tries < max_tries:
+            tries += 1
+            # initialize sample location to random point in scene bounding box
+            sample_location = np.array([0, 0, 0])
+            if from_navmesh:
+                # query random navigable point
+                sample_location = sim.pathfinder.get_random_navigable_point()
+            else:
+                sample_location = np.random.uniform(bb.min, bb.max)
+            # set the test state
+            # to debug sim.set_translation(sim.pathfinder.get_random_navigable_point(), object_id), sim.get_translation(object_id)
+            sim.set_translation(sample_location, object_id)
+            if maintain_object_up:
+                # random rotation only on the Y axis
+                y_rotation = mn.Quaternion.rotation(
+                    mn.Rad(random.random() * 2 * math.pi),
+                    mn.Vector3(0, 1.0, 0),
+                )
+                sim.set_rotation(
+                    y_rotation * sim.get_rotation(object_id), object_id
+                )
+            else:
+                # unconstrained random rotation
+                sim.set_rotation(ut.random_quaternion(), object_id)
+
+            # raise object such that lowest bounding box corner is above the navmesh sample point.
+            if from_navmesh:
+                obj_node = sim.get_object_scene_node(object_id)
+                xform_bb = habitat_sim.geo.get_transformed_bb(
+                    obj_node.cumulative_bb, obj_node.transformation
+                )
+                # also account for collision margin of the scene
+                y_translation = mn.Vector3(
+                    0, xform_bb.size_y() / 2.0 + scene_collision_margin, 0
+                )
+                sim.set_translation(
+                    y_translation + sim.get_translation(object_id), object_id
+                )
+
+            # test for penetration with the environment
+            if not sim.contact_test(object_id):
+                valid_placement = True
+
+        if not valid_placement:
+            return False
+        return True
 
     def geodesic_distance(
         self,

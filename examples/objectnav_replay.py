@@ -7,8 +7,10 @@ import time
 import os
 import torch
 import numpy as np
+import torch.nn.functional as F
 
 from habitat import Config
+from habitat.core.simulator import Observations
 from habitat_sim.utils import viz_utils as vut
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_sim.utils.common import quat_to_coeffs
@@ -22,8 +24,10 @@ from time import sleep
 from PIL import Image
 
 from habitat_baselines.objectnav.models.rednet import load_rednet
+from habitat_baselines.objectnav.models.rednet_ycb import RedNet
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
 from psiturk_dataset.utils.utils import write_json
+from habitat.tasks.nav.object_nav_task import mapping_mpcat40_to_goal21
 
 config = habitat.get_config("configs/tasks/objectnav_mp3d_video.yaml")
 
@@ -213,6 +217,8 @@ def get_navigable_area(info):
 def get_visible_area(info):
     fog_of_war_mask = info["fog_of_war_mask"]
     visible_area = fog_of_war_mask.sum() / get_navigable_area(info)
+    if visible_area > 1.0:
+        visible_area = 1.0
     return visible_area
 
 
@@ -224,7 +230,7 @@ def save_top_down_map(info):
 
 
 def run_reference_replay(
-    cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None, task_cat2mpcat40=None, sem_seg=False
+    cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None, task_cat2mpcat40=None, sem_seg=False, is_thda=False, meta_file=None
 ):
     instructions = []
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
@@ -241,6 +247,41 @@ def run_reference_replay(
                 # ckpt="data/rednet-models/rednet_semmap_mp3d_40.pth",
                 resize=True # since we train on half-vision
             )
+        if is_thda:
+            print("loading thda model")
+            # semantic_predictor = RedNet.load_pretrained_model(
+            #     model_path="data/rednet-models/rednet_semmap_mp3d_40_v2_vince.pth",
+            #     num_classes=29
+            # )
+            semantic_predictor = load_rednet(
+                device,
+                ckpt="data/rednet-models/rednet_semmap_mp3d_40_v2_vince.pth",
+                resize=True, # since we train on half-vision
+                num_classes=29
+            )
+            # semantic_predictor = load_rednet(
+            #     device,
+            #     ckpt="data/rednet-models/rednet_semmap_mp3d_40_v2_vince.pth",
+            #     # ckpt="data/rednet-models/rednet_semmap_mp3d_40.pth",
+            #     resize=True, # since we train on half-vision
+            #     num_classes=29
+            # )
+        semantic_predictor.eval()
+        semantic_predictor.training = False
+        for param in semantic_predictor.parameters():
+            param.requires_grad_(False)
+    
+    mapping_mpcat40_to_goal = np.zeros(
+        max(
+            max(mapping_mpcat40_to_goal21.keys()) + 1,
+            50,
+        ),
+        dtype=np.int8,
+    )
+    for key, value in mapping_mpcat40_to_goal21.items():
+        mapping_mpcat40_to_goal[key] = value
+    mapping_mpcat40_to_goal = torch.LongTensor(mapping_mpcat40_to_goal)
+    task_cat2pred_cat = torch.LongTensor(task_cat2mpcat40)
     
     with habitat.Env(cfg) as env:
         obs_list = []
@@ -252,6 +293,7 @@ def run_reference_replay(
         num_episodes = 0
         print("Total episodes: {}".format(len(env.episodes)))
         fails = []
+        episode_meta = []
         for ep_id in range(len(env.episodes)):
             observation_list = []
             obs = env.reset()
@@ -292,16 +334,36 @@ def run_reference_replay(
                 observations = env.step(action=action)
 
                 info = env.get_metrics()
+                # sem_obs_gt_goal = get_goal_semantic(torch.Tensor(observations["semantic"]), observations["objectgoal"], task_cat2mpcat40, episode)
+                
                 frame = observations_to_image({"rgb": observations["rgb"]}, info)
                 if semantic_predictor is not None:
                     sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
+                    if is_thda:
+                        # print("softmax {}".format(sem_obs.shape))
+                        # sem_obs = F.softmax(sem_obs, 1)
+                        sem_obs = sem_obs - 1
+                        #sem_obs = (torch.max(sem_obs, 1)[1]).float()
+                        h, w, c = observations["rgb"].shape
+                        #print("softmax {} -- {} - {} - {}".format(sem_obs.shape, h, w, c))
+                        idx = mapping_mpcat40_to_goal[
+                            task_cat2pred_cat[
+                                torch.Tensor(observations["objectgoal"]).long().squeeze()
+                            ]
+                        ]
+                        sem_obs_goal = (sem_obs == idx)
+
                     # sem_obs_2 = semantic_predictor_2(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
-                    sem_obs_2 = parse_gt_semantic(env._sim, observations["semantic"])
-                    sem_obs_2 = torch.Tensor(sem_obs_2).unsqueeze(0).long().to(device)
+                    # sem_obs_2 = parse_gt_semantic(env._sim, observations["semantic"])
+                    sem_obs_2 = torch.Tensor(observations["semantic"]).long().to(device)
                     observations["predicted_sem_obs"] = sem_obs
-                    observations["semantic"] = sem_obs_2
-                    sem_obs_goal = get_goal_semantic(sem_obs, observations["objectgoal"], task_cat2mpcat40, episode)
-                    sem_obs_gt_goal = get_goal_semantic(sem_obs_2, observations["objectgoal"], task_cat2mpcat40, episode)
+                    # sem_obs_goal = get_goal_semantic(sem_obs, observations["objectgoal"], task_cat2mpcat40, episode)
+                    sem_obs_gt_goal = get_goal_semantic(sem_obs_2, observations["objectgoal"], task_cat2mpcat40, episode).detach().cpu()
+
+                    if sem_obs_gt_goal.sum() > 0:
+                        print(torch.sum(sem_obs_goal))
+                        #print(torch.unique((sem_obs_goal.squeeze(-1).squeeze(0) * sem_obs_gt_goal)))
+                        print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
                     frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)                    
 
                 frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
@@ -314,30 +376,34 @@ def run_reference_replay(
                 if action_name == "STOP":
                     break
                 i+=1
-            make_videos([observation_list], output_prefix, ep_id)
+            # make_videos([observation_list], output_prefix, ep_id)
             print(info["distance_to_goal"])
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
-            if len(episode.reference_replay) <= 5000:
+            if len(episode.reference_replay) <= 500:
                 success += ep_success
                 spl += info["spl"]
 
             if "top_down_map" in info.keys():
                 visible_area += get_visible_area(info["top_down_map"])
                 total_coverage += get_coverage(info["top_down_map"])
+
             num_episodes += 1
+            del info["top_down_map"]
+            episode_meta.append(info)
 
             if num_episodes % 100 == 0:
                 print("Total succes: {}, {}, {}".format(success/num_episodes, success, num_episodes))
 
-            if sem_seg:
-                goal_visible_area, goal_visible_area_gt = get_goal_visible_area(observations, task_cat2mpcat40, episode)
-                print("Goal visible area: {}, GT: {}".format(goal_visible_area, goal_visible_area_gt))
+            # if sem_seg:
+            #     goal_visible_area, goal_visible_area_gt = get_goal_visible_area(observations, task_cat2mpcat40, episode)
+            #     print("Goal visible area: {}, GT: {}".format(goal_visible_area, goal_visible_area_gt))
 
             # if ep_id >= 0: # in [0, 1, 9]:
             #     trajectory = create_episode_trajectory(replay_data, episode)
             #     print(trajectory.keys())
             #     write_json(trajectory, "data/visualizations/teaser/trajectories/{}_{}_custom_human_trajectory.json".format(trajectory["scene_id"].split(".")[0], ep_id))
             #     save_top_down_map(info)
+            # print(info["room_visitation_map"])
 
             if ep_success == 0:
                 fails.append({
@@ -356,13 +422,16 @@ def run_reference_replay(
             "success": success/num_episodes,
             "coverage": total_coverage/num_episodes,
             "visible_area": visible_area/num_episodes,
-            "num_episodes": num_episodes
+            "num_episodes": num_episodes,
         }
         stats_file = open("data/stats/stats.json", "w")
         stats_file.write(json.dumps(stats))
 
         inst_file = open("instructions.json", "w")
         inst_file.write(json.dumps(instructions))
+
+        meta_file = open(meta_file, "w")
+        meta_file.write(json.dumps(episode_meta))
         return obs_list
 
 
@@ -380,17 +449,36 @@ def main():
     parser.add_argument(
         "--log-action", dest='log_action', action='store_true'
     )
+    parser.add_argument(
+        "--success", type=float, default=0.1
+    )
+    parser.add_argument(
+        "--metrics", dest='metrics', action='store_true'
+    )
+    parser.add_argument(
+        "--thda", dest='is_thda', action='store_true'
+    )
+    parser.add_argument(
+        "--sem-seg", dest='sem_seg', action='store_true'
+    )
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
-    # cfg.DATASET.CONTENT_SCENES = ["D7G3Y4RVNrH"]
-    # cfg.DATASET.CONTENT_SCENES = ['i5noydFURQK']
+    cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
+
+    if args.metrics:
+        cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "ROOM_REVISITATION_MAP"]
+    
+    if args.is_thda:
+        cfg.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
     cfg.freeze()
+
+    meta_file = args.replay_episode.replace(".json.gz", "_meta.json")
 
     observations = run_reference_replay(
         cfg, args.step_env, args.log_action,
-        num_episodes=1, output_prefix=args.output_prefix, task_cat2mpcat40=task_cat2mpcat40
+        num_episodes=1, output_prefix=args.output_prefix, task_cat2mpcat40=task_cat2mpcat40, sem_seg=args.sem_seg, is_thda=args.is_thda, meta_file=meta_file
     )
 
 if __name__ == "__main__":

@@ -1226,8 +1226,10 @@ class RearrangementSPL(Measure):
         self._previous_position = self._sim.get_agent_state().position
         self._agent_episode_distance = 0.0
         self._start_end_episode_distance = task.measurements.measures[
-            DistanceToGoal.cls_uuid
-        ].get_metric()
+            AgentToObjectDistance.cls_uuid
+        ].get_metric() + task.measurements.measures[
+            ObjectToReceptacleDistance.cls_uuid
+        ].get_metric() 
         self.update_metric(  # type:ignore
             episode=episode, task=task, *args, **kwargs
         )

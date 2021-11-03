@@ -1,7 +1,7 @@
 # Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
 # for better hyperparameters for actual training
 
-BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il.yaml"
+BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il_thda.yaml"
 TRAINER_NAME: "objectnav-bc-env"
 ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
@@ -13,13 +13,13 @@ VIDEO_DIR: "video_dir/objectnav/overfitting/rgbd/seed_1/"
 TEST_EPISODE_COUNT: 10
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_env_v4/rgbd/seed_1_70M/ckpt.22.pth"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 8
+NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting/rgbd/seed_1"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 100
-SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
@@ -38,7 +38,7 @@ IL:
     clip_param: 0.2
     num_mini_batch: 2
     max_grad_norm: 0.2
-    num_steps: 64
+    num_steps: 32
     use_linear_clip_decay: False
     use_linear_lr_decay: True
     reward_window_size: 50
@@ -61,19 +61,19 @@ MODEL:
   embed_sge: True
   embed_goal_seg: False
   NO_VISION: False
-  USE_SEMANTICS: False
-  USE_PRED_SEMANTICS: False
+  USE_SEMANTICS: True
+  USE_PRED_SEMANTICS: True
   SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
   SEMANTIC_ENCODER:
-    rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"
-    #rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_40_v2_vince.pth"
+    # rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"
+    rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_40_v2_vince.pth"
     cnn_type: "ResnetSemSegEncoder"
     output_size: 256
     backbone: "resnet18"
     train_encoder: True
     embedding_size: 4
     is_thda: True
-    num_classes: 40
+    num_classes: 29
   RGB_ENCODER:
     cnn_type: "ResnetRGBEncoder"
     output_size: 256

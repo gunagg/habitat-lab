@@ -98,13 +98,10 @@ class BCAgent(nn.Module):
 
             total_loss_epoch += total_loss.item()
             hidden_states.append(rnn_hidden_states)
-            # logger.info("hid: {}, {}".format(rnn_hidden_states.shape, idx))
 
         profiling_wrapper.range_pop()
 
-        num_updates = 1
         hidden_states = torch.cat(hidden_states, dim=1)
-        # logger.info("cat: {}".format(hidden_states.shape))
 
         total_loss_epoch /= self.num_mini_batch
 

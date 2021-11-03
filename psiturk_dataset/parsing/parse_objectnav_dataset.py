@@ -5,6 +5,7 @@ import datetime
 import glob
 import gzip
 import json
+import os
 import re
 import sys
 import zipfile
@@ -178,6 +179,8 @@ def handle_step(step, episode, unique_id, timestamp):
 
             episode["episode_id"] = unique_id # data["episode_id"]
             episode["scene_id"] = data["scene_id"]
+            if len(episode["scene_id"].split("/")) == 1:
+                episode["scene_id"] = "mp3d/{}/{}".format(episode["scene_id"].split(".")[0], episode["scene_id"])
             episode["start_position"] = data["startState"]["position"]
             episode["start_rotation"] = data["startState"]["rotation"]
             episode["object_category"] = data["object_category"]
@@ -185,6 +188,10 @@ def handle_step(step, episode, unique_id, timestamp):
             episode["shortest_paths"] = data["shortest_paths"]
             episode["info"] = data["info"]
             episode["goals"] = []
+            episode["is_thda"] = data.get("is_thda")
+            episode["scene_state"] = data.get("scene_state")
+            if episode["is_thda"]:
+                episode["goals"] = data["goals"]
 
             episode["reference_replay"] = []
 
@@ -248,13 +255,15 @@ def convert_to_episode(csv_reader):
 
 
 def replay_to_episode(
-    replay_path, output_path, max_episodes=16,  max_episode_length=1000, sample=False, append_dataset=False
-    ):
+    replay_path, output_path, max_episodes=16,  max_episode_length=1000, sample=False, append_dataset=False, is_thda=False
+):
     all_episodes = {
         "episodes": []
     }
 
     episode_lengths = []
+    start_pos_map = {}
+    episodes = []
     if replay_path.endswith("zip"):
         archive = zipfile.ZipFile(replay_path, "r")
         for file_path in tqdm(archive.namelist()):
@@ -273,11 +282,24 @@ def replay_to_episode(
     else:
         file_paths = glob.glob(replay_path + "/*.csv")
         scene_episode_map = defaultdict(list)
-
+        duplicates = 0
         for file_path in tqdm(file_paths):
             reader = read_csv(file_path)
 
             episode, counts = convert_to_episode(reader)
+
+            episode_key = str(episode["start_position"]) + "_{}".format(episode["scene_id"])
+
+            if episode_key in start_pos_map.keys():
+                duplicates += 1
+                continue
+            start_pos_map[episode_key] = 1
+
+            if is_thda and not episode.get("is_thda"):
+                continue
+            if not is_thda and episode.get("is_thda"):
+                continue
+
             # Filter out episodes that have unstable initialization
             if episode["episode_id"] in filter_episodes:
                 continue
@@ -288,12 +310,19 @@ def replay_to_episode(
             if sample:
                 if len(episode_lengths) >= max_episodes:
                     break
+    print("Total duplicate episodes: {}".format(duplicates))
     objectnav_dataset_path = "data/datasets/objectnav_mp3d_v1/train/content/{}.json.gz"
-    if "_val" in output_path:
+    if "val" in output_path:
         objectnav_dataset_path = objectnav_dataset_path.replace("train", "val")
         print("Using val path")
+    if is_thda:
+        objectnav_dataset_path = "data/datasets/objectnav_mp3d_thda/train/content/{}.json.gz"
     for scene, episodes in scene_episode_map.items():
         scene = scene.split("/")[-1].split(".")[0]
+        # print(objectnav_dataset_path)
+        if not os.path.isfile(objectnav_dataset_path.format(scene)):
+            print("Source dataset missing: {}".format(scene))
+            continue
         episode_data = load_dataset(objectnav_dataset_path.format(scene))
         episode_data["episodes"] = episodes
 
@@ -304,7 +333,7 @@ def replay_to_episode(
             len_before = len(episode_data["episodes"])
             episode_data["episodes"].extend(existing_episodes["episodes"])
             print("Appending new episodes to existing scene: {} -- {} -- {}".format(scene, len_before, len(episode_data["episodes"])))
-
+        print(path)
         write_json(episode_data, path)
         write_gzip(path, path)
 
@@ -368,10 +397,17 @@ def main():
     parser.add_argument(
         "--append-dataset", dest='append_dataset', action='store_true'
     )
+    parser.add_argument(
+        "--thda", dest="is_thda", action="store_true"
+    )
+    parser.add_argument(
+        "--sample", dest="sample", action="store_true"
+    )
     args = parser.parse_args()
     replay_to_episode(
         args.replay_path, args.output_path, args.max_episodes,
-        args.max_episode_length, append_dataset=args.append_dataset
+        args.max_episode_length, append_dataset=args.append_dataset, is_thda=args.is_thda,
+        sample=args.sample
     )
     list_missing_episodes()
 

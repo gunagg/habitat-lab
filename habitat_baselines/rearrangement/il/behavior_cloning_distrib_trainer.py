@@ -12,6 +12,7 @@ import random
 import time
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Optional, Tuple, Union
+from cv2 import log
 
 import numpy as np
 import sys
@@ -217,12 +218,13 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
     def _setup_dataset(self):
         config = self.config
 
-        content_scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
-        if "*" in content_scenes:
-            dataset = make_dataset(
-                config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
-            )
-            content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
+        content_scenes = self.envs.scene_splits()[0]
+        logger.info("Scene splits: {}".format(content_scenes))
+        # if "*" in content_scenes:
+        #     dataset = make_dataset(
+        #         config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
+        #     )
+        #     content_scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
         datasets = []
         for scene in content_scenes:
             dataset = RearrangementEpisodeDataset(

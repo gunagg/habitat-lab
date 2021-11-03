@@ -228,12 +228,25 @@ class Env:
         self.mapping = np.array([ instance_id_to_label_id[i] for i in range(len(instance_id_to_label_id)) ])
 
         # ! MP3D object id to category ID mapping
-        if 'semantic' in observations: # If no map, then we're using semantics on scene without
-            # Should raise a warning, but just driving ahead for now
-            if self.mapping.size > 0:
-                observations['semantic'] = np.take(self.mapping, observations['semantic'])
-            else:
-                observations['semantic'] = observations['semantic'].astype(int)
+        # if 'semantic' in observations: # If no map, then we're using semantics on scene without
+        #     # Should raise a warning, but just driving ahead for now
+        #     if self.mapping.size > 0:
+        #         if len(self.sim.obj_sem_id_to_sem_category_mapping.keys()) > 0:
+        #             instance_id_to_label_id.update(self.sim.obj_sem_id_to_sem_category_mapping)
+        #             self.mapping = np.zeros(
+        #                 max(max(instance_id_to_label_id.keys()) + 1, 51), dtype=np.int8
+        #             )  # debug hack
+        #             for key, value in instance_id_to_label_id.items():
+        #                 # remap everything void/unlabeled/misc/etc .. to misc class 40
+        #                 # (void:0,  unlabeled: 41, misc=40)
+        #                 self.mapping[key] = 40 if value <= 0 or value == 41 else value
+        #             observations["semantic"] = self.mapping[observations["semantic"]]
+        #         else:
+        #             observations['semantic'] = np.take(self.mapping, observations['semantic'])
+        #     else:
+        #         observations['semantic'] = observations['semantic'].astype(int)
+        # # Clean up memory
+        # del self.mapping
 
         self._task.measurements.reset_measures(
             episode=self.current_episode,
@@ -285,11 +298,11 @@ class Env:
         )
 
         # Instance to sem seg
-        if 'semantic' in observations:
-            if self.mapping.size > 0:
-                observations['semantic'] = np.take(self.mapping, observations['semantic'])
-            else:
-                observations['semantic'] = observations['semantic'].astype(int)
+        # if 'semantic' in observations:
+        #     if self.mapping.size > 0:
+        #         observations['semantic'] = np.take(self.mapping, observations['semantic'])
+        #     else:
+        #         observations['semantic'] = observations['semantic'].astype(int)
 
         self._task.measurements.update_measures(
             episode=self.current_episode, action=action,

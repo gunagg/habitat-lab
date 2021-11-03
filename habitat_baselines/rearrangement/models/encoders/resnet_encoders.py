@@ -336,10 +336,12 @@ class ResnetSemSeqEncoder(nn.Module):
         semantic_embedding_size=4,
         use_pred_semantics=False,
         use_goal_seg=False,
+        is_thda=False,
     ):
         super().__init__()
         if not use_goal_seg:
-            self.semantic_embedder = nn.Embedding(40 + 2, semantic_embedding_size)
+            sem_input_size = 40 + 2
+            self.semantic_embedder = nn.Embedding(sem_input_size, semantic_embedding_size)
 
         self.visual_encoder = ResNetEncoder(
             spaces.Dict({"semantic": observation_space.spaces["semantic"]}),
@@ -347,6 +349,7 @@ class ResnetSemSeqEncoder(nn.Module):
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
             normalize_visual_inputs=normalize_visual_inputs,
+            sem_embedding_size=semantic_embedding_size,
         )
 
         for param in self.visual_encoder.parameters():
@@ -431,6 +434,7 @@ class ResnetEncoder(nn.Module):
         normalize_visual_inputs=False,
         trainable=True,
         spatial_output: bool = False,
+        sem_embedding_size=4,
     ):
         super().__init__()
         self.visual_encoder = ResNetEncoder(
@@ -439,6 +443,7 @@ class ResnetEncoder(nn.Module):
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
             normalize_visual_inputs=normalize_visual_inputs,
+            sem_embedding_size=sem_embedding_size,
         )
 
         for param in self.visual_encoder.parameters():

@@ -17,19 +17,19 @@ def read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, idx=0):
             obs = obs.astype(np.uint8)
         observations[k] = torch.from_numpy(obs)
     
-    obs_idx = "{0:0=6d}_sobs".format(idx)
-    observations_binary = lmdb_cursor.get(obs_idx.encode())
-    sem_observations = msgpack_numpy.unpackb(observations_binary, raw=False)
-    for k, v in sem_observations.items():
-        obs = np.array(sem_observations[k])
-        observations[k] = torch.from_numpy(obs)
+    # obs_idx = "{0:0=6d}_sobs".format(idx)
+    # observations_binary = lmdb_cursor.get(obs_idx.encode())
+    # sem_observations = msgpack_numpy.unpackb(observations_binary, raw=False)
+    # for k, v in sem_observations.items():
+    #     obs = np.array(sem_observations[k])
+    #     observations[k] = torch.from_numpy(obs)
     
-    obs_idx = "{0:0=6d}_pobs".format(idx)
-    observations_binary = lmdb_cursor.get(obs_idx.encode())
-    sem_observations = msgpack_numpy.unpackb(observations_binary, raw=False)
-    for k, v in sem_observations.items():
-        obs = np.array(sem_observations[k])
-        observations[k] = torch.from_numpy(obs)
+    # obs_idx = "{0:0=6d}_pobs".format(idx)
+    # observations_binary = lmdb_cursor.get(obs_idx.encode())
+    # sem_observations = msgpack_numpy.unpackb(observations_binary, raw=False)
+    # for k, v in sem_observations.items():
+    #     obs = np.array(sem_observations[k])
+    #     observations[k] = torch.from_numpy(obs)
     
     obs_list = []
     print("Observations shape: {}".format(observations["rgb"].shape))
@@ -37,8 +37,6 @@ def read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, idx=0):
         frame = observations_to_image({
             "rgb": observations["rgb"][i],
             "depth": observations["depth"][i],
-            "gt_semantic": observations["semantic"][i],
-            "semantic": observations["pred_semantic"][i]
         }, {})
         obs_list.append(frame)
 
@@ -73,7 +71,7 @@ def get_videos_from_lmdb(path, ub):
     lmdb_txn = lmdb_env.begin()
     lmdb_cursor = lmdb_txn.cursor()
     for i in range(0, ub):
-        read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, 0)
+        read_observation_from_lmdb(lmdb_env, lmdb_txn, lmdb_cursor, i)
 
 
 if __name__ == "__main__":
