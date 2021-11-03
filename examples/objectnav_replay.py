@@ -358,13 +358,19 @@ def run_reference_replay(
                     sem_obs_2 = torch.Tensor(observations["semantic"]).long().to(device)
                     observations["predicted_sem_obs"] = sem_obs
                     # sem_obs_goal = get_goal_semantic(sem_obs, observations["objectgoal"], task_cat2mpcat40, episode)
-                    sem_obs_gt_goal = get_goal_semantic(sem_obs_2, observations["objectgoal"], task_cat2mpcat40, episode).detach().cpu()
+                    # sem_obs_gt_goal = get_goal_semantic(sem_obs_2, observations["objectgoal"], task_cat2mpcat40, episode).detach().cpu()
+                    idx = mapping_mpcat40_to_goal[
+                        task_cat2pred_cat[
+                            torch.Tensor(observations["objectgoal"]).long().squeeze()
+                        ]
+                    ]
+                    sem_obs_gt_goal = (sem_obs_2 == idx)
 
-                    if sem_obs_gt_goal.sum() > 0:
-                        print(torch.sum(sem_obs_goal))
-                        #print(torch.unique((sem_obs_goal.squeeze(-1).squeeze(0) * sem_obs_gt_goal)))
-                        print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
-                    frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)                    
+                    # if sem_obs_gt_goal.sum() > 0:
+                    #     print(torch.sum(sem_obs_goal))
+                    #     #print(torch.unique((sem_obs_goal.squeeze(-1).squeeze(0) * sem_obs_gt_goal)))
+                    #     print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
+                    frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
 
                 frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
                 replay_data.append(get_agent_pose(env._sim))
@@ -376,7 +382,7 @@ def run_reference_replay(
                 if action_name == "STOP":
                     break
                 i+=1
-            # make_videos([observation_list], output_prefix, ep_id)
+            make_videos([observation_list], output_prefix, ep_id)
             print(info["distance_to_goal"])
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
             if len(episode.reference_replay) <= 500:
@@ -394,10 +400,6 @@ def run_reference_replay(
             if num_episodes % 100 == 0:
                 print("Total succes: {}, {}, {}".format(success/num_episodes, success, num_episodes))
 
-            # if sem_seg:
-            #     goal_visible_area, goal_visible_area_gt = get_goal_visible_area(observations, task_cat2mpcat40, episode)
-            #     print("Goal visible area: {}, GT: {}".format(goal_visible_area, goal_visible_area_gt))
-
             # if ep_id >= 0: # in [0, 1, 9]:
             #     trajectory = create_episode_trajectory(replay_data, episode)
             #     print(trajectory.keys())
@@ -410,6 +412,8 @@ def run_reference_replay(
                     "episodeId": instructions[-1]["episodeId"],
                     "distanceToGoal": info["distance_to_goal"]
                 })
+            if num_episodes >= 5:
+                break
 
         print("Total episode success: {}".format(success))
         print("SPL: {}, {}, {}".format(spl/num_episodes, spl, num_episodes))
