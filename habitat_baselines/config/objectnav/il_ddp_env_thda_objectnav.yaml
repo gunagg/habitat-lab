@@ -7,14 +7,14 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_mp3d_thda/sem_seg_pred/seed_1_2node/"
-VIDEO_DIR: "video_dir/objectnav/objectnav_mp3d_thda/sem_seg_pred/seed_1_2node/"
+TENSORBOARD_DIR: "tb/objectnav/objectnav_mp3d_thda_40k/sem_seg_pred/seed_1_16node/val_17_v2/Z6MFQCViBuw/"
+VIDEO_DIR: "video_dir/objectnav/objectnav_mp3d_thda_40k/sem_seg_pred/seed_1_16node/val_17_v2/Z6MFQCViBuw/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_mp3d_thda/sem_seg_pred/seed_1_2node/ckpt.4.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_mp3d_thda_40k/sem_seg_pred/seed_1_16node/ckpt.17.pth"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 8
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_mp3d_thda/sem_seg_pred/seed_1_2node/"
+NUM_PROCESSES: 1
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_mp3d_thda_40k/sem_seg_pred/seed_1_16node/val/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -28,9 +28,9 @@ EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
   SPLIT: "val"
   sample: False
-  semantic_metrics: True
-  evaluation_meta_file: "tb/objectnav/objectnav_mp3d_thda/sem_seg_pred/seed_1_2node/evaluation_meta.json"
-NUM_UPDATES: 26000
+  semantic_metrics: False
+  evaluation_meta_file: "tb/objectnav/objectnav_mp3d_thda_40k/sem_seg_pred/seed_1_16node/val_17_v2/Z6MFQCViBuw/evaluation_meta.json"
+NUM_UPDATES: 32000
 
 IL:
   USE_IW: True
@@ -41,7 +41,7 @@ IL:
     clip_param: 0.2
     num_mini_batch: 2
     max_grad_norm: 0.2
-    num_steps: 32
+    num_steps: 64
     use_linear_clip_decay: False
     use_linear_lr_decay: True
     reward_window_size: 50

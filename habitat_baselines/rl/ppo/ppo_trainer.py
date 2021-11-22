@@ -34,6 +34,7 @@ from habitat_baselines.utils.common import (
     linear_decay,
 )
 from habitat_baselines.utils.env_utils import construct_envs
+from habitat_baselines.objectnav.models.rednet import load_rednet
 
 
 @baseline_registry.register_trainer(name="ppo")
@@ -77,6 +78,17 @@ class PPOTrainer(BaseRLTrainer):
             self.config, observation_space, self.envs.action_spaces[0]
         )
         self.actor_critic.to(self.device)
+
+        self.semantic_predictor = None
+        if self.config.MODEL_CONFIG.USE_PRED_SEMANTICS:
+            self.semantic_predictor = load_rednet(
+                self.device,
+                ckpt=self.config.MODEL_CONFIG.SEMANTIC_ENCODER.rednet_ckpt,
+                resize=True, # since we train on half-vision
+                num_classes=self.config.MODEL_CONFIG.SEMANTIC_ENCODER.num_classes
+            )
+            self.semantic_predictor.eval()
+
 
         self.agent = PPO(
             actor_critic=self.actor_critic,
@@ -214,6 +226,12 @@ class PPOTrainer(BaseRLTrainer):
 
         t_update_stats = time.time()
         batch = batch_obs(observations, device=self.device)
+        if self.config.MODEL.USE_PRED_SEMANTICS and self.current_update >= self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE:
+            batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+            # Subtract 1 from class labels for THDA YCB categories
+            if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                batch["semantic"] = batch["semantic"] - 1
+
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         rewards = torch.tensor(
@@ -321,6 +339,7 @@ class PPOTrainer(BaseRLTrainer):
                 sum(param.numel() for param in self.agent.parameters())
             )
         )
+        self.current_update = 0
 
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
@@ -333,6 +352,11 @@ class PPOTrainer(BaseRLTrainer):
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
+        if self.config.MODEL.USE_PRED_SEMANTICS and self.current_update >= self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE:
+            batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+            # Subtract 1 from class labels for THDA YCB categories
+            if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                batch["semantic"] = batch["semantic"] - 1
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         for sensor in rollouts.observations:
@@ -370,6 +394,7 @@ class PPOTrainer(BaseRLTrainer):
             for update in range(self.config.NUM_UPDATES):
                 profiling_wrapper.on_start_step()
                 profiling_wrapper.range_push("train update")
+                self.current_update += 1
 
                 if ppo_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore

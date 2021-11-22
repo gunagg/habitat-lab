@@ -47,6 +47,7 @@ from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
 from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
 from habitat_baselines.objectnav.models.rednet import load_rednet
 from psiturk_dataset.utils.utils import write_json
+from psiturk_dataset.generator.objectnav_shortest_path_generator import get_episode_json
 
 
 @baseline_registry.register_trainer(name="objectnav-bc-env")
@@ -143,9 +144,18 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         rgb_frame = observations_to_image(
                         {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
                     )
-        rgb_path = os.path.join(path.format(split=split, type="rgb"), "frame_{}".format(episode_id))
+        dirname = os.path.join(path.format(split=split, type="rgb"), "{}".format(episode_id.split("_")[0]))
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+        rgb_path = os.path.join(dirname, "frame_{}".format(episode_id))
         save_frame(rgb_frame, rgb_path)
-
+        if "top_down_map" in infos[env_idx]:
+            top_down_frame = observations_to_image(
+                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx], top_down_map_only=True
+                    )
+            top_down_path = os.path.join(path.format(split=split, type="top_down_map"), "frame_{}".format(episode_id))
+            save_frame(top_down_frame, top_down_path)
+        
 
     def _make_results_dir(self, split="val"):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
@@ -191,7 +201,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "room_visitation_map"}
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "room_visitation_map", "exploration_metrics"}
 
     @classmethod
     def _extract_scalars_from_info(
@@ -562,7 +572,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             logger.info("Setting up human val {}".format(config.TASK_CONFIG.DATASET.SPLIT))            
         
         if hasattr(config.EVAL, "semantic_metrics") and config.EVAL.semantic_metrics:
-            config.TASK_CONFIG.TASK.MEASUREMENTS = config.TASK_CONFIG.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP"]
+            config.TASK_CONFIG.TASK.MEASUREMENTS = config.TASK_CONFIG.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]
             logger.info("Setting up semantic exploration metrics")
         config.freeze()
 
@@ -636,6 +646,10 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
         logger.info("Start eval")
         evaluation_meta = []
+        ep_actions = [
+            [] for _ in range(self.config.NUM_PROCESSES)
+        ]  # type: List[List[np.ndarray]]
+        possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -667,6 +681,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
                 actions = torch.argmax(logits, dim=1)
                 prev_actions.copy_(actions.unsqueeze(1))  # type: ignore
+            action_names = [possible_actions[a.item()] for a in actions.to(device="cpu")]
 
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
@@ -725,12 +740,17 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     current_episode_cross_entropy[i] = 0
 
                     ep_metrics = copy.deepcopy(episode_stats)
-                    ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
-                    evaluation_meta.append({
-                        "scene_id": current_episodes[i].scene_id,
-                        "episode_id": current_episodes[i].episode_id,
-                        "metrics": ep_metrics,
-                    })
+                    if "room_visitation_map" in infos[i]:
+                        ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
+                    if "exploration_metrics" in infos[i]:
+                        ep_metrics["exploration_metrics"] = infos[i]["exploration_metrics"]
+                    # evaluation_meta.append({
+                    #     "scene_id": current_episodes[i].scene_id,
+                    #     "episode_id": current_episodes[i].episode_id,
+                    #     "metrics": ep_metrics,
+                    #     "object_category": current_episodes[i].object_category
+                    # })
+                    # write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (
@@ -738,6 +758,9 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                             current_episodes[i].episode_id,
                         )
                     ] = episode_stats
+
+                    ep_metrics = get_episode_json(current_episodes[i], ep_actions[i])
+                    evaluation_meta.append(ep_metrics)
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
@@ -760,15 +783,28 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                         )
 
                         rgb_frames[i] = []
+                        ep_actions[i] = []
 
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
-                        {k: v[i] for k, v in batch.items()}, infos[i]
+                        {"rgb": batch["rgb"][i]}, infos[i]
                     )
-                    frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
+                    #frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
                     rgb_frames[i].append(frame)
+                    ep_actions[i].append({
+                        "action": action_names[i]
+                    })
+
+                    # self._save_results(
+                    #     batch,
+                    #     infos,
+                    #     config.RESULTS_DIR,
+                    #     i,
+                    #     config.EVAL.SPLIT,
+                    #     "{}_{}".format(current_episodes[i].episode_id, len(rgb_frames[i])),
+                    # )
 
             (
                 self.envs,

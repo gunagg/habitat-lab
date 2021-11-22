@@ -12,20 +12,20 @@ SIMULATOR:
     RADIUS: 0.18
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
-    ALLOW_SLIDING: False
+    ALLOW_SLIDING: True
   SEMANTIC_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
+    WIDTH: 512
+    HEIGHT: 512
     HFOV: 79
     POSITION: [0, 0.88, 0]
   RGB_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
+    WIDTH: 512
+    HEIGHT: 512
     HFOV: 79
     POSITION: [0, 0.88, 0]
   DEPTH_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
+    WIDTH: 512
+    HEIGHT: 512
     HFOV: 79
     MIN_DEPTH: 0.5
     MAX_DEPTH: 5.0
@@ -57,11 +57,12 @@ TASK:
   
   ROOM_VISITATION_MAP:
     TYPE: "RoomVisitationMap"
-  ROOM_REVISITATION_MAP:
-    TYPE: "RoomRevisitationMap"
+  EXPLORATION_METRICS:
+    TYPE: "ExplorationMetrics"
 
 DATASET:
   TYPE: ObjectNav-v2
   SPLIT: train
   DATA_PATH: "data/datasets/objectnav_mp3d_v2/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
+  # CONTENT_SCENES: ["oLBMNvg9in8"]

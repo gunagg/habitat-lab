@@ -105,10 +105,12 @@ def get_action_data(action, sim):
 
 def get_episode_json(episode, reference_replay):
     episode.reference_replay = reference_replay
-    episode._shortest_path_cache = None
-    episode.goals []
+    #episode._shortest_path_cache = None
+    #episode.goals = []
     episode.scene_id = episode.scene_id
-    return attr.asdict(episode)
+    ep_json = attr.asdict(episode)
+    del ep_json["_shortest_path_cache"]
+    return ep_json
 
 
 def is_object_gripped(sim):

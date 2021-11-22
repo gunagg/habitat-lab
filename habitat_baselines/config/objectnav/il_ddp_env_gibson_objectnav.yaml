@@ -1,35 +1,35 @@
 # Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
 # for better hyperparameters for actual trainingsem_seg_pred
 
-BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il.yaml"
+BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_gibson_il.yaml"
 TRAINER_NAME: "ddp-objectnav-bc-env"
 ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_mp3d_24k/sem_seg_pred/seed_1/val_supp_qfig/"
-VIDEO_DIR: "video_dir/objectnav/objectnav_mp3d_24k/sem_seg_pred/seed_1/val_supp_qfig/"
+TENSORBOARD_DIR: "tb/objectnav/objectnav_mp3d_35k/sem_seg_pred/seed_1/val_16/"
+VIDEO_DIR: "video_dir/objectnav/objectnav_mp3d_35k/sem_seg_pred/seed_1/val_16/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_mp3d_24k/sem_seg_pred/seed_1/ckpt.23.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_mp3d_35k/sem_seg_pred/seed_1/ckpt.16.pth"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 4
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_mp3d_24k/sem_seg_pred/seed_1/"
+NUM_PROCESSES: 8
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_mp3d_35k/sem_seg_pred/seed_1/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 500
 SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
-RESULTS_DIR: "data/objectnav/results/objectnav_mp3d_24k/sem_seg_pred/val_supp_qfig/{split}/{type}"
+RESULTS_DIR: "data/objectnav/results/objectnav_mp3d_35k/sem_seg_pred/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "val_supp_qfig"
+  SPLIT: "val"
   sample: False
-  semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/objectnav_mp3d_24k/sem_seg_pred/seed_1/val_supp_qfig/evaluation_meta_35k.json"
+  semantic_metrics: True
+  evaluation_meta_file: "tb/objectnav/objectnav_mp3d_35k/sem_seg_pred/seed_1/val_16/evaluation_meta_35k.json"
 NUM_UPDATES: 16000
 
 IL:
@@ -67,7 +67,8 @@ MODEL:
   force_blind_policy: False
   embed_sge: True
   embed_goal_seg: False
-  sem_seg_pred: True
+  sem_seg_pred: False
+  NO_VISION: False
   USE_SEMANTICS: True
   USE_PRED_SEMANTICS: True
   SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
@@ -93,7 +94,7 @@ MODEL:
     trainable: False
     ddppo_checkpoint: "data/ddppo-models/gibson-2plus-resnet50.pth"
   STATE_ENCODER:
-    hidden_size: 512
+    hidden_size: 2048
     rnn_type: "GRU"
     num_recurrent_layers: 2
   SEQ2SEQ:

@@ -42,10 +42,10 @@ TASK:
   DEMONSTRATION_SENSOR_UUID: "demonstration"
   INFLECTION_WEIGHT_SENSOR:
     TYPE: InflectionWeightSensor
-    INFLECTION_COEF: 3.6462232132554084
+    INFLECTION_COEF: 3.477512060914205
   INFLECTION_WEIGHT_SENSOR_UUID: "inflection_weight"
 
-  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL', 'COVERAGE', 'GOAL_OBJECT_VISIBLE']
 
   TOP_DOWN_MAP:
     DRAW_GOAL_AABBS: False
@@ -53,8 +53,8 @@ TASK:
 
   ROOM_VISITATION_MAP:
     TYPE: "RoomVisitationMap"
-  ROOM_REVISITATION_MAP:
-    TYPE: "RoomRevisitationMap"
+  EXPLORATION_METRICS:
+    TYPE: "ExplorationMetrics"
 
   DISTANCE_TO_GOAL:
     DISTANCE_TO: VIEW_POINTS
@@ -67,5 +67,5 @@ DATASET:
   SPLIT: train
   DATA_PATH: "data/datasets/objectnav_mp3d_v4/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
-  CONTENT_SCENES: ["Z6MFQCViBuw"] #, "1LXtFkjw3qL", "E9uDoFAP3SH"]
+  # CONTENT_SCENES: ["17DRP5sb8fy"] #, "1LXtFkjw3qL", "E9uDoFAP3SH"]
 

@@ -69,9 +69,11 @@ class RearrangementDatasetV1(Dataset):
            sentences=deserialized["instruction_vocab"]["sentences"]
         )
 
-        for episode in deserialized["episodes"]:
+        for i, episode in enumerate(deserialized["episodes"]):
             episode["reference_replay"] = []
+            # del episode["_shortest_path_cache"]
             episode = RearrangementEpisode(**episode)
+            # episode.episode_id = str(i)
 
             if scenes_dir is not None:
                 if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
@@ -133,9 +135,11 @@ class RearrangementDatasetV2(Dataset):
            sentences=deserialized["instruction_vocab"]["sentences"]
         )
 
-        for episode in deserialized["episodes"]:
+        for i, episode in enumerate(deserialized["episodes"]):
             # del episode["task"]
+            # del episode["_shortest_path_cache"]
             episode = RearrangementEpisode(**episode)
+            # episode.episode_id = str(i)
 
             if scenes_dir is not None:
                 if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):

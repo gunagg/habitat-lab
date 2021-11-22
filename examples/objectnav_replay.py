@@ -1,4 +1,5 @@
 import argparse
+import copy
 import cv2
 import habitat
 import json
@@ -289,6 +290,11 @@ def run_reference_replay(
         spl = 0
         total_coverage = 0
         visible_area = 0
+        total_peeks = 0
+        total_pano_turns = 0
+        total_beeline = 0
+        avg_delta_coverage = 0
+        avg_delta_count = 0
 
         num_episodes = 0
         print("Total episodes: {}".format(len(env.episodes)))
@@ -336,7 +342,7 @@ def run_reference_replay(
                 info = env.get_metrics()
                 # sem_obs_gt_goal = get_goal_semantic(torch.Tensor(observations["semantic"]), observations["objectgoal"], task_cat2mpcat40, episode)
                 
-                frame = observations_to_image({"rgb": observations["rgb"]}, info)
+                frame = observations_to_image({"rgb": observations["rgb"]}, {})
                 if semantic_predictor is not None:
                     sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
                     if is_thda:
@@ -372,7 +378,7 @@ def run_reference_replay(
                     #     print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
                     frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
 
-                frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
+                #frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
                 replay_data.append(get_agent_pose(env._sim))
 
                 if info["success"]:
@@ -394,32 +400,52 @@ def run_reference_replay(
                 total_coverage += get_coverage(info["top_down_map"])
 
             num_episodes += 1
-            del info["top_down_map"]
-            episode_meta.append(info)
+
+            ep_metrics = copy.deepcopy(info)
+            del ep_metrics["top_down_map"]
+            episode_meta.append({
+                "scene_id": env.current_episode.scene_id,
+                "episode_id": env.current_episode.episode_id,
+                "metrics": ep_metrics,
+                "object_category": env.current_episode.object_category
+            })
+
+            meta_f = open(meta_file, "w")
+            meta_f.write(json.dumps(episode_meta))
 
             if num_episodes % 100 == 0:
                 print("Total succes: {}, {}, {}".format(success/num_episodes, success, num_episodes))
 
-            # if ep_id >= 0: # in [0, 1, 9]:
-            #     trajectory = create_episode_trajectory(replay_data, episode)
-            #     print(trajectory.keys())
-            #     write_json(trajectory, "data/visualizations/teaser/trajectories/{}_{}_custom_human_trajectory.json".format(trajectory["scene_id"].split(".")[0], ep_id))
-            #     save_top_down_map(info)
-            # print(info["room_visitation_map"])
+            if "exploration_metrics" in info and len(info["exploration_metrics"]["room_revisitation_map_strict"].keys()) > 0:
+                total_peeks += 1
+            if "exploration_metrics" in info and info["exploration_metrics"]["panoramic_turns_strict"] > 0:
+                total_pano_turns += 1
+            
+            if "exploration_metrics" in info and info["exploration_metrics"]["beeline"]:
+                total_beeline += 1
+            
+            if "exploration_metrics" in info and info["exploration_metrics"]["avg_delta_coverage"]:
+                if info["exploration_metrics"]["panoramic_turns_strict"] > 0:
+                    avg_delta_coverage += info["exploration_metrics"]["avg_delta_coverage"]
+                    avg_delta_count += 1
+
 
             if ep_success == 0:
                 fails.append({
                     "episodeId": instructions[-1]["episodeId"],
                     "distanceToGoal": info["distance_to_goal"]
                 })
-            if num_episodes >= 5:
-                break
+        
+        # print("Average delta cov: {}".format(avg_delta_coverage / avg_delta_count, avg_delta_coverage, avg_delta_count))
 
         print("Total episode success: {}".format(success))
         print("SPL: {}, {}, {}".format(spl/num_episodes, spl, num_episodes))
         print("Success: {}, {}, {}".format(success/num_episodes, success, num_episodes))
         print("Coverage: {}, {}, {}".format(total_coverage/num_episodes, total_coverage, num_episodes))
         print("Visible area: {}, {}, {}".format(visible_area/num_episodes, visible_area, num_episodes))
+        print("Total peeks: {}, {}, {}".format(total_peeks/num_episodes, total_peeks, num_episodes))
+        print("Total Pano turns: {}, {}, {}".format(total_pano_turns/num_episodes, total_pano_turns, num_episodes))
+        print("Total Beeline: {}, {}, {}".format(total_beeline/num_episodes, total_beeline, num_episodes))
         print("Failed episodes: {}".format(fails))
         stats = {
             "spl": spl/num_episodes,
@@ -465,6 +491,9 @@ def main():
     parser.add_argument(
         "--sem-seg", dest='sem_seg', action='store_true'
     )
+    parser.add_argument(
+        "--stats", type=str, default="data/stats/objectnav/human_val.json"
+    )
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
@@ -472,7 +501,7 @@ def main():
     cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
 
     if args.metrics:
-        cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "ROOM_REVISITATION_MAP"]
+        cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]
     
     if args.is_thda:
         cfg.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"

@@ -7,25 +7,28 @@ ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/pick_and_place/s_path_full/seed_1/"
-VIDEO_DIR: "video_dir/pick_and_place/s_path_full/seed_1/"
-# To evaluate on all episodes, set this to -1
+TENSORBOARD_DIR: "tb/pick_and_place/unseen_scenes/seed_1/eval_metrics/"
+VIDEO_DIR: "video_dir/pick_and_place/unseen_scenes/seed_1/eval_metrics/"
+# To evaluate on all episodes, set this to -1d
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/pick_and_place/s_path_full/v4_1node_ep10_seed3.ckpt"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/pick_and_place/unseen_scenes/unseen_scenes_1node_ep10_seed2.ckpt"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints/pick_and_place/s_path_full/seed_1/"
+NUM_PROCESSES: 2
+CHECKPOINT_FOLDER: "data/new_checkpoints/unseen_scenes/seed_1/"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 1
-DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/s_path_full/{split}/{scene_split}.db"
+DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/unseen_scenes/{split}/{scene_split}.db"
 RESULTS_DIR: "data/object_rearrangement/results/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/object_rearrangement/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "test"
+  SPLIT: "eval"
+  sample: False
+  semantic_metrics: True
+  evaluation_meta_file: "tb/pick_and_place/unseen_scenes/seed_1/evaluation_meta_full_unseen_scenes.json"
 
 IL:
   USE_IW: True
@@ -34,11 +37,11 @@ IL:
     lr: 0.001
     max_epochs: 10
     batch_size: 8
-    timestep_batch_size: 512
+    timestep_batch_size: 256
     freeze_encoder: False
 
 RL:
-  REWARD_MEASURE: "agent_receptacle_distance"
+  REWARD_MEASURE: "rearrangement_reward"
   REWARD_MEASURE_2: "agent_object_distance"
   SUCCESS_MEASURE: "success"
   SLACK_REWARD: -0.01

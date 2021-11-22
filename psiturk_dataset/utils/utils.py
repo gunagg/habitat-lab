@@ -1,6 +1,7 @@
 import gzip
 import json
 
+import matplotlib.pyplot as plt
 
 def write_json(data, path):
     with open(path, 'w') as file:
@@ -68,3 +69,24 @@ def get_unique_scenes(episodes):
     for ep in episodes:
         scenes.append(ep["scene_id"])
     return list(set(scenes))
+
+def prep_plt(ax=None):
+    SMALL_SIZE = 18
+    MEDIUM_SIZE = 24
+    LARGE_SIZE = 35
+    plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+    plt.rc('axes', labelsize=LARGE_SIZE)    # fontsize of the x and y labels
+    plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
+    plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
+    plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+    plt.style.use('seaborn-muted')
+    plt.figure(figsize=(6,4))
+    if ax is None:
+        ax = plt.gca()
+    spine_alpha = 0.3
+    ax.spines['right'].set_alpha(spine_alpha)
+    ax.spines['bottom'].set_alpha(spine_alpha)
+    ax.spines['left'].set_alpha(spine_alpha)
+    ax.spines['top'].set_alpha(spine_alpha)
+    ax.grid(alpha=0.25)
+    plt.tight_layout()

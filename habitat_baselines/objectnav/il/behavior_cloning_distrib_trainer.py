@@ -117,14 +117,14 @@ class ObjectNavDistribBCTrainer(BaseILTrainer):
         rgb_frame = observations_to_image(
                         {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
                     )
-        depth_frame = observations_to_image(
-                        {"depth": observations["depth"][env_idx]}, {}
-                    )
         rgb_path = os.path.join(path.format(split=split, type="rgb"), "frame_{}".format(episode_id))
-        #save_frame(rgb_frame, rgb_path)
-
-        depth_path = os.path.join(path.format(split=split, type="depth"), "frame_{}".format(episode_id))
-        #save_frame(depth_frame, depth_path)
+        save_frame(rgb_frame, rgb_path)
+        if "top_down_map" in infos[env_idx]:
+            top_down_frame = observations_to_image(
+                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx], top_down_map_only=True
+                    )
+            top_down_path = os.path.join(path.format(split=split, type="top_down_map"), "frame_{}".format(episode_id))
+            save_frame(top_down_frame, top_down_path)
 
 
     METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward", "coverage"}

@@ -1,7 +1,7 @@
 #!/bin/bash
-source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+source /srv/share3/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate
-conda activate habitat
+conda activate habitat-3
 
 cd /srv/share3/rramrakhya6/habitat-lab
 echo "Starting eval"

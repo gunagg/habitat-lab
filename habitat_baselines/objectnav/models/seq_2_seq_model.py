@@ -95,6 +95,8 @@ class Seq2SeqNet(Net):
                 model_config.DEPTH_ENCODER.output_size
                 + model_config.RGB_ENCODER.output_size
             )
+        else:
+            logger.info("Setting up no vision baseline")
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[

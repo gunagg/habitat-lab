@@ -277,7 +277,7 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
             if "_shortest_path_cache" in episode:
                 del episode["_shortest_path_cache"]
             episode = ObjectGoalNavEpisode(**episode)
-            # episode.episode_id = str(i)
+            episode.episode_id = str(i)
 
             if scenes_dir is not None:
                 if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):

@@ -4,13 +4,13 @@ ENV_NAME: RearrangementRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/ddppo_delta_dist_one_grab_with_penalty_pos/seed_1/eval"
-VIDEO_DIR: "video_dir/ddppo_delta_dist_one_grab_with_penalty_pos/seed_1/eval"
+TENSORBOARD_DIR: "tb/ddppo_delta_dist_one_grab_with_penalty_pos/seed_2/"
+VIDEO_DIR: "video_dir/ddppo_delta_dist_one_grab_with_penalty_pos/seed_2/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_delta_dist_one_grab_with_penalty_pos/seed_1/ckpt.4.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/ddppo_delta_dist_one_grab_with_penalty_pos/seed_2/ckpt.4.pth"
 NUM_PROCESSES: 5
-CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_delta_dist_one_grab_with_penalty_pos/seed_1/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/ddppo_delta_dist_one_grab_with_penalty_pos/seed_2/"
 OUTPUT_LOG_DIR: data/object_rearrangement/logs
 NUM_UPDATES: 50000
 LOG_INTERVAL: 10

@@ -55,10 +55,14 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     requeue_job,
     save_interrupted_state,
 )
+from habitat_baselines.utils.visualizations.utils import (
+    save_frame,
+)
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
-from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, get_distance
 from PIL import Image
+from psiturk_dataset.utils.utils import write_json
+from psiturk_dataset.generator.objectnav_shortest_path_generator import get_episode_json
 
 
 @baseline_registry.register_trainer(name="rearrangement-behavior-cloning-distrib")
@@ -91,13 +95,12 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
 
     def _save_results(
         self,
-        gt_rgb: torch.Tensor,
-        pred_rgb: torch.Tensor,
-        gt_seg: torch.Tensor,
-        pred_seg: torch.Tensor,
-        gt_depth: torch.Tensor,
-        pred_depth: torch.Tensor,
+        observations,
+        infos,
         path: str,
+        env_idx: int,
+        split: str,
+        episode_id: int
     ) -> None:
         r"""For saving EQA-CNN-Pretrain reconstruction results.
 
@@ -110,12 +113,23 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
             pred_depth: depth map output
             path: to write file
         """
+        rgb_frame = observations_to_image(
+                        {"rgb": observations["rgb"][env_idx]}, {}
+                    )
+        dirname = os.path.join(path.format(split=split, type="rgb"), "{}".format(episode_id.split("_")[0]))
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+        rgb_path = os.path.join(dirname, "frame_{}".format(episode_id))
+        save_frame(rgb_frame, rgb_path)
+        if "top_down_map" in infos[env_idx]:
+            top_down_frame = observations_to_image(
+                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx], top_down_map_only=True
+                    )
+            top_down_path = os.path.join(path.format(split=split, type="top_down_map"), "frame_{}".format(episode_id))
+            save_frame(top_down_frame, top_down_path)
+        
 
-        save_rgb_results(gt_rgb[0], pred_rgb[0], path)
-        save_seg_results(gt_seg[0], pred_seg[0], path)
-        save_depth_results(gt_depth[0], pred_depth[0], path)
-
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward", "coverage"}
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "goal_vis_pixels", "rearrangement_reward", "coverage", "collisions.count", "release_failed", "object_receptacle_distance", "exploration_metrics", "room_visitation_map"}
 
     @classmethod
     def _extract_scalars_from_info(
@@ -323,10 +337,10 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
         # Distributed data parallel setup
         if torch.cuda.is_available():
             self.model = torch.nn.parallel.DistributedDataParallel(
-                self.model, device_ids=[self.device], output_device=self.device, find_unused_parameters=True
+                self.model, device_ids=[self.device], output_device=self.device
             )
         else:
-            self.model = torch.nn.parallel.DistributedDataParallel(self.model, find_unused_parameters=True)    
+            self.model = torch.nn.parallel.DistributedDataParallel(self.model)    
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
@@ -556,6 +570,12 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
             if config.SHOW_TOP_DOWN_MAP:
                 config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config.freeze()
+        
+        config.defrost()
+        if hasattr(config.EVAL, "semantic_metrics") and config.EVAL.semantic_metrics:
+            config.TASK_CONFIG.TASK.MEASUREMENTS = config.TASK_CONFIG.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]
+            logger.info("Setting up semantic exploration metrics")
+        config.freeze()
 
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         batch_size = config.IL.BehaviorCloning.batch_size
@@ -632,6 +652,11 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
         action_match_count = [(0, 0)] * self.envs.num_envs
         possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
         episode_count = 0
+
+        ep_actions = [
+            [] for _ in range(self.config.NUM_PROCESSES)
+        ]  # type: List[List[np.ndarray]]
+        evaluation_meta = []
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -705,26 +730,61 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
                     next_episodes = self.envs.current_episodes()
                     episode_count += 1
 
+                    ep_metrics = copy.deepcopy(episode_stats)
+                    if "room_visitation_map" in infos[i]:
+                        ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
+                    if "exploration_metrics" in infos[i]:
+                        ep_metrics["exploration_metrics"] = infos[i]["exploration_metrics"]
+                    evaluation_meta.append({
+                        "scene_id": current_episodes[i].scene_id,
+                        "episode_id": current_episodes[i].episode_id,
+                        "metrics": ep_metrics,
+                        "instruction": current_episodes[i].instruction.instruction_text
+                    })
+                    write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
+
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
-                            episode_id=episode_count,
+                            episode_id=episode_count, #current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
                         )
 
+                        self._save_results(
+                            batch,
+                            infos,
+                            config.RESULTS_DIR,
+                            i,
+                            config.EVAL.SPLIT,
+                            current_episodes[i].episode_id,
+                        )
+
                         rgb_frames[i] = []
+                        ep_actions[i] = []
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
-                    frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))
+                    # frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))
                     rgb_frames[i].append(frame)
+                    ep_actions[i].append({
+                        "action": action_names[i]
+                    })
+
+                    # self._save_results(
+                    #     batch,
+                    #     infos,
+                    #     config.RESULTS_DIR,
+                    #     i,
+                    #     config.EVAL.SPLIT,
+                    #     "{}_{}".format(current_episodes[i].episode_id, len(rgb_frames[i])),
+                    # )
 
 
             (
@@ -760,6 +820,8 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
         step_id = checkpoint_index
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]
+        
+        write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
 
         writer.add_scalars(
             "eval_reward",

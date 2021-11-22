@@ -109,7 +109,7 @@ def images_to_video(
     images: List[np.ndarray],
     output_dir: str,
     video_name: str,
-    fps: int = 15,
+    fps: int = 5,
     quality: Optional[float] = 5,
     **kwargs,
 ):
@@ -160,7 +160,7 @@ def draw_collision(view: np.ndarray, alpha: float = 0.4) -> np.ndarray:
     return view
 
 
-def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
+def observations_to_image(observation: Dict, info: Dict, top_down_map_only=False) -> np.ndarray:
     r"""Generate image of single frame from observation and info
     returned from a single environment step().
 
@@ -231,6 +231,11 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
             info["top_down_map"], egocentric_view.shape[0]
         )
         frame = np.concatenate((egocentric_view, top_down_map), axis=1)
+        if top_down_map_only:
+            top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+                info["top_down_map"], 512
+            )
+            frame = top_down_map
     return frame
 
 
@@ -245,7 +250,7 @@ def append_text_to_image(image: np.ndarray, text: str):
         A new image with text inserted underneath the input image
     """
     h, w, c = image.shape
-    font_size = 0.5
+    font_size = 1.5
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
     blank_image = np.zeros(image.shape, dtype=np.uint8)

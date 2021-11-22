@@ -1,6 +1,6 @@
 #!/bin/bash
-source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
-conda activate habitat
+source /srv/share3/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+conda activate habitat-3
 
 cd /srv/share3/rramrakhya6/habitat-lab
 echo "Starting video generation"

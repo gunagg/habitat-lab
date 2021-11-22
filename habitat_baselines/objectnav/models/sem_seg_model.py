@@ -34,6 +34,8 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetNet
 from habitat_baselines.objectnav.models.rednet import load_rednet
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
 from habitat_baselines.rl.ddppo.algo.ddppo import DecentralizedDistributedMixin
+from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.rl.ppo import Net, Policy
 
 from habitat.utils.visualizations.utils import observations_to_image, images_to_video
 
@@ -49,7 +51,7 @@ class SemSegSeqNet(Net):
         RNN state encoder
     """
 
-    def __init__(self, observation_space: Space, model_config: Config, num_actions, device):
+    def __init__(self, observation_space: Space, model_config: Config, num_actions, device=None):
         super().__init__()
         self.model_config = model_config
         rnn_input_size = 0
@@ -182,6 +184,9 @@ class SemSegSeqNet(Net):
                 )
                 + 1
             )
+            if self.is_thda:
+                self._n_object_categories += 7
+            logger.info("Object categorues: {}".format(self._n_object_categories))
             self.obj_categories_embedding = nn.Embedding(
                 self._n_object_categories, 32
             )
@@ -355,7 +360,7 @@ class SemSegSeqNet(Net):
 
 class SemSegSeqModel(nn.Module):
     def __init__(
-        self, observation_space: Space, action_space: Space, model_config: Config, device
+        self, observation_space: Space, action_space: Space, model_config: Config, device=None
     ):
         super().__init__()
         self.net = SemSegSeqNet(
@@ -379,17 +384,7 @@ class SemSegSeqModel(nn.Module):
         distribution = self.action_distribution(features)
 
         return distribution.logits, rnn_hidden_states
-    
-    # def act(
-    #     self, observations, rnn_hidden_states, prev_actions, masks
-    # ) -> CustomFixedCategorical:
 
-    #     features, rnn_hidden_states = self.net(
-    #         observations, rnn_hidden_states, prev_actions, masks
-    #     )
-    #     distribution = self.action_distribution(features)
-
-    #     return distribution, rnn_hidden_states
 
 class SemSegSeqPolicy(nn.Module):
     def __init__(
@@ -413,6 +408,31 @@ class SemSegSeqPolicy(nn.Module):
         )
 
         return logits, rnn_hidden_states
+
+
+@baseline_registry.register_policy
+class SemSegILPolicy(Policy):
+    def __init__(
+        self, observation_space: Space, action_space: Space, model_config: Config
+    ):
+        super().__init__(
+            SemSegSeqNet(
+                observation_space=observation_space,
+                model_config=model_config,
+                num_actions=action_space.n,
+            ),
+            action_space.n
+        )
+
+    @classmethod
+    def from_config(
+        cls, config: Config, observation_space, action_space
+    ):
+        return cls(
+            observation_space=observation_space,
+            action_space=action_space,
+            model_config=config.MODEL,            
+        )
 
 
 class DDPSemSegSeqModel(DecentralizedDistributedMixin, SemSegSeqPolicy):

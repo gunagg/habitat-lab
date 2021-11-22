@@ -154,8 +154,8 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                     observations = env._sim.get_observations_at(agent_state.position, agent_state.rotation, sensor_states, object_states)
 
                 info = env.get_metrics()
-                frame = observations_to_image({"rgb": observations["rgb"]}, info)
-                frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
+                frame = observations_to_image({"rgb": observations["rgb"]}, {})
+                # frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
                 total_reward += info["rearrangement_reward"]
                 success = info["success"]
 
@@ -170,6 +170,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             # save_image(frame, "s_path_{}.png".format(ep_id))
             make_videos([observation_list], output_prefix, ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, success))
+            # break
 
         print("split: {}".format(cfg.DATASET.DATA_PATH))
         print("Average success: {} - {} - {}".format(total_success / num_episodes, total_success, num_episodes))

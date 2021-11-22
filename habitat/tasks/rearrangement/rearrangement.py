@@ -23,6 +23,7 @@ from habitat.tasks.nav.nav import (
     merge_sim_episode_config,
     DistanceToGoal,
     TopDownMap,
+    EpisodicGPSSensor,
     PointGoalSensor
 )
 from habitat.core.dataset import Dataset, Episode
@@ -34,6 +35,37 @@ from habitat.sims.habitat_simulator.actions import (
 from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
+
+task_cat2mpcat40 = [
+    3,  # ('chair', 2, 0)
+    5,  # ('table', 4, 1)
+    6,  # ('picture', 5, 2)
+    7,  # ('cabinet', 6, 3)
+    8,  # ('cushion', 7, 4)
+    10,  # ('sofa', 9, 5),
+    11,  # ('bed', 10, 6)
+    13,  # ('chest_of_drawers', 12, 7),
+    14,  # ('plant', 13, 8)
+    15,  # ('sink', 14, 9)
+    18,  # ('toilet', 17, 10),
+    19,  # ('stool', 18, 11),
+    20,  # ('towel', 19, 12)
+    22,  # ('tv_monitor', 21, 13)
+    23,  # ('shower', 22, 14)
+    25,  # ('bathtub', 24, 15)
+    26,  # ('counter', 25, 16),
+    27,  # ('fireplace', 26, 17),
+    33,  # ('gym_equipment', 32, 18),
+    34,  # ('seating', 33, 19),
+    38,  # ('clothes', 37, 20),
+    43,  # ('foodstuff', 42, 21),
+    44,  # ('stationery', 43, 22),
+    45,  # ('fruit', 44, 23),
+    46,  # ('plaything', 45, 24),
+    47,  # ('hand_tool', 46, 25),
+    48,  # ('game_equipment', 47, 26),
+    49,  # ('kitchenware', 48, 27)
+]
 
 @attr.s(auto_attribs=True)
 class InstructionData:
@@ -165,7 +197,7 @@ class InstructionSensor(Sensor):
         return spaces.Box(
             low=0,
             high=66,
-            shape=(10,),
+            shape=(11,),
             dtype=np.int64,
         )
 
@@ -375,8 +407,12 @@ class ObjectToReceptacleDistance(Measure):
             if self._metric == np.inf or self._metric == np.nan:
                 was_nan = True
                 self._metric = 2.0
-        if was_nan:
-            logger.error("object receptacle distance is nan: {} -- {} - {} -- {}".format(receptacle_id, obj_id, object_position, episode.episode_id))
+        self._metric = {
+            "was_nan": was_nan,
+            "metric": self._metric
+        }
+        # if was_nan:
+        #     logger.error("object receptacle distance is nan: {} -- {} - {} -- {}".format(receptacle_id, obj_id, object_position, episode.episode_id))
 
 
 @registry.register_measure
@@ -442,6 +478,10 @@ class AgentToObjectDistance(Measure):
                 self._metric = 2.0
         else:
             self._metric = 0.0
+        self._metric = {
+            "was_nan": was_nan,
+            "metric": self._metric
+        }
         if was_nan:
             logger.error("Agent object distance is inf: {} -- {} -- {}".format(sim_obj_id, object_position, episode.episode_id))
 
@@ -489,7 +529,7 @@ class AgentToReceptacleDistance(Measure):
             scene_object = self._sim.get_object_from_scene(object_id)
             if scene_object.is_receptacle == True:
                 sim_obj_id = scene_object.object_id
-        
+        was_nan = False
         if sim_obj_id != -1:
             receptacle_position = np.array(
                 self._sim.get_translation(sim_obj_id)
@@ -506,6 +546,12 @@ class AgentToReceptacleDistance(Measure):
             if self._metric == np.inf or self._metric == np.nan:
                 was_nan = True
                 self._metric = 2.0
+        else:
+            self._metric = 0.0
+        self._metric = {
+            "was_nan": was_nan,
+            "metric": self._metric
+        }
 
 
 @registry.register_measure
@@ -516,6 +562,7 @@ class GoalObjectVisible(Measure):
     def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._config = config
+        self.task_cat2mpcat40 = task_cat2mpcat40
 
         super().__init__()
 
@@ -548,6 +595,16 @@ class GoalObjectVisible(Measure):
             goal_visible_pixels += (semantic == semantic_object_id).sum() # Sum over all since we're not batched
             goal_visible_area = goal_visible_pixels / semantic.size
             self._metric = goal_visible_area
+
+            # obj_semantic = observations["semantic"]
+            # # permute tensor to dimension [CHANNEL x HEIGHT X WIDTH]
+            # idx = self.task_cat2mpcat40[
+            #     observations["objectgoal"][0]
+            # ]  # task._dataset.category_to_task_category_id[episode.object_category], task._dataset.category_to_scene_annotation_category_id[episode.object_category], observations["objectgoal"][0]
+
+            # goal_visible_pixels = (obj_semantic == idx).sum() # Sum over all since we're not batched
+            # goal_visible_area = goal_visible_pixels / obj_semantic.size
+            # self._metric = goal_visible_area
 
 
 @registry.register_measure
@@ -677,6 +734,43 @@ class CoverageExplorationReward(Measure):
 
 
 @registry.register_measure
+class ExploreThenNavReward(CoverageExplorationReward):
+    # Stop count-based coverage once goal is seen
+
+    cls_uuid: str = "explore_then_nav_reward"
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._goal_was_seen = False
+        self._previous_measure = None
+
+    def reset_metric(self, episode, task, *args, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.cls_uuid,
+            [
+                Coverage.cls_uuid,
+                GoalObjectVisible.cls_uuid,
+                DistanceToGoal.cls_uuid,
+            ]
+        )
+        self._goal_was_seen = False
+        self._previous_measure = None
+        super().reset_metric(episode, task, *args, **kwargs)
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
+        if self._goal_was_seen:
+            measure = task.measurements.measures[DistanceToGoal.cls_uuid].get_metric()
+            self._metric = self._previous_measure - measure
+            return
+        goal_vis = task.measurements.measures[GoalObjectVisible.cls_uuid].get_metric()
+        if goal_vis > self._config.EXPLORE_GOAL_SEEN_THRESHOLD:
+            self._goal_was_seen = True
+            self._previous_measure = task.measurements.measures[DistanceToGoal.cls_uuid].get_metric()
+        super().update_metric(*args, episode, task, **kwargs)
+
+
+@registry.register_measure
 class ReleaseFailed(Measure):
     r"""Grab Success - whether an object was grabbed during episode or not
     """
@@ -778,8 +872,8 @@ class RearrangementReward(Measure):
         self._recetpacle_was_seen = False
         self._attenuation_penalty = 1.0
         self._gripped_object_count = defaultdict(int)
-        self._previous_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()
-        self._previous_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
+        self._previous_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()["metric"]
+        self._previous_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()["metric"]
         self._previous_gripped_object_id = -1
         self._previous_exploration_area = None
         self._previous_placement_success = 0
@@ -804,8 +898,8 @@ class RearrangementReward(Measure):
     def reward_grab_success(self, episode, task, action, observations, *args: Any, **kwargs: Any):
         reward = 0.0
         action_name = task.get_action_name(action["action"])
-        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
-        current_object_receptacle_distance = task.measurements.measures[ObjectToReceptacleDistance.cls_uuid].get_metric()
+        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()["metric"]
+        current_object_receptacle_distance = task.measurements.measures[ObjectToReceptacleDistance.cls_uuid].get_metric()["metric"]
 
         if action_name != "GRAB_RELEASE":
             return reward
@@ -853,8 +947,8 @@ class RearrangementReward(Measure):
         **kwargs: Any,
     ):
         reward = 0
-        current_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()
-        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
+        current_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()["metric"]
+        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()["metric"]
         action_name = task.get_action_name(action["action"])
 
         if action_name != "GRAB_RELEASE" and self._previous_gripped_object_id == -1:
@@ -1078,8 +1172,8 @@ class RearrangementReward(Measure):
         # reward = self._config.SLACK_REWARD if self.step_count > 20 else 0
         reward = 0
 
-        current_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()
-        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()
+        current_agent_object_distance = task.measurements.measures[AgentToObjectDistance.cls_uuid].get_metric()["metric"]
+        current_agent_receptacle_distance = task.measurements.measures[AgentToReceptacleDistance.cls_uuid].get_metric()["metric"]
 
         if self._config.MODE == "DISTANCE_TO_GOAL_PLUS_VISIBLE":
             reward += self.reward_distance_to_object_plus_visible(
@@ -1158,7 +1252,7 @@ class RearrangementSuccess(Measure):
     ):
         distance_to_target = task.measurements.measures[
             ObjectToReceptacleDistance.cls_uuid
-        ].get_metric()
+        ].get_metric()["metric"]
         object_ids = self._sim.get_existing_object_ids()
 
         obj_id = -1
@@ -1227,9 +1321,9 @@ class RearrangementSPL(Measure):
         self._agent_episode_distance = 0.0
         self._start_end_episode_distance = task.measurements.measures[
             AgentToObjectDistance.cls_uuid
-        ].get_metric() + task.measurements.measures[
+        ].get_metric()["metric"] + task.measurements.measures[
             ObjectToReceptacleDistance.cls_uuid
-        ].get_metric() 
+        ].get_metric()["metric"] 
         self.update_metric(  # type:ignore
             episode=episode, task=task, *args, **kwargs
         )

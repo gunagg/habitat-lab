@@ -1,17 +1,18 @@
 #!/bin/bash
-#SBATCH --job-name=ddppo_one
-#SBATCH --gres gpu:2
-#SBATCH --nodes 1
+#SBATCH --job-name=ddppo_pp
+#SBATCH --gres gpu:8
+#SBATCH --nodes 2
 #SBATCH --cpus-per-task 6
-#SBATCH --ntasks-per-node 2
-#SBATCH --partition=long
-#SBATCH --constraint=rtx_6000
+#SBATCH --ntasks-per-node 8
+#SBATCH --partition=user-overcap
+#SBATCH --qos=ram-special
+#SBATCH --constraint=a40
 #SBATCH --output=slurm_logs/ddppo-%j.out
 #SBATCH --error=slurm_logs/ddppo-%j.err
 
-source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+source /srv/share3/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate
-conda activate habitat
+conda activate habitat-3
 
 cd /srv/share3/rramrakhya6/habitat-lab
 

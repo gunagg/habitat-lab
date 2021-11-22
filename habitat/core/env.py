@@ -228,8 +228,9 @@ class Env:
         instance_id_to_label_id = {int(obj.id.split("_")[-1]): obj.category.index() for obj in scene.objects}
         self.mapping = np.array([ instance_id_to_label_id[i] for i in range(len(instance_id_to_label_id)) ])
 
+        is_rearrangement = "Rearrangement" in self._config.DATASET.TYPE
         # ! MP3D object id to category ID mapping
-        if 'semantic' in observations: # If no map, then we're using semantics on scene without
+        if not is_rearrangement and 'semantic' in observations: # If no map, then we're using semantics on scene without
             # Should raise a warning, but just driving ahead for now
             if self.mapping.size > 0:
                 if len(self.sim.obj_sem_id_to_sem_category_mapping.keys()) > 0:
@@ -302,8 +303,9 @@ class Env:
             action=action, episode=self.current_episode
         )
 
+        is_rearrangement = "Rearrangement" in self._config.DATASET.TYPE
         # Instance to sem seg
-        if 'semantic' in observations:
+        if not is_rearrangement and  'semantic' in observations:
             if self.mapping.size > 0:
                 observations['semantic'] = np.take(self.mapping, observations['semantic'])
             else:

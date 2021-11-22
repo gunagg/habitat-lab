@@ -1264,7 +1264,7 @@ def get_active_obs_transforms(config: Config) -> List[ObservationTransformer]:
             obs_transform = obs_trans_cls.from_config(config)
             active_obs_transforms.append(obs_transform)
     
-    if hasattr(config.IL, "OBS_TRANSFORMS"):
+    if hasattr(config, "IL") and hasattr(config.IL, "OBS_TRANSFORMS"):
         obs_transform_names = (
             config.IL.OBS_TRANSFORMS.ENABLED_TRANSFORMS, 
         )

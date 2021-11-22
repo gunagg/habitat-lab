@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
 #SBATCH --signal=USR1@300
-#SBATCH --partition=long
+#SBATCH --partition=user-overcap
 #SBATCH --qos=ram-special
 #SBATCH --constraint=a40
 #SBATCH --output=slurm_logs/ddppo-%j.out
@@ -44,9 +44,14 @@ elif [[ $sensor == "recollect" ]]; then
     srun python -u -m habitat_baselines.run \
     --exp-config habitat_baselines/config/objectnav/il_recollect_ddp_objectnav.yaml \
     --run-type train
-else
+elif [[ $sensor == "il" ]]; then
     echo "In ObjectNav IL DDP"
     srun python -u -m habitat_baselines.run \
     --exp-config habitat_baselines/config/objectnav/il_objectnav.yaml \
+    --run-type train
+else
+    echo "In ObjectNav IL+RL FT DDP"
+    srun python -u -m habitat_baselines.run \
+    --exp-config habitat_baselines/config/objectnav/ddppo_ft_objectnav.yaml \
     --run-type train
 fi

@@ -45,6 +45,7 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 from habitat_baselines.utils.common import batch_obs, linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
+from habitat_baselines.objectnav.models.rednet import load_rednet
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -87,6 +88,16 @@ class DDPPOTrainer(PPOTrainer):
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
 
+        self.semantic_predictor = None
+        if self.config.MODEL.USE_PRED_SEMANTICS:
+            self.semantic_predictor = load_rednet(
+                self.device,
+                ckpt=self.config.MODEL.SEMANTIC_ENCODER.rednet_ckpt,
+                resize=True, # since we train on half-vision
+                num_classes=self.config.MODEL.SEMANTIC_ENCODER.num_classes
+            )
+            self.semantic_predictor.eval()
+
         if (
             self.config.RL.DDPPO.pretrained_encoder
             or self.config.RL.DDPPO.pretrained
@@ -100,7 +111,7 @@ class DDPPOTrainer(PPOTrainer):
                 {
                     k[len("actor_critic.") :]: v
                     for k, v in pretrained_state["state_dict"].items()
-                }
+                }, strict=False
             )
         elif self.config.RL.DDPPO.pretrained_encoder:
             prefix = "actor_critic.net.visual_encoder."
@@ -115,6 +126,16 @@ class DDPPOTrainer(PPOTrainer):
         if not self.config.RL.DDPPO.train_encoder:
             self._static_encoder = True
             for param in self.actor_critic.net.visual_encoder.parameters():
+                param.requires_grad_(False)
+        
+        self._static_vis_encoder = False
+        if hasattr(self.config, "MODEL") and self.config.MODEL.freeze_encoders:
+            self._static_vis_encoder = True
+            for param in self.actor_critic.net.depth_encoder.parameters():
+                param.requires_grad_(False)
+            for param in self.actor_critic.net.rgb_encoder.parameters():
+                param.requires_grad_(False)
+            for param in self.actor_critic.net.sem_seg_encoder.parameters():
                 param.requires_grad_(False)
 
         if self.config.RL.DDPPO.reset_critic:
@@ -159,6 +180,7 @@ class DDPPOTrainer(PPOTrainer):
 
         self.world_rank = distrib.get_rank()
         self.world_size = distrib.get_world_size()
+        self.current_update = 0
 
         self.config.defrost()
         self.config.TORCH_GPU_ID = self.local_rank
@@ -208,6 +230,13 @@ class DDPPOTrainer(PPOTrainer):
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
+
+        if self.config.MODEL.USE_PRED_SEMANTICS and self.current_update >= self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE:
+            batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+            # Subtract 1 from class labels for THDA YCB categories
+            if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                batch["semantic"] = batch["semantic"] - 1
+
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         obs_space = self.obs_space
@@ -296,6 +325,7 @@ class DDPPOTrainer(PPOTrainer):
             for update in range(start_update, self.config.NUM_UPDATES):
                 profiling_wrapper.on_start_step()
                 profiling_wrapper.range_push("train update")
+                self.current_update += 1
 
                 if ppo_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore
@@ -364,6 +394,11 @@ class DDPPOTrainer(PPOTrainer):
                 self.agent.train()
                 if self._static_encoder:
                     self._encoder.eval()
+                
+                if self._static_vis_encoder:
+                    self.actor_critic.net.rgb_encoder.eval()
+                    self.actor_critic.net.depth_encoder.eval()
+                    self.actor_critic.net.sem_seg_encoder.eval()
 
                 (
                     delta_pth_time,

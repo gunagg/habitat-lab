@@ -1,18 +1,18 @@
 #!/bin/bash
-#SBATCH --job-name=ddp_onav
+#SBATCH --job-name=onav_eval
 #SBATCH --gres gpu:1
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --partition=short
+#SBATCH --partition=long
 #SBATCH --qos=ram-special
 #SBATCH --constraint=rtx_6000
 #SBATCH --output=slurm_logs/eval/eval-%j.out
 #SBATCH --error=slurm_logs/eval/eval-%j.err
 
-source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+source /srv/share3/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate
-conda activate habitat
+conda activate habitat-3
 
 cd /srv/share3/rramrakhya6/habitat-lab
 

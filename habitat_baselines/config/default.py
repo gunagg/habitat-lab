@@ -51,8 +51,15 @@ _C.EVAL.USE_CKPT_CONFIG = True
 _C.RL = CN()
 _C.RL.REWARD_MEASURE = "distance_to_goal"
 _C.RL.SUCCESS_MEASURE = "spl"
-_C.RL.SUCCESS_REWARD = 10.0
+_C.RL.SUCCESS_REWARD = 2.5
 _C.RL.SLACK_REWARD = -0.01
+_C.RL.COVERAGE_REWARD = 0.25
+_C.RL.COVERAGE_ATTENUATION = 0.99
+_C.RL.COVERAGE_VISIT_EXP = 1
+_C.RL.COVERAGE_BONUS_SCALE = 0.5 # We see coverages of around 5-10
+_C.RL.COVERAGE_FALLOFF_RADIUS = 2.0
+_C.RL.COVERAGE_TYPE = "VISIT" # Or "FOG_OF_WAR"
+_C.RL.EXPLORE_GOAL_SEEN_THRESHOLD = 0.05 # Transition for ExploreThenNav
 # -----------------------------------------------------------------------------
 # POLICY CONFIG
 # -----------------------------------------------------------------------------

@@ -154,7 +154,7 @@ _C.TASK.TOP_DOWN_MAP = CN()
 _C.TASK.TOP_DOWN_MAP.TYPE = "TopDownMap"
 _C.TASK.TOP_DOWN_MAP.MAX_EPISODE_STEPS = _C.ENVIRONMENT.MAX_EPISODE_STEPS
 _C.TASK.TOP_DOWN_MAP.MAP_PADDING = 3
-_C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 256
+_C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1024
 _C.TASK.TOP_DOWN_MAP.DRAW_SOURCE = True
 _C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
 _C.TASK.TOP_DOWN_MAP.DRAW_SHORTEST_PATH = True
@@ -166,6 +166,31 @@ _C.TASK.TOP_DOWN_MAP.DRAW_VIEW_POINTS = True
 _C.TASK.TOP_DOWN_MAP.DRAW_GOAL_POSITIONS = True
 # Axes aligned bounding boxes
 _C.TASK.TOP_DOWN_MAP.DRAW_GOAL_AABBS = True
+
+# -----------------------------------------------------------------------------
+# # COVERAGE MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.COVERAGE = CN()
+_C.TASK.COVERAGE.TYPE = "Coverage"
+_C.TASK.COVERAGE.GRID_DELTA = 0.25
+_C.TASK.COVERAGE.EGOCENTRIC = False # Agent will spawn centered on a tile, as opposed to global
+
+
+_C.TASK.GOAL_OBJECT_VISIBLE = CN() # nb: this is fraction of view, not pixels
+_C.TASK.GOAL_OBJECT_VISIBLE.TYPE = "GoalObjectVisible"
+
+# -----------------------------------------------------------------------------
+# ETN REWARD MEASUREMENT
+# -----------------------------------------------------------------------------
+# The next reward (OBJNAV_REWARD) was ported from master, this is my own simpler writeup.
+_C.TASK.ETN_REWARD = CN()
+_C.TASK.ETN_REWARD.TYPE = "ExploreThenNavReward"
+_C.TASK.ETN_REWARD.EXPLORE_GOAL_SEEN_THRESHOLD = 0.02
+# Duplicted from coverage since measure only receives its own config
+_C.TASK.ETN_REWARD.REWARD = 0.25
+_C.TASK.ETN_REWARD.ATTENUATION = 0.995
+_C.TASK.ETN_REWARD.VISIT_EXP = 1
+
 # -----------------------------------------------------------------------------
 # COLLISIONS MEASUREMENT
 # -----------------------------------------------------------------------------

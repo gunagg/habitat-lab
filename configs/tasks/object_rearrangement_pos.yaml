@@ -61,7 +61,7 @@ TASK:
     TYPE: "GoalObjectVisible"
   REARRANGEMENT_REWARD:
     TYPE: "RearrangementReward"
-    MODE: "DISTANCE_TO_GOAL_PLUS_VISIBLE"
+    MODE: "DISTANCE_TO_GOAL_WHEN_VISIBLE_ELSE_EXPLORE"
     OBJECT_SEEN_REWARD_THRESHOLD: 0.001
     RECEPTACLE_SEEN_REWARD_THRESHOLD: 0.001
     OBJECT_SEEN_REWARD: 1.5
@@ -95,6 +95,6 @@ TASK:
 
 DATASET:
   TYPE: RearrangementDataset-v0
-  SPLIT: "train"
-  DATA_PATH: "data/datasets/object_rearrangement/v3/{split}/{split}.json.gz"
+  SPLIT: "train_rl"
+  DATA_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/object_rearrangement/v4/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/habitat-test-scenes/"

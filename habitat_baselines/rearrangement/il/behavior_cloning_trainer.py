@@ -58,7 +58,6 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
 )
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import get_habitat_sim_action, get_habitat_sim_action_str
-from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum, get_distance
 from habitat_baselines.utils.visualizations.utils import (
     save_frame,
 )

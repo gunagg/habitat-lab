@@ -25,6 +25,22 @@ def caclulate_inflections(episode):
 def save_meta_for_analysis(meta, path):
     write_json(meta, path)
 
+
+def get_action_time(action, task="objectnav"):
+    tt = 0
+    if task == "rearrangement":
+        if "TURN" in action or "LOOK" in action:
+            tt = 0.000358 * (5**2) + 0.108 * 5 + 2.23
+        elif "MOVE" in action or "GRAB" in action:
+            tt = 4.2 * 0.15 + 0.362
+    else:
+        if "TURN" in action or "LOOK" in action:
+            tt = 0.000358 * (30**2) + 0.108 * 30 + 2.23
+        elif "MOVE" in action:
+            tt = 4.2 * 0.25 + 0.362
+    return tt
+
+
 def calculate_inflection_weight(path, stats_path):
     data = load_dataset(path)
 
@@ -38,6 +54,7 @@ def calculate_inflection_weight(path, stats_path):
     }
     ep_success_count = 0
     actions_lt_2k = 0
+    wall_clock_time = 0
     for episode in tqdm(episodes):
         num_inflections, num_actions = caclulate_inflections(episode)
         data["episode_length"].append(num_actions)
@@ -47,6 +64,7 @@ def calculate_inflection_weight(path, stats_path):
             if action not in data["action_frequency"]:
                 data["action_frequency"][action] = 0
             data["action_frequency"][action] += 1
+            wall_clock_time += get_action_time(action, "rearrangement")
         
         if len(reference_replay) <= 1500:
             ep_success_count += 1
@@ -64,6 +82,7 @@ def calculate_inflection_weight(path, stats_path):
     print("Total actions: {}".format(total_actions))
     print("Total success: {}".format(ep_success_count / len(episodes)))
     print("Total actions less than 2k: {}".format(actions_lt_2k))
+    print("Wall clock time in hours: {}".format(wall_clock_time / 3600))
 
     instructions = convert_instruction_tokens(episodes)
     print("Num of distinct instructions: {}".format(len(set(instructions))))
@@ -85,7 +104,7 @@ def calculate_inflection_weight_objectnav(path, stats_path):
     }
     mx = 0
     actions_lt_2k = 0
-
+    wall_clock_time = 0
     for file_path in tqdm(files):
         data = load_dataset(file_path)
 
@@ -101,6 +120,7 @@ def calculate_inflection_weight_objectnav(path, stats_path):
                 if action not in data_stats["action_frequency"]:
                     data_stats["action_frequency"][action] = 0
                 data_stats["action_frequency"][action] += 1
+                wall_clock_time += get_action_time(action, "objectnav")
 
             object_category = episode['object_category']
             if object_category not in data_stats['object_frequency']:
@@ -127,6 +147,7 @@ def calculate_inflection_weight_objectnav(path, stats_path):
     print("Average episode length: {}".format(total_actions / total_episodes))
     print("Total actions: {}".format(total_actions))
     print("Total actions less than 2k: {}".format(actions_lt_2k))
+    print("Wall clock time in hours: {}".format(wall_clock_time / 3600))
 
 
 def convert_instruction_tokens(episodes):
