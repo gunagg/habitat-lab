@@ -53,7 +53,7 @@ class RolloutStorage:
             self.actions = self.actions.long()
             self.prev_actions = self.prev_actions.long()
 
-        self.masks = torch.zeros(num_steps + 1, num_envs, 1)
+        self.masks = torch.zeros(num_steps + 1, num_envs, 1).bool()
         self.episode_step_index = [1] * (num_steps + 1)
 
         self.num_steps = num_steps
@@ -92,7 +92,7 @@ class RolloutStorage:
     def update_running_episode_step(self, masks):
         for i in range(self.num_envs):
             self.episode_step_index[i] += 1
-            if masks[self.step][i].item() == 0:
+            if not masks[self.step][i].item():
                 self.episode_step_index[i] = 1
 
     def after_update(self, rnn_hidden_states):

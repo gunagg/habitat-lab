@@ -282,13 +282,14 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones],
-            dtype=torch.float,
+            dtype=torch.bool,
             device=current_episode_reward.device,
         )
+        done_masks = torch.logical_not(masks)
 
         current_episode_reward += rewards
-        running_episode_stats["reward"] += (1 - masks) * current_episode_reward  # type: ignore
-        running_episode_stats["count"] += 1 - masks  # type: ignore
+        running_episode_stats["reward"] += done_masks * current_episode_reward  # type: ignore
+        running_episode_stats["count"] += done_masks  # type: ignore
         for k, v_k in self._extract_scalars_from_infos(infos).items():
             v = torch.tensor(
                 v_k, dtype=torch.float, device=current_episode_reward.device
@@ -298,7 +299,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     running_episode_stats["count"]
                 )
 
-            running_episode_stats[k] += (1 - masks) * v  # type: ignore
+            running_episode_stats[k] += done_masks * v  # type: ignore
 
         current_episode_reward *= masks
 
@@ -712,7 +713,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
-                dtype=torch.float,
+                dtype=torch.bool,
                 device=self.device,
             )
 

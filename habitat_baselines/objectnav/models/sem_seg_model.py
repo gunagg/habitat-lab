@@ -27,7 +27,7 @@ from habitat_baselines.objectnav.models.encoders.resnet_encoders import (
     ResnetSemSeqEncoder,
 )
 from habitat_baselines.objectnav.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
-from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
+from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
 from habitat_baselines.rl.ppo.policy import Net
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
 from habitat_baselines.rl.ddppo.algo.ddppo import DecentralizedDistributedMixin
@@ -144,13 +144,6 @@ class SemSegSeqNet(Net):
             logger.info("Setting up Sem Seg model")
             rnn_input_size += sem_seg_output_size
 
-        # Init the RNN state decoder
-        # rnn_input_size = (
-        #     model_config.DEPTH_ENCODER.output_size
-        #     + model_config.RGB_ENCODER.output_size
-        #     + sem_seg_output_size
-        # )
-
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
                 EpisodicGPSSensor.cls_uuid
@@ -208,11 +201,11 @@ class SemSegSeqNet(Net):
             self.mapping_mpcat40_to_goal = torch.tensor(self.mapping_mpcat40_to_goal, device=device)
             rnn_input_size += 1
 
-        self.state_encoder = RNNStateEncoder(
-            input_size=rnn_input_size,
-            hidden_size=model_config.STATE_ENCODER.hidden_size,
-            num_layers=model_config.STATE_ENCODER.num_recurrent_layers,
+        self.state_encoder = build_rnn_state_encoder(
+            rnn_input_size,
+            model_config.STATE_ENCODER.hidden_size,
             rnn_type=model_config.STATE_ENCODER.rnn_type,
+            num_layers=model_config.STATE_ENCODER.num_recurrent_layers,
         )
 
         self.train()

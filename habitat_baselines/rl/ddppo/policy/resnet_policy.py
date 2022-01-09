@@ -211,7 +211,13 @@ class ResNetEncoder(nn.Module):
             cnn_input.append(depth_observations)
 
         x = torch.cat(cnn_input, dim=1)
-        x = F.avg_pool2d(x, 2)
+
+        if self._frame_size == (256, 256):
+            x = F.avg_pool2d(x, 2)
+        elif self._frame_size == (240, 320):
+            x = F.avg_pool2d(x, (2, 3), padding=(0, 1)) # 240 x 324 -> 120 x 108
+        elif self._frame_size == (480, 640):
+            x = F.avg_pool2d(x, (4, 5))
 
         x = self.running_mean_and_var(x)
         x = self.backbone(x)

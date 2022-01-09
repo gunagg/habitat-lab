@@ -24,7 +24,6 @@ from habitat_baselines.objectnav.models.encoders.simple_cnns import SimpleDepthC
 from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
 from habitat_baselines.rl.ppo.policy import Net
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
-from habitat_baselines.common.baseline_registry import baseline_registry
 
 
 class Seq2SeqNet(Net):
@@ -134,13 +133,6 @@ class Seq2SeqNet(Net):
         if model_config.SEQ2SEQ.use_prev_action:
             self.prev_action_embedding = nn.Embedding(num_actions + 1, 32)
             rnn_input_size += self.prev_action_embedding.embedding_dim
-
-        # self.state_encoder = RNNStateEncoder(
-        #     input_size=rnn_input_size,
-        #     hidden_size=model_config.STATE_ENCODER.hidden_size,
-        #     num_layers=model_config.STATE_ENCODER.num_recurrent_layers,
-        #     rnn_type=model_config.STATE_ENCODER.rnn_type,
-        # )
 
         self.state_encoder = build_rnn_state_encoder(
             rnn_input_size,

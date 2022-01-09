@@ -235,6 +235,9 @@ def batch_obs(
     for sensor_name in sensor_names:
         for i, obs in enumerate(observations):
             sensor = obs[sensor_name]
+            # print(sensor_name)
+            if isinstance(sensor, np.ndarray) and sensor.dtype == np.uint32:
+                sensor = torch.from_numpy(sensor.astype(int))
             if cache is None:
                 batch[sensor_name].append(torch.as_tensor(sensor))
             else:
