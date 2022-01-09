@@ -28,3 +28,17 @@ def _try_register_objectnavdatasetv1():
         class ObjectNavDatasetImportError(Dataset):
             def __init__(self, *args, **kwargs):
                 raise pointnav_import_error
+
+def _try_register_objectnavdatasetv2():
+    try:
+        from habitat.datasets.object_nav.object_nav_dataset import (  # noqa: F401
+            ObjectNavDatasetV2,
+        )
+
+    except ImportError as e:
+        pointnav_import_error = e
+
+        @registry.register_dataset(name="ObjectNav-v2")
+        class ObjectNavDatasetImportError(Dataset):
+            def __init__(self, *args, **kwargs):
+                raise pointnav_import_error

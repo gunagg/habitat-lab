@@ -7,6 +7,8 @@
 import numpy as np
 import quaternion  # noqa: F401 # pylint: disable=unused-import
 
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
+
 
 def quaternion_to_rotation(q_r, q_i, q_j, q_k):
     r"""
@@ -62,3 +64,19 @@ def get_angle(x, y):
     else:
         y_norm = y
     return np.arccos(np.clip(np.dot(x_norm, y_norm), -1, 1))
+
+
+def get_habitat_sim_action(action):
+    if action == "TURN_RIGHT":
+        return HabitatSimActions.TURN_RIGHT
+    elif action == "TURN_LEFT":
+        return HabitatSimActions.TURN_LEFT
+    elif action == "MOVE_FORWARD":
+        return HabitatSimActions.MOVE_FORWARD
+    elif action == "MOVE_BACKWARD":
+        return HabitatSimActions.MOVE_BACKWARD
+    elif action == "LOOK_UP":
+        return HabitatSimActions.LOOK_UP
+    elif action == "LOOK_DOWN":
+        return HabitatSimActions.LOOK_DOWN
+    return HabitatSimActions.STOP

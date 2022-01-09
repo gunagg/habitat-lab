@@ -7,6 +7,7 @@
 
 from typing import Dict, Tuple
 
+import math
 import numpy as np
 import torch
 from gym import spaces
@@ -104,20 +105,39 @@ class ResNetEncoder(nn.Module):
         spatial_size: int = 128,
         make_backbone=None,
         normalize_visual_inputs: bool = False,
+        sem_embedding_size=4,
     ):
         super().__init__()
 
         if "rgb" in observation_space.spaces:
+            self._frame_size = tuple(observation_space.spaces["rgb"].shape[:2])
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
-            spatial_size = observation_space.spaces["rgb"].shape[0] // 2
+            # spatial_size = observation_space.spaces["rgb"].shape[:2] // 2
+            spatial_size = observation_space.spaces["rgb"].shape[:2]
         else:
             self._n_input_rgb = 0
 
         if "depth" in observation_space.spaces:
+            self._frame_size = tuple(observation_space.spaces["depth"].shape[:2])
             self._n_input_depth = observation_space.spaces["depth"].shape[2]
-            spatial_size = observation_space.spaces["depth"].shape[0] // 2
+            # spatial_size = observation_space.spaces["depth"].shape[:2] // 2
+            spatial_size = observation_space.spaces["depth"].shape[:2]
         else:
             self._n_input_depth = 0
+        
+        if "semantic" in observation_space.spaces:
+            self._frame_size = tuple(observation_space.spaces["semantic"].shape[:2])
+            self._n_input_semantics = sem_embedding_size # observation_space.spaces["semantic"].shape[2]
+        else:
+            self._n_input_semantics = 0
+        
+        if self._frame_size == (256, 256):
+            spatial_size = (128, 128)
+        elif self._frame_size == (240, 320):
+            spatial_size = (120, 108)
+        elif self._frame_size == (480, 640):
+            spatial_size = (120, 108)
+
 
         if normalize_visual_inputs:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
@@ -130,12 +150,12 @@ class ResNetEncoder(nn.Module):
             input_channels = self._n_input_depth + self._n_input_rgb
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
-            final_spatial = int(
-                spatial_size * self.backbone.final_spatial_compress
-            )
+            final_spatial = np.array([math.ceil(
+                d * self.backbone.final_spatial_compress
+            ) for d in spatial_size])
             after_compression_flat_size = 2048
             num_compression_channels = int(
-                round(after_compression_flat_size / (final_spatial ** 2))
+                round(after_compression_flat_size / np.prod(final_spatial))
             )
             self.compression = nn.Sequential(
                 nn.Conv2d(
@@ -151,8 +171,8 @@ class ResNetEncoder(nn.Module):
 
             self.output_shape = (
                 num_compression_channels,
-                final_spatial,
-                final_spatial,
+                final_spatial[0],
+                final_spatial[1],
             )
 
     @property

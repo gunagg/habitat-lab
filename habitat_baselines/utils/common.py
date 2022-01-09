@@ -43,6 +43,11 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 cv2 = try_cv2_import()
 
 
+class Flatten(nn.Module):
+    def forward(self, x: Tensor) -> Tensor:
+        return torch.flatten(x, start_dim=1)
+
+
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
     def sample(
         self, sample_shape: Size = torch.Size()  # noqa: B008

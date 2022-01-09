@@ -220,6 +220,7 @@ class EmbodiedTask:
     _sim: Optional[Simulator]
     _dataset: Optional[Dataset]
     _is_episode_active: bool
+    _is_resetting: bool
     measurements: Measurements
     sensor_suite: SensorSuite
 
@@ -277,6 +278,7 @@ class EmbodiedTask:
         return entities
 
     def reset(self, episode: Episode):
+        self._is_resetting = True
         observations = self._sim.reset()
         observations.update(
             self.sensor_suite.get_observations(
@@ -286,6 +288,7 @@ class EmbodiedTask:
 
         for action_instance in self.actions.values():
             action_instance.reset(episode=episode, task=self)
+        self._is_resetting = False
 
         return observations
 
@@ -353,6 +356,10 @@ class EmbodiedTask:
     @property
     def is_episode_active(self):
         return self._is_episode_active
+
+    @property
+    def is_resetting(self):
+        return self._is_resetting
 
     def seed(self, seed: int) -> None:
         return
