@@ -7,31 +7,31 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_mp3d_40k/sem_seg_pred/seed_1/"
-VIDEO_DIR: "video_dir/objectnav/objectnav_mp3d_40k/sem_seg_pred/seed_1/"
+TENSORBOARD_DIR: "tb/objectnav/overfitting/sem_seg_pred/seed_1/"
+VIDEO_DIR: "video_dir/objectnav/overfitting/sem_seg_pred/seed_1/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_mp3d_40k/sem_seg_pred/seed_1/ckpt.31.pth"
+EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/overfitting/sem_seg_pred/seed_1/ckpt.4.pth"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 4
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_mp3d_40k/sem_seg_pred/seed_1/"
+NUM_PROCESSES: 2
+CHECKPOINT_FOLDER: "checkpoints/objectnav/overfitting/sem_seg_pred/seed_1/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 NUM_CHECKPOINTS: -1
-CHECKPOINT_INTERVAL: 500
+CHECKPOINT_INTERVAL: 100
 SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
-RESULTS_DIR: "data/objectnav/results/objectnav_mp3d_40k/sem_seg_pred/{split}/{type}"
+RESULTS_DIR: "data/objectnav/results/overfitting/sem_seg_pred/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "val"
+  SPLIT: "sample"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/objectnav_mp3d_40k/sem_seg_pred/seed_1/evaluation_meta_35k_3.json"
-NUM_UPDATES: 16000
+  evaluation_meta_file: "tb/objectnav/overfitting/sem_seg_pred/seed_1/evaluation_meta_35k_3.json"
+NUM_UPDATES: 500
 
 IL:
   USE_IW: True
@@ -40,7 +40,7 @@ IL:
     lr: 0.001
     eps: 1.0e-5
     clip_param: 0.2
-    num_mini_batch: 2
+    num_mini_batch: 1
     max_grad_norm: 0.2
     num_steps: 128
     use_linear_clip_decay: False
@@ -54,7 +54,7 @@ RL:
 
 MODEL:
   ablate_depth: False
-  ablate_rgb: False
+  ablate_sem_seg_pred: False
   num_recurrent_layers: 2
   rnn_type: "GRU"
   backbone: "resnet18"
@@ -65,12 +65,12 @@ MODEL:
   embed_goal_seg: False
   sem_seg_pred: False
   NO_VISION: False
-  USE_SEMANTICS: False
-  USE_PRED_SEMANTICS: False
+  USE_SEMANTICS: True
+  USE_PRED_SEMANTICS: True
   SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
   SEMANTIC_ENCODER:
-    # rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_40_v2_vince.pth"
-    rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"
+    rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_40_v2_vince.pth"
+    # rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"
     cnn_type: "ResnetSemSegEncoder"
     output_size: 256
     backbone: "resnet18"

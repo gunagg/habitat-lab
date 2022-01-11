@@ -147,7 +147,7 @@ class ResNetEncoder(nn.Module):
             self.running_mean_and_var = nn.Sequential()
 
         if not self.is_blind:
-            input_channels = self._n_input_depth + self._n_input_rgb
+            input_channels = self._n_input_depth + self._n_input_rgb + self._n_input_semantics
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
             final_spatial = np.array([math.ceil(
@@ -177,7 +177,7 @@ class ResNetEncoder(nn.Module):
 
     @property
     def is_blind(self):
-        return self._n_input_rgb + self._n_input_depth == 0
+        return self._n_input_rgb + self._n_input_depth + self._n_input_semantics == 0
 
     def layer_init(self):
         for layer in self.modules():
@@ -209,6 +209,14 @@ class ResNetEncoder(nn.Module):
             depth_observations = depth_observations.permute(0, 3, 1, 2)
 
             cnn_input.append(depth_observations)
+
+        if self._n_input_semantics > 0:
+            semantic_observations = observations["semantic"]
+
+            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            semantic_observations = semantic_observations.permute(0, 3, 1, 2)
+
+            cnn_input.append(semantic_observations)
 
         x = torch.cat(cnn_input, dim=1)
 

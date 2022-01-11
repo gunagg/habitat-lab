@@ -87,3 +87,11 @@ data
 
 # vim
 *.swp
+
+# data
+checkpoints/
+scripts/
+slurm_logs/
+tb/
+video_dir/
+

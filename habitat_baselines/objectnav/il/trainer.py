@@ -609,7 +609,9 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             self.config.NUM_PROCESSES, 1, device=self.device, dtype=torch.long
         )
         not_done_masks = torch.zeros(
-            self.config.NUM_PROCESSES, 1, device=self.device
+            self.config.NUM_PROCESSES, 1,
+            device=self.device,
+            dtype=torch.bool
         )
         stats_episodes: Dict[
             Any, Any
@@ -650,9 +652,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         #     [{"action": "STOP"}] for _ in range(self.config.NUM_PROCESSES)
         # ]  # type: List[List[np.ndarray]]
         possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
-        stop_episode = [
-            (0, 0) for _ in range(self.config.NUM_PROCESSES)
-        ]
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -683,9 +682,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 current_episode_steps += 1
 
                 actions = torch.argmax(logits, dim=1)
-                for i in range(len(stop_episode)):
-                    if stop_episode[i][0]:
-                        actions[i] = torch.tensor(0)
                 prev_actions.copy_(actions.unsqueeze(1))  # type: ignore
             action_names = [possible_actions[a.item()] for a in actions.to(device="cpu")]
 
@@ -703,13 +699,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             ]
             batch = batch_obs(observations, device=self.device)
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)
-
-            for i in range(len(infos)):
-                goal_vis = int(infos[i]["goal_vis_pixels"] > 0.02) + stop_episode[i][1]
-                is_success = 0
-                if infos[i]["distance_to_goal"] < 0.1:
-                    is_success = 1
-                stop_episode[i] = (is_success, goal_vis)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -760,7 +749,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                         ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
                     if "exploration_metrics" in infos[i]:
                         ep_metrics["exploration_metrics"] = infos[i]["exploration_metrics"]
-                    ep_metrics["goal_vis_times"] = stop_episode[i][1]
                     evaluation_meta.append({
                         "scene_id": current_episodes[i].scene_id,
                         "episode_id": current_episodes[i].episode_id,
@@ -792,8 +780,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                         )
 
                         rgb_frames[i] = []
-                        # ep_actions[i] = [{"action": "STOP"}]
-                        stop_episode[i] = (0, 0)
 
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
@@ -815,7 +801,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
-                current_episode_cross_entropy,
             ) = self._pause_envs(
                 envs_to_pause,
                 self.envs,
@@ -825,7 +810,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
-                current_episode_cross_entropy,
             )
 
         num_episodes = len(stats_episodes)
