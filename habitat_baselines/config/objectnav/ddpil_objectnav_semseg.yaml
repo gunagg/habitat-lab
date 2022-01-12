@@ -20,7 +20,7 @@ LOG_INTERVAL: 10
 LOG_METRICS: True
 NUM_CHECKPOINTS: -1
 CHECKPOINT_INTERVAL: 100
-SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/overfitting/sem_seg_pred/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
@@ -65,8 +65,8 @@ MODEL:
   embed_goal_seg: False
   sem_seg_pred: False
   NO_VISION: False
-  USE_SEMANTICS: False
-  USE_PRED_SEMANTICS: False
+  USE_SEMANTICS: True
+  USE_PRED_SEMANTICS: True
   SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
   SEMANTIC_ENCODER:
     # rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_40_v2_vince.pth"
