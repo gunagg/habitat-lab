@@ -57,14 +57,11 @@ class BCAgent(nn.Module):
         hidden_states = []
 
         for sample in data_generator:
-            (
-                obs_batch,
-                recurrent_hidden_states_batch,
-                actions_batch,
-                prev_actions_batch,
-                masks_batch,
-                idx
-            ) = sample
+            obs_batch = sample["observations"]
+            recurrent_hidden_states_batch = sample["recurrent_hidden_states"]
+            actions_batch = sample["actions"]
+            prev_actions_batch = sample["prev_actions"]
+            masks_batch = sample["masks"]
 
             # Reshape to do in a single forward pass for all steps
             (
@@ -77,13 +74,15 @@ class BCAgent(nn.Module):
                 masks_batch,
             )
 
-            T, N, _ = actions_batch.shape
+            T = actions_batch.shape[0] // self.num_envs
+            N = self.num_envs
+            actions_batch = actions_batch.view(T, N, -1)
             logits = logits.view(T, N, -1)
 
             action_loss = cross_entropy_loss(logits.permute(0, 2, 1), actions_batch.squeeze(-1))
 
             self.optimizer.zero_grad()
-            inflections_batch = obs_batch["inflection_weight"]
+            inflections_batch = obs_batch["inflection_weight"].view(T, N)
 
             total_loss = ((inflections_batch * action_loss).sum(0) / inflections_batch.sum(0)).mean()
 

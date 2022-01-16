@@ -14,6 +14,7 @@ from habitat_baselines.il.trainers.vqa_trainer import VQATrainer
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer, RolloutStorage
 from habitat_baselines.objectnav.il.trainer import ObjectNavBCEnvTrainer
 from habitat_baselines.objectnav.il.ddp_trainer import ObjectNavBCEnvDDPTrainer
+from habitat_baselines.objectnav.il.gail_trainer import GAILTrainer
 
 __all__ = [
     "BaseTrainer",
@@ -26,4 +27,5 @@ __all__ = [
     "VQATrainer",
     "ObjectNavBCEnvTrainer",
     "ObjectNavBCEnvDDPTrainer",
+    "GAILTrainer",
 ]

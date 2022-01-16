@@ -6,9 +6,11 @@
 
 import os
 import time
+from collections import defaultdict
 from typing import Any, ClassVar, Dict, List, Tuple, Union
 
 import torch
+import numpy as np
 from numpy import ndarray
 from torch import Tensor
 
@@ -323,3 +325,42 @@ class BaseRLTrainer(BaseTrainer):
             batch,
             rgb_frames,
         )
+    
+
+    @classmethod
+    def _extract_scalars_from_info(
+        cls, info: Dict[str, Any]
+    ) -> Dict[str, float]:
+        result = {}
+        for k, v in info.items():
+            if k in cls.METRICS_BLACKLIST:
+                continue
+
+            if isinstance(v, dict):
+                result.update(
+                    {
+                        k + "." + subk: subv
+                        for subk, subv in cls._extract_scalars_from_info(
+                            v
+                        ).items()
+                        if (k + "." + subk) not in cls.METRICS_BLACKLIST
+                    }
+                )
+            # Things that are scalar-like will have an np.size of 1.
+            # Strings also have an np.size of 1, so explicitly ban those
+            elif np.size(v) == 1 and not isinstance(v, str):
+                result[k] = float(v)
+
+        return result
+
+    @classmethod
+    def _extract_scalars_from_infos(
+        cls, infos: List[Dict[str, Any]]
+    ) -> Dict[str, List[float]]:
+
+        results = defaultdict(list)
+        for i in range(len(infos)):
+            for k, v in cls._extract_scalars_from_info(infos[i]).items():
+                results[k].append(v)
+
+        return results

@@ -472,7 +472,7 @@ class PointNavResNetNet(Net):
                     torch.sin(observations[EpisodicCompassSensor.cls_uuid]),
                 ],
                 -1,
-            )
+            ).float()
             x.append(
                 self.compass_embedding(compass_observations.squeeze(dim=1))
             )

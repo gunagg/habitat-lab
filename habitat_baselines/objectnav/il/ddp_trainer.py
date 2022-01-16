@@ -27,7 +27,7 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     get_active_obs_transforms
 )
-from habitat_baselines.objectnav.common.il_rollout_storage import RolloutStorage
+from habitat_baselines.objectnav.common.il_rollout_storage import ILRolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
@@ -208,7 +208,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
 
         obs_space = self.obs_space
 
-        rollouts = RolloutStorage(
+        rollouts = ILRolloutStorage(
             il_cfg.num_steps,
             self.envs.num_envs,
             obs_space,
@@ -218,15 +218,15 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
         )
         rollouts.to(self.device)
 
-        for sensor in rollouts.observations:
-            rollouts.observations[sensor][0].copy_(batch[sensor])
+        for sensor in rollouts.buffers["observations"]:
+            rollouts.buffers["observations"][sensor][0].copy_(batch[sensor])
             # Use first semantic observations from RedNet predictor as well
             if sensor == "semantic" and self.config.MODEL.USE_PRED_SEMANTICS:
                 semantic_obs = self.semantic_predictor(batch["rgb"], batch["depth"])
                 # Subtract 1 from class labels for THDA YCB categories
                 if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
                     semantic_obs = semantic_obs - 1
-                rollouts.observations[sensor][0].copy_(semantic_obs)
+                rollouts.buffers["observations"][sensor][0].copy_(semantic_obs)
 
         # batch and observations may contain shared PyTorch CUDA
         # tensors.  We must explicitly clear them here otherwise

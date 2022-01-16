@@ -168,9 +168,9 @@ class Seq2SeqNet(Net):
             depth_embedding = self.depth_encoder(observations)
             rgb_embedding = self.rgb_encoder(observations)
 
-            if self.model_config.ablate_depth:
+            if self.model_config.ablate_rgbd:
                 depth_embedding = depth_embedding * 0
-            if self.model_config.ablate_rgb:
+            if self.model_config.ablate_rgbd:
                 rgb_embedding = rgb_embedding * 0
 
             x.extend([depth_embedding, rgb_embedding])
@@ -191,7 +191,7 @@ class Seq2SeqNet(Net):
                     torch.sin(obs_compass),
                 ],
                 -1,
-            )
+            ).float()
             compass_embedding = self.compass_embedding(compass_observations.squeeze(dim=1))
             x.append(compass_embedding)
 

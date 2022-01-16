@@ -50,6 +50,13 @@ class RolloutStorage:
             recurrent_hidden_state_size,
         )
 
+        self.discr_recurrent_hidden_states = torch.zeros(
+            1,
+            num_envs,
+            num_recurrent_layers,
+            recurrent_hidden_state_size,
+        )
+
         self.buffers["rewards"] = torch.zeros(numsteps + 1, num_envs, 1)
         self.buffers["value_preds"] = torch.zeros(numsteps + 1, num_envs, 1)
         self.buffers["returns"] = torch.zeros(numsteps + 1, num_envs, 1)
@@ -154,8 +161,9 @@ class RolloutStorage:
     def advance_rollout(self, buffer_index: int = 0):
         self.current_rollout_step_idxs[buffer_index] += 1
 
-    def after_update(self):
+    def after_update(self, discr_rnn_hidden_states):
         self.buffers[0] = self.buffers[self.current_rollout_step_idx]
+        self.discr_recurrent_hidden_states = discr_rnn_hidden_states.detach()
 
         self.current_rollout_step_idxs = [
             0 for _ in self.current_rollout_step_idxs
@@ -208,7 +216,10 @@ class RolloutStorage:
                     num_environments, num_mini_batch
                 )
             )
-        for inds in torch.randperm(num_environments).chunk(num_mini_batch):
+        
+        # NOTE: PPO doesn't necessarily need Envs input in same order every time.
+        # UNDO this change if you see weird results
+        for inds in torch.arange(num_environments).chunk(num_mini_batch):
             batch = self.buffers[0 : self.current_rollout_step_idx, inds]
             batch["advantages"] = advantages[
                 0 : self.current_rollout_step_idx, inds
@@ -216,5 +227,8 @@ class RolloutStorage:
             batch["recurrent_hidden_states"] = batch[
                 "recurrent_hidden_states"
             ][0:1]
+            batch = batch.map(lambda v: v.flatten(0, 1))
+            # TODO: come up with a better way to maintain discriminator hidden states
+            batch["discr_recurrent_hidden_states"] = self.discr_recurrent_hidden_states
 
-            yield batch.map(lambda v: v.flatten(0, 1))
+            yield batch

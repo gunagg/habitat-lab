@@ -399,15 +399,16 @@ class SemSegSeqPolicy(nn.Module):
 
 
 @baseline_registry.register_policy
-class SemSegILPolicy(Policy):
+class ObjectNavSemSegPolicy(Policy):
     def __init__(
-        self, observation_space: Space, action_space: Space, model_config: Config
+        self, observation_space: Space, action_space: Space, model_config: Config, device
     ):
         super().__init__(
             SemSegSeqNet(
                 observation_space=observation_space,
                 model_config=model_config,
                 num_actions=action_space.n,
+                device=device,
             ),
             action_space.n
         )
