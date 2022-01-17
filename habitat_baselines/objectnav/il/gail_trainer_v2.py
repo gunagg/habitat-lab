@@ -31,7 +31,7 @@ from habitat_baselines.common.obs_transformers import (
 )
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.objectnav.common.il_rollout_storage import ILRolloutStorage
+from habitat_baselines.common.il_rollout_storage import ILRolloutStorage
 from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
@@ -58,7 +58,7 @@ from habitat_baselines.utils.common import (
 from habitat_baselines.utils.env_utils import construct_envs
 
 
-@baseline_registry.register_trainer(name="gail")
+@baseline_registry.register_trainer(name="gail-v2")
 class GAILTrainer(BaseRLTrainer):
     r"""Trainer class for PPO algorithm
     Paper: https://arxiv.org/abs/1707.06347.

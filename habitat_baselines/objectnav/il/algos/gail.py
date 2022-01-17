@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from lib2to3.pgen2.token import OP
+from optparse import Option
 from typing import Optional, Tuple
 
 import torch
@@ -14,44 +16,60 @@ from torch import optim as optim
 from habitat import logger
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
+from habitat_baselines.common.il_rollout_storage import ILRolloutStorage
+
+EPS_PPO = 1e-5
 
 
 class GAIL(nn.Module):
     def __init__(
         self,
-        model: nn.Module,
+        discriminator: nn.Module,
         num_envs: int,
         num_mini_batch: int,
         lr: Optional[float] = None,
         eps: Optional[float] = None,
         max_grad_norm: Optional[float] = None,
+        use_normalized_advantage: Optional[float] = True
     ) -> None:
 
         super().__init__()
 
-        self.model = model
+        self.discriminator = discriminator
 
         self.num_mini_batch = num_mini_batch
+        self.use_normalized_advantage = use_normalized_advantage
 
         self.max_grad_norm = max_grad_norm
         self.num_envs = num_envs
 
         self.optimizer = optim.Adam(
-            list(filter(lambda p: p.requires_grad, model.parameters())),
+            list(filter(lambda p: p.requires_grad, discriminator.parameters())),
             lr=lr,
             eps=eps,
         )
-        self.device = next(model.parameters()).device
+        self.device = next(discriminator.parameters()).device
 
     def forward(self, *x):
         raise NotImplementedError
+    
+    def get_advantages(self, rollouts: RolloutStorage) -> Tensor:
+        advantages = (
+            rollouts.buffers["returns"][:-1]
+            - rollouts.buffers["value_preds"][:-1]
+        )
+        if not self.use_normalized_advantage:
+            return advantages
 
-    def update(self, agent_rollouts: RolloutStorage, expert_rollouts: RolloutStorage) -> Tuple[float, float, float]:
+        return (advantages - advantages.mean()) / (advantages.std() + EPS_PPO)
+
+    def update(self, agent_rollouts: RolloutStorage, expert_rollouts: ILRolloutStorage) -> Tuple[float, float, float]:
+        advantages = self.get_advantages(agent_rollouts)
         total_loss_epoch = 0.0
 
         profiling_wrapper.range_push("GAIL update epoch")
         agent_sampler = agent_rollouts.recurrent_generator(
-            self.num_mini_batch
+            advantages, self.num_mini_batch
         )
         expert_sampler = expert_rollouts.recurrent_generator(
             self.num_mini_batch
@@ -64,7 +82,7 @@ class GAIL(nn.Module):
             (
                 expert_logits,
                 expert_batch_hidden_states,
-            ) = self.model(
+            ) = self.discriminator(
                 expert_batch["observations"],
                 expert_batch["recurrent_hidden_states"],
                 expert_batch["prev_actions"],
@@ -73,11 +91,10 @@ class GAIL(nn.Module):
 
             targets = torch.ones(expert_logits.shape).to(self.device)
             expert_loss = bce_loss(expert_logits, targets)
-
             (
                 agent_logits,
                 agent_batch_hidden_states,
-            ) = self.model(
+            ) = self.discriminator(
                 agent_batch["observations"],
                 agent_batch["discr_recurrent_hidden_states"],
                 agent_batch["prev_actions"],
@@ -102,12 +119,12 @@ class GAIL(nn.Module):
 
         profiling_wrapper.range_pop()
 
-        expert_hidden_states = torch.cat(expert_hidden_states, dim=1)
-        agent_hidden_states = torch.cat(agent_hidden_states, dim=1)
+        expert_hidden_states = torch.cat(expert_hidden_states, dim=0)
+        agent_hidden_states = torch.cat(agent_hidden_states, dim=0)
 
         total_loss_epoch /= self.num_mini_batch
 
-        return total_loss_epoch
+        return total_loss_epoch, expert_hidden_states, agent_hidden_states
 
     def before_backward(self, loss: Tensor) -> None:
         pass
@@ -117,7 +134,7 @@ class GAIL(nn.Module):
 
     def before_step(self) -> None:
         nn.utils.clip_grad_norm_(
-            self.model.parameters(), self.max_grad_norm
+            self.discriminator.parameters(), self.max_grad_norm
         )
 
     def after_step(self) -> None:

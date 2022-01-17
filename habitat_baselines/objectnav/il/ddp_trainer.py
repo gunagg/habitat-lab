@@ -27,7 +27,7 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     get_active_obs_transforms
 )
-from habitat_baselines.objectnav.common.il_rollout_storage import ILRolloutStorage
+from habitat_baselines.common.il_rollout_storage import ILRolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
@@ -40,7 +40,7 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 )
 from habitat_baselines.utils.common import batch_obs, linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
-from habitat_baselines.objectnav.il.agent import BCAgent, DDPBCAgent
+from habitat_baselines.objectnav.il.algos.agent import BCAgent, DDPBCAgent
 from habitat_baselines.objectnav.il.trainer import ObjectNavBCEnvTrainer
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel

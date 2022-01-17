@@ -30,8 +30,8 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
-from habitat_baselines.objectnav.common.il_rollout_storage import ILRolloutStorage
-from habitat_baselines.objectnav.il.agent import BCAgent
+from habitat_baselines.common.il_rollout_storage import ILRolloutStorage
+from habitat_baselines.objectnav.il.algos.agent import BCAgent
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.utils.common import (
     batch_obs,

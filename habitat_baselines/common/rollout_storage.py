@@ -107,6 +107,7 @@ class RolloutStorage:
 
     def to(self, device):
         self.buffers.map_in_place(lambda v: v.to(device))
+        self.discr_recurrent_hidden_states.to(device)
 
     def insert(
         self,
@@ -163,7 +164,7 @@ class RolloutStorage:
 
     def after_update(self, discr_rnn_hidden_states):
         self.buffers[0] = self.buffers[self.current_rollout_step_idx]
-        self.discr_recurrent_hidden_states = discr_rnn_hidden_states.detach()
+        self.discr_recurrent_hidden_states[0] = discr_rnn_hidden_states.detach()
 
         self.current_rollout_step_idxs = [
             0 for _ in self.current_rollout_step_idxs
@@ -229,6 +230,6 @@ class RolloutStorage:
             ][0:1]
             batch = batch.map(lambda v: v.flatten(0, 1))
             # TODO: come up with a better way to maintain discriminator hidden states
-            batch["discr_recurrent_hidden_states"] = self.discr_recurrent_hidden_states
+            batch["discr_recurrent_hidden_states"] = self.discr_recurrent_hidden_states[0, inds].to(batch["masks"].device)
 
             yield batch
