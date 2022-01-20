@@ -65,7 +65,9 @@ class GAIL(nn.Module):
 
     def update(self, agent_rollouts: RolloutStorage, expert_rollouts: ILRolloutStorage) -> Tuple[float, float, float]:
         advantages = self.get_advantages(agent_rollouts)
-        total_loss_epoch = 0.0
+        avg_discr_loss = 0.0
+        avg_agent_loss = 0.0
+        avg_expert_loss = 0.0
 
         profiling_wrapper.range_push("GAIL update epoch")
         agent_sampler = agent_rollouts.recurrent_generator(
@@ -113,7 +115,9 @@ class GAIL(nn.Module):
             self.optimizer.step()
             self.after_step()
 
-            total_loss_epoch += total_loss.item()
+            avg_discr_loss += total_loss.item()
+            avg_agent_loss += agent_loss.item()
+            avg_expert_loss += expert_loss.item()
             expert_hidden_states.append(expert_batch_hidden_states)
             agent_hidden_states.append(agent_batch_hidden_states)
 
@@ -122,9 +126,11 @@ class GAIL(nn.Module):
         expert_hidden_states = torch.cat(expert_hidden_states, dim=0)
         agent_hidden_states = torch.cat(agent_hidden_states, dim=0)
 
-        total_loss_epoch /= self.num_mini_batch
+        avg_discr_loss /= self.num_mini_batch
+        avg_agent_loss /= self.num_mini_batch
+        avg_expert_loss /= self.num_mini_batch
 
-        return total_loss_epoch, expert_hidden_states, agent_hidden_states
+        return avg_discr_loss, avg_agent_loss, avg_expert_loss, expert_hidden_states, agent_hidden_states
 
     def before_backward(self, loss: Tensor) -> None:
         pass

@@ -71,5 +71,5 @@ DATASET:
   SPLIT: sample
   DATA_PATH: "data/datasets/objectnav_mp3d_v2/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
-  CONTENT_SCENES: ["17DRP5sb8fy", "E9uDoFAP3SH"]
+  CONTENT_SCENES: ["17DRP5sb8fy"]
 

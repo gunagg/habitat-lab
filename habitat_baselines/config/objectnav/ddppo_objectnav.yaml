@@ -1,18 +1,19 @@
-BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d.yaml"
+BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il.yaml"
 CMD_TRAILING_OPTS: ["TASK_CONFIG.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS", "50000"]
 ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
-TENSORBOARD_DIR: "tb"
+TENSORBOARD_DIR: "tb/objectnav/ppo/overfitting/rgbd/seed_1/"
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 4
-CHECKPOINT_FOLDER: "data/new_checkpoints"
+EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/ppo/overfitting/rgbd/seed_1/"
+NUM_ENVIRONMENTS: 1
+NUM_PROCESSES: 1
+CHECKPOINT_FOLDER: "checkpoints/objectnav/ppo/overfitting/rgbd/seed_1/"
 TRAINER_NAME: "ddppo"
 SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
-NUM_UPDATES: 270000
+NUM_UPDATES: 10000
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 100
 # Force PyTorch to be single threaded as
@@ -33,7 +34,7 @@ RL:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 4
-    num_mini_batch: 2
+    num_mini_batch: 1
     value_loss_coef: 0.5
     entropy_coef: 0.01
     lr: 2.5e-4

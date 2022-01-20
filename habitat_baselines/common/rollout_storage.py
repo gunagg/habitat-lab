@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 import numpy as np
 import torch
 
+from habitat import logger
 from habitat_baselines.common.tensor_dict import TensorDict
 
 
@@ -107,7 +108,7 @@ class RolloutStorage:
 
     def to(self, device):
         self.buffers.map_in_place(lambda v: v.to(device))
-        self.discr_recurrent_hidden_states.to(device)
+        self.discr_recurrent_hidden_states = self.discr_recurrent_hidden_states.to(device)
 
     def insert(
         self,
@@ -162,9 +163,11 @@ class RolloutStorage:
     def advance_rollout(self, buffer_index: int = 0):
         self.current_rollout_step_idxs[buffer_index] += 1
 
-    def after_update(self, discr_rnn_hidden_states):
+    def after_update(self, discr_rnn_hidden_states=None):
         self.buffers[0] = self.buffers[self.current_rollout_step_idx]
-        self.discr_recurrent_hidden_states[0] = discr_rnn_hidden_states.detach()
+
+        if discr_rnn_hidden_states is not None:
+            self.discr_recurrent_hidden_states[0] = discr_rnn_hidden_states.detach()
 
         self.current_rollout_step_idxs = [
             0 for _ in self.current_rollout_step_idxs

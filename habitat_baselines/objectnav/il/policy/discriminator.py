@@ -39,11 +39,11 @@ class Discriminator(nn.Module, metaclass=abc.ABCMeta):
         return logits, hidden_states
 
     def compute_rewards(self, observations, rnn_hidden_states, prev_actions, masks):
-        features, _ = self.net(
+        features, rnn_hidden_states = self.net(
             observations, rnn_hidden_states, prev_actions, masks
         )
         preds = self.discriminator(features)
-        return self.sigmoid(preds)
+        return self.sigmoid(preds), rnn_hidden_states
 
     @classmethod
     @abc.abstractmethod
