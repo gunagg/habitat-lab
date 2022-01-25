@@ -1,5 +1,5 @@
 # Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
-# for better hyperparameters for actual trainingrgbd
+# for better hyperparameters for actual trainingsem_seg_pred
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il.yaml"
 TRAINER_NAME: "objectnav-bc-env"
@@ -7,14 +7,14 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/overfitting/rgbd/seed_1/"
-VIDEO_DIR: "video_dir/objectnav/overfitting/rgbd/seed_1/"
+TENSORBOARD_DIR: "tb/objectnav/objectnav_mp3d_thda_50k/sem_seg_pred/debug/"
+VIDEO_DIR: "video_dir/objectnav/objectnav_mp3d_thda_50k/sem_seg_pred/debug/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/overfitting/rgbd/seed_1/ckpt.4.pth"
+EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/objectnav_mp3d_thda_50k/sem_seg_pred/debug/ckpt.4.pth"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 2
-CHECKPOINT_FOLDER: "checkpoints/objectnav/overfitting/rgbd/seed_1/"
+NUM_PROCESSES: 8
+CHECKPOINT_FOLDER: "checkpoints/objectnav/objectnav_mp3d_thda_50k/sem_seg_pred/debug/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -22,7 +22,7 @@ NUM_CHECKPOINTS: -1
 CHECKPOINT_INTERVAL: 100
 SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
-RESULTS_DIR: "data/objectnav/results/overfitting/rgbd/{split}/{type}"
+RESULTS_DIR: "data/objectnav/results/objectnav_mp3d_thda_50k/sem_seg_pred/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
@@ -30,7 +30,7 @@ EVAL:
   SPLIT: "sample"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/overfitting/rgbd/seed_1/evaluation_meta_35k_3.json"
+  evaluation_meta_file: "tb/objectnav/objectnav_mp3d_thda_50k/sem_seg_pred/debug/evaluation_meta_35k_3.json"
 NUM_UPDATES: 500
 
 IL:
@@ -40,9 +40,9 @@ IL:
     lr: 0.001
     eps: 1.0e-5
     clip_param: 0.2
-    num_mini_batch: 1
+    num_mini_batch: 2
     max_grad_norm: 0.2
-    num_steps: 128
+    num_steps: 64
     use_linear_clip_decay: False
     use_linear_lr_decay: True
     reward_window_size: 50
@@ -54,7 +54,7 @@ RL:
 
 MODEL:
   ablate_depth: False
-  ablate_rgbd: False
+  ablate_sem_seg_pred: False
   num_recurrent_layers: 2
   rnn_type: "GRU"
   backbone: "resnet18"
@@ -63,7 +63,7 @@ MODEL:
   force_blind_policy: False
   embed_sge: True
   embed_goal_seg: False
-  rgbd: False
+  sem_seg_pred: False
   NO_VISION: False
   USE_SEMANTICS: False
   USE_PRED_SEMANTICS: False

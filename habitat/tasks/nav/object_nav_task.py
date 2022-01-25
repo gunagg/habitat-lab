@@ -299,7 +299,7 @@ class DemonstrationSensor(Sensor):
         if self.timestep < len(episode.reference_replay):
             action_name = episode.reference_replay[self.timestep].action
             action = get_habitat_sim_action(action_name)
-            #logger.info("{} -- {}".format(self.timestep, action_name))
+            # logger.info("{} -- {}".format(self.timestep, action_name))
         else:
             action = 0
             # logger.info("{} -- {}".format(self.timestep, "STOP"))

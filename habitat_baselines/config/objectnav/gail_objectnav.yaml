@@ -1,4 +1,4 @@
-# Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
+# Note:  This is an example config, see habitat_baselines/config/pointnav/overfitting_pointnav.yaml
 # for better hyperparameters for actual trainingrgb
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il.yaml"
@@ -7,19 +7,19 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/gail/overfitting/rgb/v4_bug_fix/"
-VIDEO_DIR: "video_dir/objectnav/gail/overfitting/rgb/v4_bug_fix/"
+TENSORBOARD_DIR: "tb/objectnav/gail/overfitting/rgb/v3_sample_metrics/"
+VIDEO_DIR: "video_dir/objectnav/gail/overfitting/rgb/v3_sample_metrics/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/gail/overfitting/rgb/seed_1/ckpt.4.pth"
+EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/gail/overfitting/rgb/v3_sample_metrics/ckpt.4.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "checkpoints/objectnav/gail/overfitting/rgb/seed_1/"
+CHECKPOINT_FOLDER: "checkpoints/objectnav/gail/overfitting/rgb/v3_sample_metrics/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 NUM_CHECKPOINTS: -1
-CHECKPOINT_INTERVAL: 100
+CHECKPOINT_INTERVAL: 500
 SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/gail/overfitting/rgb/{split}/{type}"
@@ -30,17 +30,18 @@ EVAL:
   SPLIT: "sample"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/gail/overfitting/rgb/seed_1/evaluation_meta_35k_3.json"
-NUM_UPDATES: 1000
+  evaluation_meta_file: "tb/objectnav/gail/overfitting/rgb/v3_sample_metrics/evaluation_meta_35k_3.json"
+NUM_UPDATES: 50000
+
 
 RL:
   SUCCESS_REWARD: 2.5
   SLACK_REWARD: -1e-3
 
   PPO:
-    # ppo params
+    # overfitting params
     clip_param: 0.2
-    ppo_epoch: 4 
+    overfitting_epoch: 4 
     num_mini_batch: 1
     value_loss_coef: 0.5
     entropy_coef: 0.01
@@ -68,7 +69,7 @@ IL:
   USE_IW: True
   distrib_backend: GLOO
   GAIL:
-    lr: 1.0e-5
+    lr: 1.0e-6
     eps: 1.0e-5
     clip_param: 0.2
     num_mini_batch: 1
@@ -80,6 +81,7 @@ IL:
     sync_frac: 0.6
 
     use_normalized_advantage: False
+    reward_type: "gail"
 
     DISCRIMINATOR:
       name: "ObjectNavDiscriminator"
@@ -120,7 +122,7 @@ MODEL:
     output_size: 128
     backbone: "resnet50"
     trainable: False
-    ddppo_checkpoint: "data/ddppo-models/gibson-2plus-resnet50.pth"
+    ddoverfitting_checkpoint: "data/ddoverfitting-models/gibson-2plus-resnet50.pth"
   STATE_ENCODER:
     hidden_size: 512
     rnn_type: "GRU"

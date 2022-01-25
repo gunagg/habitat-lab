@@ -235,7 +235,13 @@ class GAILTrainer(BaseRLTrainer):
 
     @profiling_wrapper.RangeContext("_collect_agent_rollout_step")
     def _collect_agent_rollout_step(
-        self, rollouts, current_episode_reward, running_episode_stats, buffer_index=0
+        self,
+        rollouts,
+        current_episode_reward,
+        current_episode_accuracy,
+        current_episode_steps,
+        running_episode_stats,
+        buffer_index=0
     ):
         pth_time = 0.0
         env_time = 0.0
@@ -277,6 +283,8 @@ class GAILTrainer(BaseRLTrainer):
         step_data = [a.item() for a in actions.to(device="cpu")]
         profiling_wrapper.range_pop()  # compute actions
 
+        action_accuracy = torch.sum(actions == step_batch["observations"]["demonstration"]).to(device="cpu")
+
         outputs = self.agent_envs.step(step_data)
         observations, rewards_l, dones, infos = [
             list(x) for x in zip(*outputs)
@@ -301,7 +309,11 @@ class GAILTrainer(BaseRLTrainer):
         done_masks = torch.logical_not(masks)
 
         current_episode_reward += rewards
+        current_episode_accuracy += action_accuracy
+        current_episode_steps += masks
         running_episode_stats["reward"] += done_masks * current_episode_reward  # type: ignore
+        running_episode_stats["action_accuracy"] += done_masks * current_episode_accuracy  / (current_episode_steps + 1) # type: ignore
+        # logger.info("steps: {}, action: {}, action acc: {}".format(current_episode_steps, actions, current_episode_accuracy))
         running_episode_stats["count"] += done_masks  # type: ignore
         for k, v_k in self._extract_scalars_from_infos(infos).items():
             v = torch.tensor(
@@ -314,7 +326,9 @@ class GAILTrainer(BaseRLTrainer):
 
             running_episode_stats[k] += done_masks * v  # type: ignore
 
+        current_episode_steps *= masks
         current_episode_reward *= masks
+        current_episode_accuracy *= masks
 
         rollouts.insert(
             next_observations=batch,
@@ -333,7 +347,7 @@ class GAILTrainer(BaseRLTrainer):
         return pth_time, env_time, self.agent_envs.num_envs
 
     @profiling_wrapper.RangeContext("_update_agent")
-    def _update_agent(self, agent_rollouts, expert_rollouts, running_episode_stats):
+    def _update_agent(self, agent_rollouts, expert_rollouts, running_episode_stats, current_episode_pred_reward):
         ppo_cfg = self.config.RL.PPO
         t_update_model = time.time()
 
@@ -350,14 +364,16 @@ class GAILTrainer(BaseRLTrainer):
             discr_loss,
             agent_loss,
             expert_loss,
+            discr_acc,
+            discr_agent_acc,
+            discr_expert_acc,
             expert_hidden_states,
             agent_hidden_states,
-        ) = self.gail.update(agent_rollouts, expert_rollouts)
+        ) = self.gail.update(agent_rollouts, expert_rollouts, self.current_update)
 
         # Overwrite environment rewards with discriminator preds
         self.gail.eval()
         with torch.no_grad():
-            eps = 1e-20
             discr_recurrent_hidden_states = agent_rollouts.discr_recurrent_hidden_states[0].to(agent_rollouts.discr_recurrent_hidden_states.device)
             for i in range(agent_rollouts.current_rollout_step_idx):
                 step_batch = agent_rollouts.buffers[i]
@@ -367,8 +383,12 @@ class GAILTrainer(BaseRLTrainer):
                     step_batch["prev_actions"],
                     step_batch["masks"],
                 )
-                agent_rollouts.buffers["rewards"][i] = (reward + eps).log()
-                running_episode_stats["pred_reward"] += agent_rollouts.buffers["rewards"][i].detach().cpu() * agent_rollouts.buffers["masks"][i].detach().cpu()
+                agent_rollouts.buffers["rewards"][i] = reward.detach()
+                current_episode_pred_reward += reward.detach().cpu()
+                done_masks = torch.logical_not(agent_rollouts.buffers["masks"][i].detach().cpu())
+                running_episode_stats["pred_reward"] += current_episode_pred_reward * done_masks
+                current_episode_pred_reward *= agent_rollouts.buffers["masks"][i].detach().cpu()
+                # logger.info("{}, {}, {}".format(current_episode_pred_reward, done_masks, agent_rollouts.buffers["masks"][i].detach().cpu()))
 
         # Agent update
         with torch.no_grad():
@@ -406,6 +426,9 @@ class GAILTrainer(BaseRLTrainer):
             discr_loss,
             agent_loss,
             expert_loss,
+            discr_acc,
+            discr_agent_acc,
+            discr_expert_acc,
         )
 
     @profiling_wrapper.RangeContext("train")
@@ -421,11 +444,17 @@ class GAILTrainer(BaseRLTrainer):
             num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
         )
 
-        self.expert_envs = construct_envs(
+        self.agent_envs = construct_envs(
             self.config, get_env_class(self.config.ENV_NAME)
         )
 
-        self.agent_envs = construct_envs(
+        # Create only 1 env for expert
+        self.config.defrost()
+        self.config.NUM_PROCESSES = 1
+        self.config.TASK_CONFIG.DATASET.NUM_EPISODES = 1
+        self.config.freeze()
+
+        self.expert_envs = construct_envs(
             self.config, get_env_class(self.config.ENV_NAME)
         )
 
@@ -480,10 +509,14 @@ class GAILTrainer(BaseRLTrainer):
         agent_obs_batch = apply_obs_transforms_batch(agent_obs_batch, self.obs_transforms)
 
         current_episode_reward = torch.zeros(self.agent_envs.num_envs, 1)
+        current_episode_pred_reward = torch.zeros(self.agent_envs.num_envs, 1)
+        current_episode_accuracy = torch.zeros(self.agent_envs.num_envs, 1)
+        current_episode_steps = torch.zeros(self.agent_envs.num_envs, 1)
         running_episode_stats = dict(
             count=torch.zeros(self.agent_envs.num_envs, 1),
             reward=torch.zeros(self.agent_envs.num_envs, 1),
             pred_reward=torch.zeros(self.agent_envs.num_envs, 1),
+            action_accuracy=torch.zeros(self.agent_envs.num_envs, 1),
         )
         window_episode_stats: DefaultDict[str, deque] = defaultdict(
             lambda: deque(maxlen=gail_cfg.reward_window_size)
@@ -552,7 +585,11 @@ class GAILTrainer(BaseRLTrainer):
                         delta_env_time,
                         delta_steps,
                     ) = self._collect_agent_rollout_step(
-                        agent_rollouts, current_episode_reward, running_episode_stats
+                        agent_rollouts,
+                        current_episode_reward,
+                        current_episode_accuracy,
+                        current_episode_steps,
+                        running_episode_stats
                     )
                     agent_pth_time += delta_pth_time
                     agent_env_time += delta_env_time
@@ -567,7 +604,10 @@ class GAILTrainer(BaseRLTrainer):
                     discr_loss,
                     agent_loss,
                     expert_loss,
-                ) = self._update_agent(agent_rollouts, expert_rollouts, running_episode_stats)
+                    discr_acc,
+                    discr_agent_acc,
+                    discr_expert_acc,
+                ) = self._update_agent(agent_rollouts, expert_rollouts, running_episode_stats, current_episode_pred_reward)
                 agent_pth_time += update_time
 
                 for k, v in running_episode_stats.items():
@@ -619,16 +659,24 @@ class GAILTrainer(BaseRLTrainer):
                 if len(expert_metrics) > 0:
                     writer.add_scalars("expert_metrics", expert_metrics, expert_count_steps)
 
-                losses = [value_loss, action_loss, discr_loss, agent_loss, expert_loss]
+                losses = [value_loss, action_loss]
                 writer.add_scalars(
                     "policy losses",
                     {k: l for l, k in zip(losses, ["value", "action"])},
                     agent_count_steps,
                 )
 
+                discr_losses = [discr_loss, agent_loss, expert_loss]
                 writer.add_scalars(
                     "discriminator losses",
-                    {k: l for l, k in zip(losses, ["discrimator", "agent_discr", "expert_discr"])},
+                    {k: l for l, k in zip(discr_losses, ["discrimator", "agent_discr", "expert_discr"])},
+                    agent_count_steps,
+                )
+
+                discr_accuracies = [discr_acc, discr_agent_acc, discr_expert_acc]
+                writer.add_scalars(
+                    "discriminator accuracies",
+                    {k: l for l, k in zip(discr_accuracies, ["discr_acc", "agent_acc", "expert_acc"])},
                     agent_count_steps,
                 )
 
@@ -647,6 +695,11 @@ class GAILTrainer(BaseRLTrainer):
                     logger.info(
                         "update: {}\tdiscr loss: {:.3f}\texpert discr loss: {:.3f}\tagent discr loss: {:.3f}".format(
                             update, discr_loss, expert_loss, agent_loss
+                        )
+                    )
+                    logger.info(
+                        "update: {}\tdiscr acc: {:.3f}\texpert discr acc: {:.3f}\tagent discr acc: {:.3f}".format(
+                            update, discr_acc, discr_expert_acc, discr_agent_acc
                         )
                     )
 

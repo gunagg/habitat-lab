@@ -8,6 +8,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Sequence
 
+from habitat.core.logging import logger
 from habitat.config import Config
 from habitat.core.dataset import ObjectInScene, SceneState
 from habitat.core.registry import registry
@@ -202,6 +203,7 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
 
     def __init__(self, config: Optional[Config] = None) -> None:
         self.goals_by_category = {}
+        self.config = config
         super().__init__(config)
         self.episodes = list(self.episodes)
 
@@ -308,3 +310,6 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
                 continue
 
             self.episodes.append(episode)  # type: ignore [attr-defined]
+            if self.config.NUM_EPISODES <= len(self.episodes):
+                break
+        logger.info("Episodes loaded: {}".format(len(self.episodes)))

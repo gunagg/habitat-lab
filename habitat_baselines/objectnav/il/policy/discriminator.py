@@ -26,9 +26,11 @@ class DiscriminatorHead(nn.Module):
 
 
 class Discriminator(nn.Module, metaclass=abc.ABCMeta):
-    def __init__(self, net):
+    def __init__(self, net, reward_type, eps=1e-12):
         super().__init__()
         self.net = net
+        self.reward_type = reward_type
+        self.eps = eps
 
         self.discriminator = DiscriminatorHead(self.net.output_size)
         self.sigmoid = nn.Sigmoid()
@@ -43,7 +45,13 @@ class Discriminator(nn.Module, metaclass=abc.ABCMeta):
             observations, rnn_hidden_states, prev_actions, masks
         )
         preds = self.discriminator(features)
-        return self.sigmoid(preds), rnn_hidden_states
+        rewards = self.sigmoid(preds)
+
+        if self.reward_type == "gail":
+            rewards = (rewards + self.eps).log()
+        elif self.reward_type == "airl":
+            rewards = (rewards + self.eps).log() - (1 - rewards + self.eps).log()
+        return rewards, rnn_hidden_states
 
     @classmethod
     @abc.abstractmethod
@@ -65,6 +73,7 @@ class ObjectNavDiscriminator(Discriminator):
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         discriminator_config: Config = None,
+        reward_type: str = "gail",
         **kwargs
     ):
         if discriminator_config is not None:
@@ -89,7 +98,8 @@ class ObjectNavDiscriminator(Discriminator):
                 normalize_visual_inputs=normalize_visual_inputs,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
-            )
+            ),
+            reward_type
         )
 
     @classmethod
@@ -107,4 +117,5 @@ class ObjectNavDiscriminator(Discriminator):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             discriminator_config=config.RL.POLICY,
+            reward_type=config.IL.GAIL.reward_type
         )
