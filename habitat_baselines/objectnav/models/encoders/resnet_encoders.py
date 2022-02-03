@@ -7,7 +7,7 @@ import torchvision.models as models
 from gym import spaces
 from habitat import logger
 from habitat_baselines.utils.common import Flatten
-from habitat_baselines.rl.ddppo.policy import resnet
+from habitat_baselines.rl.ddppo.policy import resnet, resnet_gn
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
 
 
@@ -250,11 +250,19 @@ class ResnetRGBEncoder(nn.Module):
         spatial_output: bool = False,
     ):
         super().__init__()
+        backbone_split = backbone.split("_")
+        logger.info("backbone: {}".format(backbone_split))
+        if len(backbone_split) > 1:
+            if backbone_split[1] == "gn":
+                make_backbone = getattr(resnet_gn, backbone_split[0])
+        else:
+            make_backbone = getattr(resnet, backbone_split[0])
+
         self.visual_encoder = ResNetEncoder(
             spaces.Dict({"rgb": observation_space.spaces["rgb"]}),
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
-            make_backbone=getattr(resnet, backbone),
+            make_backbone=make_backbone,
             normalize_visual_inputs=normalize_visual_inputs,
         )
 

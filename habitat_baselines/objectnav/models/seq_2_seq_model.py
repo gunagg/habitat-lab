@@ -86,6 +86,7 @@ class Seq2SeqNet(Net):
                     output_size=model_config.RGB_ENCODER.output_size,
                     backbone=model_config.RGB_ENCODER.backbone,
                     trainable=model_config.RGB_ENCODER.train_encoder,
+                    normalize_visual_inputs=model_config.normalize_visual_inputs,
                 )
 
             # Init the RNN state decoder
@@ -167,11 +168,6 @@ class Seq2SeqNet(Net):
         if not self.model_config.NO_VISION:
             depth_embedding = self.depth_encoder(observations)
             rgb_embedding = self.rgb_encoder(observations)
-
-            if self.model_config.ablate_rgbd:
-                depth_embedding = depth_embedding * 0
-            if self.model_config.ablate_rgbd:
-                rgb_embedding = rgb_embedding * 0
 
             x.extend([depth_embedding, rgb_embedding])
 

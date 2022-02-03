@@ -7,25 +7,25 @@ SIMULATOR:
   TILT_ANGLE: 30
   ACTION_SPACE_CONFIG: "v1"
   AGENT_0:
-    SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
     HEIGHT: 0.88
     RADIUS: 0.18
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
     ALLOW_SLIDING: False
   SEMANTIC_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
+    WIDTH: 128
+    HEIGHT: 128
     HFOV: 79
     POSITION: [0, 0.88, 0]
   RGB_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
+    WIDTH: 128
+    HEIGHT: 128
     HFOV: 79
     POSITION: [0, 0.88, 0]
   DEPTH_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
+    WIDTH: 128
+    HEIGHT: 128
     HFOV: 79
     MIN_DEPTH: 0.5
     MAX_DEPTH: 5.0
@@ -68,8 +68,9 @@ TASK:
 SEED: 103
 DATASET:
   TYPE: ObjectNav-v2
-  SPLIT: sample
+  SPLIT: single_episode
   DATA_PATH: "data/datasets/objectnav_mp3d_v2/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
-  NUM_EPISODES: -1
+  CONTENT_SCENES: ["17DRP5sb8fy"]
+  NUM_EPISODES: 1
 

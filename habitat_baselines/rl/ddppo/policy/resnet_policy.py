@@ -14,6 +14,7 @@ from gym import spaces
 from torch import nn as nn
 from torch.nn import functional as F
 
+from habitat import logger
 from habitat.config import Config
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
@@ -26,7 +27,7 @@ from habitat.tasks.nav.nav import (
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.ddppo.policy import resnet
+from habitat_baselines.rl.ddppo.policy import resnet, resnet_gn
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
     RunningMeanAndVar,
 )
@@ -106,6 +107,7 @@ class ResNetEncoder(nn.Module):
         make_backbone=None,
         normalize_visual_inputs: bool = False,
         sem_embedding_size=4,
+        dropout_prob: float = 0.0
     ):
         super().__init__()
 
@@ -148,7 +150,7 @@ class ResNetEncoder(nn.Module):
 
         if not self.is_blind:
             input_channels = self._n_input_depth + self._n_input_rgb + self._n_input_semantics
-            self.backbone = make_backbone(input_channels, baseplanes, ngroups)
+            self.backbone = make_backbone(input_channels, baseplanes, ngroups, dropout_prob=dropout_prob)
 
             final_spatial = np.array([math.ceil(
                 d * self.backbone.final_spatial_compress
@@ -327,6 +329,16 @@ class PointNavResNetNet(Net):
             self.compass_embedding = nn.Linear(input_compass_dim, 32)
             rnn_input_size += 32
 
+        backbone_split = backbone.split("_")
+        logger.info("backbone: {}".format(backbone_split))
+        if len(backbone_split) > 1:
+            if backbone_split[1] == "gn":
+                make_backbone = getattr(resnet_gn, backbone_split[0])
+            elif backbone_split[1] == "bn":
+                make_backbone = getattr(resnet_bn, backbone_split[0])
+        else:
+            make_backbone = getattr(resnet_hab, backbone_split[0])
+
         if ImageGoalSensor.cls_uuid in observation_space.spaces:
             goal_observation_space = spaces.Dict(
                 {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
@@ -335,7 +347,7 @@ class PointNavResNetNet(Net):
                 goal_observation_space,
                 baseplanes=resnet_baseplanes,
                 ngroups=resnet_baseplanes // 2,
-                make_backbone=getattr(resnet, backbone),
+                make_backbone=make_backbone,
                 normalize_visual_inputs=normalize_visual_inputs,
             )
 
@@ -355,7 +367,7 @@ class PointNavResNetNet(Net):
             observation_space if not force_blind_policy else spaces.Dict({}),
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
-            make_backbone=getattr(resnet, backbone),
+            make_backbone=make_backbone,
             normalize_visual_inputs=normalize_visual_inputs,
         )
 

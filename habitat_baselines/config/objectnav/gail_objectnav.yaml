@@ -7,14 +7,14 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/gail/overfitting/rgb/v3_sample_metrics/"
-VIDEO_DIR: "video_dir/objectnav/gail/overfitting/rgb/v3_sample_metrics/"
+TENSORBOARD_DIR: "tb/objectnav/gail/overfitting/rgb/v4/"
+VIDEO_DIR: "video_dir/objectnav/gail/overfitting/rgb/v4/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/gail/overfitting/rgb/v3_sample_metrics/ckpt.4.pth"
+EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/gail/overfitting/rgb/v4/ckpt.4.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "checkpoints/objectnav/gail/overfitting/rgb/v3_sample_metrics/"
+CHECKPOINT_FOLDER: "checkpoints/objectnav/gail/overfitting/rgb/v4/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -30,7 +30,7 @@ EVAL:
   SPLIT: "sample"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/gail/overfitting/rgb/v3_sample_metrics/evaluation_meta_35k_3.json"
+  evaluation_meta_file: "tb/objectnav/gail/overfitting/rgb/v4/evaluation_meta_35k_3.json"
 NUM_UPDATES: 50000
 
 
@@ -79,6 +79,9 @@ IL:
     use_linear_lr_decay: True
     reward_window_size: 50
     sync_frac: 0.6
+
+    hidden_size: 512
+    embed_actions: False
 
     use_normalized_advantage: False
     reward_type: "gail"

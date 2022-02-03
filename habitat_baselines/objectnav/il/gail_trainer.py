@@ -84,16 +84,6 @@ class GAILTrainer(BaseRLTrainer):
         )
         self.actor_critic.to(self.device)
 
-        self.semantic_predictor = None
-        if self.config.MODEL.USE_PRED_SEMANTICS:
-            self.semantic_predictor = load_rednet(
-                self.device,
-                ckpt=self.config.MODEL.SEMANTIC_ENCODER.rednet_ckpt,
-                resize=True, # since we train on half-vision
-                num_classes=self.config.MODEL.SEMANTIC_ENCODER.num_classes
-            )
-            self.semantic_predictor.eval()
-
         self.agent = PPO(
             actor_critic=self.actor_critic,
             clip_param=ppo_cfg.clip_param,
@@ -140,6 +130,7 @@ class GAILTrainer(BaseRLTrainer):
         checkpoint = {
             "state_dict": self.agent.state_dict(),
             "config": self.config,
+            "reward_model_state_dict": self.gail.state_dict()
         }
         if extra_state is not None:
             checkpoint["extra_state"] = extra_state
@@ -485,8 +476,8 @@ class GAILTrainer(BaseRLTrainer):
             self.expert_envs.num_envs,
             self.obs_space,
             self.expert_envs.action_spaces[0],
-            self.config.MODEL.STATE_ENCODER.hidden_size,
-            self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
+            self.config.IL.GAIL.hidden_size,
+            self.discriminator.net.num_recurrent_layers,
         )
         expert_rollouts.to(self.device)
 
@@ -495,8 +486,8 @@ class GAILTrainer(BaseRLTrainer):
             self.agent_envs.num_envs,
             self.obs_space,
             self.agent_envs.action_spaces[0],
-            self.config.MODEL.STATE_ENCODER.hidden_size,
-            self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
+            self.config.RL.PPO.hidden_size,
+            self.actor_critic.net.num_recurrent_layers,
         )
         agent_rollouts.to(self.device)
 
@@ -544,6 +535,10 @@ class GAILTrainer(BaseRLTrainer):
             optimizer=self.agent.optimizer,
             lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
         )
+        gail_lr_scheduler = LambdaLR(
+            optimizer=self.gail.optimizer,
+            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
+        )
         self.possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
 
         with TensorboardWriter(
@@ -557,6 +552,7 @@ class GAILTrainer(BaseRLTrainer):
 
                 if gail_cfg.use_linear_lr_decay and update > 0:
                     lr_scheduler.step()  # type: ignore
+                    gail_lr_scheduler.step()
 
                 if gail_cfg.use_linear_clip_decay and update > 0:
                     self.agent.clip_param = gail_cfg.clip_param * linear_decay(
@@ -739,21 +735,16 @@ class GAILTrainer(BaseRLTrainer):
                         )
                     )
 
-   
-                if update == self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE - 1:
-                    self.save_checkpoint(
-                        f"ckpt_gt_best.{count_checkpoints}.pth",
-                        dict(
-                            step=agent_count_steps,
-                            lr_scheduler=lr_scheduler.state_dict(),
-                            optimizer=self.agent.optimizer.state_dict(),
-                        ),
-                    )
-
                 # checkpoint model
                 if update % self.config.CHECKPOINT_INTERVAL == 0:
                     self.save_checkpoint(
-                        f"ckpt.{count_checkpoints}.pth", dict(step=agent_count_steps)
+                        f"ckpt.{count_checkpoints}.pth", dict(
+                            step=agent_count_steps,
+                            lr_scheduler=lr_scheduler.state_dict(),
+                            optimizer=self.agent.optimizer.state_dict(),
+                            gail_lr_scheduler=gail_lr_scheduler.state_dict(),
+                            gail_optimizer=self.gail.optimizer.state_dict(),
+                        )
                     )
                     count_checkpoints += 1
 

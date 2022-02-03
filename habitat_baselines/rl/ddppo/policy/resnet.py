@@ -281,15 +281,19 @@ class ResNet(nn.Module):
         return x
 
 
-def resnet18(in_channels, base_planes, ngroups):
+def resnet18(in_channels, base_planes, ngroups, dropout_prob=0.0):
     model = ResNet(in_channels, base_planes, ngroups, BasicBlock, [2, 2, 2, 2])
 
     return model
 
 
-def resnet50(in_channels: int, base_planes: int, ngroups: int) -> ResNet:
+def resnet50(in_channels, base_planes, ngroups, dropout_prob=0.0):
     model = ResNet(in_channels, base_planes, ngroups, Bottleneck, [3, 4, 6, 3])
+    return model
 
+
+def resnet101(in_channels, base_planes, ngroups, dropout_prob=0.0):
+    model = ResNet(in_channels, base_planes, ngroups, Bottleneck, [3, 4, 23, 3])
     return model
 
 

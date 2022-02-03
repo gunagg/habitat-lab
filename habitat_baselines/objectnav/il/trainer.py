@@ -94,8 +94,11 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         logger.add_filehandler(self.config.LOG_FILE)
 
         observation_space = self.envs.observation_spaces[0]
-        self.obs_space = observation_space
         self.obs_transforms = get_active_obs_transforms(self.config)
+        observation_space = apply_obs_transforms_obs_space(
+            observation_space, self.obs_transforms
+        )
+        self.obs_space = observation_space
         self.model = self._setup_model(
             observation_space, self.envs.action_spaces[0], model_config, self.device
         )
@@ -601,8 +604,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
             self.config.NUM_PROCESSES,
+            self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
             config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
         )
@@ -649,9 +652,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
         logger.info("Start eval")
         evaluation_meta = []
-        # ep_actions = [
-        #     [{"action": "STOP"}] for _ in range(self.config.NUM_PROCESSES)
-        # ]  # type: List[List[np.ndarray]]
+
         possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
         while (
             len(stats_episodes) < number_of_eval_episodes

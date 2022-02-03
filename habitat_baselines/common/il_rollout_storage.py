@@ -11,6 +11,7 @@ import numpy as np
 import sys
 import torch
 
+from habitat import logger
 from habitat_baselines.common.tensor_dict import TensorDict
 
 
@@ -33,6 +34,12 @@ class ILRolloutStorage:
         self.buffers["observations"] = TensorDict()
 
         for sensor in observation_space.spaces:
+            dtype = observation_space.spaces[sensor].dtype
+            if dtype == np.uint32:
+                dtype = np.int
+            elif dtype == np.float64:
+                dtype = np.float32
+
             self.buffers["observations"][sensor] = torch.from_numpy(
                 np.zeros(
                     (
@@ -40,7 +47,7 @@ class ILRolloutStorage:
                         num_envs,
                         *observation_space.spaces[sensor].shape,
                     ),
-                    dtype=observation_space.spaces[sensor].dtype,
+                    dtype=dtype
                 )
             )
 
