@@ -25,7 +25,7 @@
 
 4. Make sure `CHECKPOINT_INTERVAL` is set to `100` in `habitat_baselines/config/objectnav/ddpil_objectnav.yaml`
 
-5. Set `NUM_PROCESSES` to `8` in the file `habitat_baselines/config/objectnav/ddpil_objectnav.yaml`. Set `--nodes` to `2`, `--gres gpu` to `8` and `--n-tasks-per-node` to `8` in `scripts/run_training.sh`
+5. Set `NUM_PROCESSES` to `8` in the file `habitat_baselines/config/objectnav/ddpil_objectnav.yaml`. Set `--nodes` to `2`, `--gres gpu` to `8` and `--n-tasks-per-node` to `8` in `scripts/train_il.sh`
     **Note**: `NUM_PROCESS` * n_gpus should be less than or equal to total number of scenes in the dataset (i.e. 56 scenes for train split).
 
 6. To use semantic observations in training set `USE_SEMANTICS` to `True`. To enable finetuning on predicted semantic observations set `USE_PRED_SEMANTICS` to `True`. Change `SWITCH_TO_PRED_SEMANTICS_EPOCH` to set finetuning start epoch.
@@ -33,9 +33,9 @@
 7. To run distributed training use the following command:
     ```
     cd /path/to/habitat-lab
-    sbatch scripts/run_training.sh /path/to/ddpil_objectnav.yaml
+    sbatch scripts/train_il.sh /path/to/ddpil_objectnav.yaml
     ```
-    You can set the Multi GPU configs in `scripts/run_training.sh`
+    You can set the Multi GPU configs in `scripts/train_il.sh`
 
 
 
