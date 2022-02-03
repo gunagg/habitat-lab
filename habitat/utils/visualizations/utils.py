@@ -109,7 +109,7 @@ def images_to_video(
     images: List[np.ndarray],
     output_dir: str,
     video_name: str,
-    fps: int = 5,
+    fps: int = 15,
     quality: Optional[float] = 5,
     **kwargs,
 ):
@@ -233,7 +233,7 @@ def observations_to_image(observation: Dict, info: Dict, top_down_map_only=False
         frame = np.concatenate((egocentric_view, top_down_map), axis=1)
         if top_down_map_only:
             top_down_map = maps.colorize_draw_agent_and_fit_to_height(
-                info["top_down_map"], 512
+                info["top_down_map"], 2048
             )
             frame = top_down_map
     return frame
@@ -250,7 +250,7 @@ def append_text_to_image(image: np.ndarray, text: str):
         A new image with text inserted underneath the input image
     """
     h, w, c = image.shape
-    font_size = 1.5
+    font_size = 2.5
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
     blank_image = np.zeros(image.shape, dtype=np.uint8)
@@ -261,7 +261,7 @@ def append_text_to_image(image: np.ndarray, text: str):
     y = 0
     for line in wrapped_text:
         textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
-        y += textsize[1] + 10
+        y += textsize[1] + 15
         x = 10
         cv2.putText(
             blank_image,

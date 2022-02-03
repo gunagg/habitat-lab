@@ -78,6 +78,20 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             model = SemSegSeqModel(observation_space, action_space, model_config, device)
         else:
             model = Seq2SeqModel(observation_space, action_space, model_config)
+
+        if hasattr(model_config.RGB_ENCODER, "pretrained_ckpt") and model_config.RGB_ENCODER.pretrained_ckpt != "None":
+            state_dict = torch.load(model_config.RGB_ENCODER.pretrained_ckpt, map_location="cpu")["teacher"]
+            state_dict = {"{}.{}".format("visual_encoder", k): v for k, v in state_dict.items()}
+            msg = model.net.rgb_encoder.load_state_dict(state_dict, strict=False)
+            logger.info("Pretrained weights found at {} and loaded with msg: {}".format(
+                model_config.RGB_ENCODER.pretrained_ckpt,
+                msg
+            ))
+
+            if not model_config.RGB_ENCODER.train_encoder:
+                for param in model.net.rgb_encoder.visual_encoder.backbone.parameters():
+                    param.requires_grad_(False)
+
         return model   
 
     def _setup_actor_critic_agent(self, il_cfg: Config, model_config: Config) -> None:

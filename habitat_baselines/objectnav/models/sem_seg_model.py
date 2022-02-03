@@ -108,6 +108,7 @@ class SemSegSeqNet(Net):
                 output_size=model_config.RGB_ENCODER.output_size,
                 backbone=model_config.RGB_ENCODER.backbone,
                 trainable=model_config.RGB_ENCODER.train_encoder,
+                normalize_visual_inputs=model_config.normalize_visual_inputs,
             )
             rnn_input_size += model_config.RGB_ENCODER.output_size
         else:
@@ -184,9 +185,7 @@ class SemSegSeqNet(Net):
                 )
                 + 1
             )
-            if self.is_thda:
-                self._n_object_categories += 7
-            logger.info("Object categorues: {}".format(self._n_object_categories))
+            logger.info("Object categories: {}".format(self._n_object_categories))
             self.obj_categories_embedding = nn.Embedding(
                 self._n_object_categories, 32
             )

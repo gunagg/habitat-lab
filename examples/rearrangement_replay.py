@@ -109,8 +109,11 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
         print("Total episodes: {}".format(len(env.episodes)))
         for ep_id in range(len(env.episodes)):
             observation_list = []
+            top_down_list = []
 
             obs = env.reset()
+            if ep_id <3:
+                continue
 
             print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
@@ -134,6 +137,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             episode = env.current_episode
 
             for data in env.current_episode.reference_replay[step_index:]:
+                
                 if log_action:
                     log_action_data(data, i)
                 action = possible_actions.index(data.action)
@@ -142,6 +146,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 action_name = env.task.get_action_name(
                     action
                 )
+                #print(action_name)
 
                 if step_env:
                     observations = env.step(action=action)
@@ -155,11 +160,13 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
 
                 info = env.get_metrics()
                 frame = observations_to_image({"rgb": observations["rgb"]}, {})
-                # frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
+                top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
+                #frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
                 total_reward += info["rearrangement_reward"]
                 success = info["success"]
 
                 observation_list.append(frame)
+                top_down_list.append(top_down_frame)
                 i+=1
             
             if len(episode.reference_replay) < 2000:
@@ -169,6 +176,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             # total_coverage += get_coverage(info["top_down_map"])
             # save_image(frame, "s_path_{}.png".format(ep_id))
             make_videos([observation_list], output_prefix, ep_id)
+            make_videos([top_down_list], "{}_top_down".format(output_prefix), ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, success))
             # break
 

@@ -208,6 +208,7 @@ def handle_step(step, episode, unique_id, timestamp):
             instruction_text = data["task"]["instruction"]
             if "place the shark" in instruction_text:
                 instruction_text = instruction_text.replace("place the shark", "place the toy shark")
+            instruction_text = instruction_text.replace(" in", " on")
             episode["instruction"] = {
                 "instruction_text": instruction_text.lower(),
             }
@@ -415,18 +416,19 @@ def compute_instruction_tokens(episodes):
     return episodes
 
 
-def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_length=1500, sample=False):
+def replay_to_episode(replay_path, output_path, max_episodes=16,  max_episode_length=50000, sample=False):
     all_episodes = {
         "episodes": []
     }
 
     episodes = []
     episode_lengths = []
-    # file_paths = glob.glob(replay_path + "/*.csv")
-    archive = zipfile.ZipFile("all_hits_round_2_final.zip", "r")
-    for file_path in tqdm(archive.namelist()):
-        # reader = read_csv(file_path)
-        reader = read_csv_from_zip(archive, file_path)
+    file_paths = glob.glob(replay_path + "/*.csv")
+    # archive = zipfile.ZipFile("all_hits_round_2_final.zip", "r")
+    # for file_path in tqdm(archive.namelist()):
+    for file_path in tqdm(file_paths):
+        reader = read_csv(file_path)
+        # reader = read_csv_from_zip(archive, file_path)
 
         episode, counts = convert_to_episode(reader)
         # Filter out episodes that have unstable initialization

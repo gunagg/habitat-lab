@@ -2,6 +2,7 @@ import argparse
 import glob
 import gzip
 import json
+import random
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -355,6 +356,82 @@ def split_from_file(input_path, split_type, file, output_path):
     print("Total episodes after filtering: {}".format(len(episodes)))
     write_json(dataset, output_path)
     write_gzip(output_path, output_path)
+
+
+def split_dataset_and_exclude(input_path, output_path, source_path, num_instruction_episodes=500, num_unseen_init_episodes=2000):
+    VISITED_POINT_DICT = {}
+    # source_dataset = load_dataset(source_path)
+    
+    # for episode in source_dataset["episodes"]:
+    #     key = str(episode["start_position"])
+    #     if key not in VISITED_POINT_DICT.keys():
+    #         VISITED_POINT_DICT[key] = 0
+    #     VISITED_POINT_DICT[key] += 1
+
+    #     for object_ in episode["objects"]:
+    #         point = str(object_["position"])
+    #         if point not in VISITED_POINT_DICT.keys():
+    #             VISITED_POINT_DICT[point] = 0
+    #         VISITED_POINT_DICT[point] += 1
+
+    # print("Total existing episodes: {}".format(len(source_dataset["episodes"])))
+    dataset = load_dataset(input_path)
+    filtered_episodes = []
+    for i, episode in enumerate(dataset["episodes"]):
+        episode["episode_id"] = str(i)
+        if episode["scene_id"] not in ["TbHJrupSAjP.glb", "JmbYfDe2QKZ.glb"]:
+            filtered_episodes.append(episode)
+
+    print("Total episodees: {}, Filtered episodes: {}".format(len(dataset["episodes"]), len(filtered_episodes)))
+    dataset["episodes"] = filtered_episodes
+
+    # episodes = []
+    # for episode in dataset["episodes"]:
+    #     is_valid = True
+
+    #     key = str(episode["start_position"])
+    #     if key in VISITED_POINT_DICT.keys():
+    #         is_valid = False
+
+    #     for object_ in episode["objects"]:
+    #         point = str(object_["position"])
+    #         if point in VISITED_POINT_DICT.keys():
+    #             is_valid = False
+    #     if is_valid:
+    #         episodes.append(episode)
+
+    instructions = load_json_dataset("instructions.json")
+    inst_seen_episodes = []
+    for ep in dataset["episodes"]:
+        instruction = ep["instruction"]["instruction_text"].replace(" in", " on")
+        if instruction not in instructions:
+            inst_seen_episodes.append(ep)
+
+    print("Total filtered episodes: {}".format(len(inst_seen_episodes)))
+
+    unseen_init_episodes = random.sample(inst_seen_episodes, num_unseen_init_episodes)
+    unseen_init_episode_ids = [episode["episode_id"] for episode in unseen_init_episodes]
+
+    episodes = []
+    for episode in dataset["episodes"]:
+        instruction = episode["instruction"]["instruction_text"].replace(" in", " on")
+        if episode["episode_id"] not in unseen_init_episode_ids and instruction in instructions:
+            episodes.append(episode)
+    
+    print("Total filtered episodes: {}".format(len(episodes)))
+
+    unseen_instruction_episodes = random.sample(episodes, num_instruction_episodes)
+    dataset["episodes"] = unseen_init_episodes
+    print("Total episodees unseen inits: {}".format(len(dataset["episodes"])))
+
+    write_json(dataset, output_path)
+    write_gzip(output_path, output_path)
+    
+    dataset["episodes"] = unseen_instruction_episodes
+    print("Total episodees unseen instr filter: {}".format(len(dataset["episodes"])))
+
+    write_json(dataset, source_path)
+    write_gzip(source_path, source_path)
     
 
 def main():
@@ -392,9 +469,15 @@ def main():
     parser.add_argument(
         "--split-type", type=str, default='none'
     )
+    parser.add_argument(
+        "--exclude", dest='exclude', action='store_true'
+    )
+    
     args = parser.parse_args()
 
-    if args.create_split:
+    if args.exclude:
+        split_dataset_and_exclude(args.input_path, args.output_path, args.train_data_path)
+    elif args.create_split:
         create_split_from_existing_data(args.input_path, args.train_data_path, args.eval_data_path, args.output_path)
     elif args.validate_before_split:
         validate_split_data(args.input_path, args.train_data_path, args.eval_data_path)

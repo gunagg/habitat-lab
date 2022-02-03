@@ -93,6 +93,8 @@ class RearrangementDatasetV1(Dataset):
             for i, obj in enumerate(episode.objects):
                 episode.objects[i]["semantic_object_id"] = (episode.objects[i]["object_id"] + (1<<16))
                 episode.objects[i] = RearrangementObjectSpec(**obj)
+            if len(episode.reference_replay) > 1500:
+                continue
             self.episodes.append(episode)
 
 
@@ -168,4 +170,7 @@ class RearrangementDatasetV2(Dataset):
             for i, obj in enumerate(episode.objects):
                 episode.objects[i]["semantic_object_id"] = (episode.objects[i]["object_id"] + (1<<16))
                 episode.objects[i] = RearrangementObjectSpec(**obj)
+            
+            if len(episode.reference_replay) > 1500:
+                continue
             self.episodes.append(episode)

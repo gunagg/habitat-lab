@@ -125,6 +125,7 @@ class ObjectGoalNavEpisode(NavigationEpisode):
     reference_replay: Optional[List[ReplayActionSpec]] = None
     scene_state: Optional[List[SceneState]] = None
     is_thda: Optional[bool] = False
+    scene_dataset: Optional[str] = "mp3d"
 
     @property
     def goals_key(self) -> str:
@@ -229,6 +230,7 @@ class ObjectGoalSensor(Sensor):
                 self._dataset.category_to_task_category_id.values()
             )
             logger.info("max object cat: {}".format(max_value))
+            logger.info("cats: {}".format(self._dataset.category_to_task_category_id.values()))
 
         return spaces.Box(
             low=0, high=max_value, shape=sensor_shape, dtype=np.int64

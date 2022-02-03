@@ -754,17 +754,17 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
                             tb_writer=writer,
                         )
 
-                        self._save_results(
-                            batch,
-                            infos,
-                            config.RESULTS_DIR,
-                            i,
-                            config.EVAL.SPLIT,
-                            current_episodes[i].episode_id,
-                        )
+                        # self._save_results(
+                        #     batch,
+                        #     infos,
+                        #     config.RESULTS_DIR,
+                        #     i,
+                        #     config.EVAL.SPLIT,
+                        #     current_episodes[i].episode_id,
+                        # )
 
                         rgb_frames[i] = []
-                        ep_actions[i] = []
+                        # ep_actions[i] = []
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
@@ -773,18 +773,9 @@ class RearrangementBCDistribTrainer(BaseILTrainer):
                     )
                     # frame = append_text_to_image(frame, "Instruction: {}".format(next_episodes[i].instruction.instruction_text))
                     rgb_frames[i].append(frame)
-                    ep_actions[i].append({
-                        "action": action_names[i]
-                    })
-
-                    # self._save_results(
-                    #     batch,
-                    #     infos,
-                    #     config.RESULTS_DIR,
-                    #     i,
-                    #     config.EVAL.SPLIT,
-                    #     "{}_{}".format(current_episodes[i].episode_id, len(rgb_frames[i])),
-                    # )
+                    # ep_actions[i].append({
+                    #     "action": action_names[i]
+                    # })
 
 
             (

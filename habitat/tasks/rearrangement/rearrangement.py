@@ -584,27 +584,28 @@ class GoalObjectVisible(Measure):
     ):
         self._metric = 0
         if "semantic" in observations:
-            semantic = observations["semantic"]
-            object_ids = self._sim.get_existing_object_ids()
-            goal_visible_pixels = 0
-            semantic_object_id = self._sim.obj_id_to_semantic_obj_id_map[0]
-            # If object is gripped caclulate visible pixels for receptacle
-            if observations["gripped_object_id"] != -1:
-                semantic_object_id = self._sim.obj_id_to_semantic_obj_id_map[1]
-            
-            goal_visible_pixels += (semantic == semantic_object_id).sum() # Sum over all since we're not batched
-            goal_visible_area = goal_visible_pixels / semantic.size
-            self._metric = goal_visible_area
+            semantic_obs = observations["semantic"]
 
-            # obj_semantic = observations["semantic"]
-            # # permute tensor to dimension [CHANNEL x HEIGHT X WIDTH]
-            # idx = self.task_cat2mpcat40[
-            #     observations["objectgoal"][0]
-            # ]  # task._dataset.category_to_task_category_id[episode.object_category], task._dataset.category_to_scene_annotation_category_id[episode.object_category], observations["objectgoal"][0]
+            if self._config.INSERTED_OBJECTS:
+                object_ids = self._sim.get_existing_object_ids()
+                goal_visible_pixels = 0
+                semantic_object_id = self._sim.obj_id_to_semantic_obj_id_map[0]
+                # If object is gripped caclulate visible pixels for receptacle
+                if observations["gripped_object_id"] != -1:
+                    semantic_object_id = self._sim.obj_id_to_semantic_obj_id_map[1]
+                
+                goal_visible_pixels += (semantic_obs == semantic_object_id).sum() # Sum over all since we're not batched
+                goal_visible_area = goal_visible_pixels / semantic_obs.size
+                self._metric = goal_visible_area
+            else:
+                # permute tensor to dimension [CHANNEL x HEIGHT X WIDTH]
+                idx = self.task_cat2mpcat40[
+                    observations["objectgoal"][0]
+                ]  # task._dataset.category_to_task_category_id[episode.object_category], task._dataset.category_to_scene_annotation_category_id[episode.object_category], observations["objectgoal"][0]
 
-            # goal_visible_pixels = (obj_semantic == idx).sum() # Sum over all since we're not batched
-            # goal_visible_area = goal_visible_pixels / obj_semantic.size
-            # self._metric = goal_visible_area
+                goal_visible_pixels = (semantic_obs == idx).sum() # Sum over all since we're not batched
+                goal_visible_area = goal_visible_pixels / semantic_obs.size
+                self._metric = goal_visible_area
 
 
 @registry.register_measure

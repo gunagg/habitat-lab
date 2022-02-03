@@ -181,15 +181,18 @@ def handle_step(step, episode, unique_id, timestamp):
             episode["scene_id"] = data["scene_id"]
             if len(episode["scene_id"].split("/")) == 1:
                 episode["scene_id"] = "mp3d/{}/{}".format(episode["scene_id"].split(".")[0], episode["scene_id"])
+            if "gibson" in episode["scene_id"]:
+                episode["scene_id"] = "gibson_semantic/{}/{}".format(episode["scene_id"].split("/")[-1].split(".")[0], episode["scene_id"].split("/")[-1])
             episode["start_position"] = data["startState"]["position"]
             episode["start_rotation"] = data["startState"]["rotation"]
             episode["object_category"] = data["object_category"]
-            episode["start_room"] = data["start_room"]
-            episode["shortest_paths"] = data["shortest_paths"]
-            episode["info"] = data["info"]
-            episode["goals"] = []
+            episode["start_room"] = data.get("start_room")
+            episode["shortest_paths"] = data.get("shortest_paths")
             episode["is_thda"] = data.get("is_thda")
+            episode["info"] = data.get("info")
+            episode["scene_dataset"] = data.get("scene_dataset")
             episode["scene_state"] = data.get("scene_state")
+            episode["goals"] = []
             if episode["is_thda"]:
                 episode["goals"] = data["goals"]
 
@@ -255,7 +258,8 @@ def convert_to_episode(csv_reader):
 
 
 def replay_to_episode(
-    replay_path, output_path, max_episodes=16,  max_episode_length=1000, sample=False, append_dataset=False, is_thda=False
+    replay_path, output_path, max_episodes=16,  max_episode_length=1000, sample=False, append_dataset=False, is_thda=False,
+    is_gibson=False
 ):
     all_episodes = {
         "episodes": []
@@ -295,6 +299,8 @@ def replay_to_episode(
                 continue
             start_pos_map[episode_key] = 1
 
+            if not is_gibson and "gibson" in episode["scene_id"]:
+                continue
             if is_thda and not episode.get("is_thda"):
                 continue
             if not is_thda and episode.get("is_thda"):
@@ -311,12 +317,15 @@ def replay_to_episode(
                 if len(episode_lengths) >= max_episodes:
                     break
     print("Total duplicate episodes: {}".format(duplicates))
-    objectnav_dataset_path = "data/datasets/objectnav_mp3d_v1/train/content/{}.json.gz"
+
+    objectnav_dataset_path = "data/datasets/objectnav_mp3d/objectnav_mp3d_thda_40k/train/content/{}.json.gz"
     if "val" in output_path:
         objectnav_dataset_path = objectnav_dataset_path.replace("train", "val")
         print("Using val path")
     if is_thda:
         objectnav_dataset_path = "data/datasets/objectnav_mp3d_thda/train/content/{}.json.gz"
+    if is_gibson:
+        objectnav_dataset_path = "../Object-Goal-Navigation/data/datasets/objectnav/gibson/v1.1/train_generated/content/{}.json.gz"
     for scene, episodes in scene_episode_map.items():
         scene = scene.split("/")[-1].split(".")[0]
         # print(objectnav_dataset_path)
@@ -403,11 +412,14 @@ def main():
     parser.add_argument(
         "--sample", dest="sample", action="store_true"
     )
+    parser.add_argument(
+        "--gibson", dest="is_gibson", action="store_true"
+    )
     args = parser.parse_args()
     replay_to_episode(
         args.replay_path, args.output_path, args.max_episodes,
         args.max_episode_length, append_dataset=args.append_dataset, is_thda=args.is_thda,
-        sample=args.sample
+        sample=args.sample, is_gibson=args.is_gibson
     )
     list_missing_episodes()
 

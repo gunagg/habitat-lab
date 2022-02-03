@@ -1,4 +1,5 @@
 import argparse
+import glob
 import gzip
 import json
 
@@ -116,6 +117,34 @@ def populate_points(episodes, populate=True):
     return redundant_episode_ids, single_point_duplicate_episodes
 
 
+def populate_points_objectnav(episodes, populate=True):
+    redundant_episode_ids = []
+    single_point_duplicate_episodes = []
+    for episode in episodes:
+        point = str(episode["start_position"])
+        scene_id =  episode["scene_id"]
+        episode_id =  episode["episode_id"]
+        unique_key = "{}:{}".format(scene_id, episode_id)
+        duplicate_agent_point = False
+        if VISITED_POINT_DICT.get(point):
+            if populate:
+                VISITED_POINT_DICT[point]["scene"].append(scene_id)
+            # print("Redundant agent position in episode {}".format(episode["episode_id"]))
+            duplicate_agent_point = True
+        else:
+            if populate:
+                VISITED_POINT_DICT[point] = {
+                    "scene": [scene_id]
+                }
+
+        if duplicate_agent_point:
+            redundant_episode_ids.append({
+                "scene_id": scene_id,
+                "episode_id": episode_id
+            })
+    return redundant_episode_ids, redundant_episode_ids
+
+
 def validate_episode_init_leak(input_path_1, input_path_2):
     train_data = load_dataset(input_path_1)
     eval_data = load_dataset(input_path_2)
@@ -149,15 +178,22 @@ def filter_episodes(episodes, episode_ids):
     return filtered_episodes
 
 
-def find_duplicate_episode(input_path, output_path=None):
-    data = load_dataset(input_path)
-    episodes = data["episodes"]
-
-    redundant_points_episodes, single_point_duplicate_episodes = populate_points(episodes)
+def find_duplicate_episode(input_path, output_path=None, is_objectnav=False):
+    files = glob.glob(input_path)
+    episodes = []
+    for f in files:
+        data = load_dataset(f)
+        episodes.extend(data["episodes"])
+    
+    if is_objectnav:
+        redundant_points_episodes, single_point_duplicate_episodes = populate_points_objectnav(episodes)
+    else:
+        redundant_points_episodes, single_point_duplicate_episodes = populate_points(episodes)
+    print("\nTotal episodes: {}".format(len(episodes)))
     print("\n\nEpisode leak in train episodes: {}".format(len(redundant_points_episodes)))
     print("\n\Init points leak in train episodes: {}".format(len(single_point_duplicate_episodes)))
-    print("\n\nEpisodes: {}".format(redundant_points_episodes))
-    print("\n\nEpisodes: {}".format(single_point_duplicate_episodes))
+    print("\n\nEpisodes: {}".format(len(redundant_points_episodes)))
+    print("\n\nSingle point Episodes: {}".format(len(single_point_duplicate_episodes)))
     
     duplicate_episode_ids = []
     for dup in redundant_points_episodes:
@@ -167,8 +203,8 @@ def find_duplicate_episode(input_path, output_path=None):
     if output_path is not None:
         filtered_episodes = filter_episodes(episodes, duplicate_episode_ids)
         data["episodes"] = filtered_episodes
-        write_json(data, output_path)
-        write_gzip(output_path, output_path)
+        # write_json(data, output_path)
+        # write_gzip(output_path, output_path)
         print("Num episodes after dedup: {}".format(len(data["episodes"])))
 
 
@@ -189,13 +225,16 @@ def main():
     parser.add_argument(
         "--write-deduped", type=str, default=None
     )
+    parser.add_argument(
+        "--is-objectnav", dest="is_objectnav", action="store_true"
+    )
     args = parser.parse_args()
 
 
     if args.check_leak:
         validate_episode_init_leak(args.input_path_1, args.input_path_2)
     elif args.list_duplicate:
-        find_duplicate_episode(args.input_path_1, args.write_deduped)
+        find_duplicate_episode(args.input_path_1, args.write_deduped, args.is_objectnav)
     else:
         validate_data(args.input_path_1, args.input_path_2)
 

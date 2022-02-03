@@ -276,8 +276,14 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
         for i, episode in enumerate(deserialized["episodes"]):
             if "_shortest_path_cache" in episode:
                 del episode["_shortest_path_cache"]
+            
+            if "gibson" in episode["scene_id"]:
+                episode["scene_id"] = "gibson_semantic/{}".format(episode["scene_id"].split("/")[-1])
+            # del episode["object_id"]
+            # del episode["floor_id"]
+            # episode["reference_replay"] = []
             episode = ObjectGoalNavEpisode(**episode)
-            episode.episode_id = str(i)
+            # episode.episode_id = str(i)
 
             if scenes_dir is not None:
                 if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
@@ -322,8 +328,8 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
 
                         path[p_index] = ShortestPathPoint(**point)
             
-            # if len(episode.reference_replay) > 501:
-            #     continue
+            if len(episode.reference_replay) > 501:
+                continue
 
             self.episodes.append(episode)  # type: ignore [attr-defined]
 

@@ -87,6 +87,7 @@ class ResNetEncoder(nn.Module):
         make_backbone=None,
         normalize_visual_inputs: bool = False,
         sem_embedding_size=4,
+        dropout_prob: float = 0.0
     ):
         super().__init__()
 
@@ -128,7 +129,7 @@ class ResNetEncoder(nn.Module):
 
         if not self.is_blind:
             input_channels = self._n_input_depth + self._n_input_rgb + self._n_input_semantics
-            self.backbone = make_backbone(input_channels, baseplanes, ngroups)
+            self.backbone = make_backbone(input_channels, baseplanes, ngroups, dropout_prob=dropout_prob)
 
             # final_spatial = int(
             #     spatial_size * self.backbone.final_spatial_compress

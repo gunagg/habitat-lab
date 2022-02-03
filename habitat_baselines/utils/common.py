@@ -183,7 +183,7 @@ def generate_video(
     checkpoint_idx: int,
     metrics: Dict[str, float],
     tb_writer: TensorboardWriter,
-    fps: int = 1,
+    fps: int = 15,
 ) -> None:
     r"""Generate video according to specified information.
 

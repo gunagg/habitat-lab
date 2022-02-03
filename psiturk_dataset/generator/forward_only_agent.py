@@ -1,5 +1,6 @@
 import argparse
 import attr
+import math
 import cv2
 import habitat
 import copy
@@ -47,7 +48,7 @@ class SimpleRLEnv(habitat.RLEnv):
 
 def save_image(img, file_name):
     im = Image.fromarray(img)
-    im.save("demos/s_path/" + file_name)
+    im.save("demos/easy_scenes/" + file_name)
 
 
 def make_videos(observations_list, output_prefix, ep_id):
@@ -193,45 +194,89 @@ def save_top_down_map(info):
     save_image(top_down_map, "top_down_map.png")
 
 
-def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="data", output_path=""):
+def calculate_turnn_angle(env, goal_position):
+    agent_state = env._sim.get_agent(0).get_state()
+    object_position = goal_position
+    agent_to_obj = object_position - agent_state.position
+    #agent_local_forward = np.array([0, 0, -1.0])
+    # print(env._sim._default_agent.body.object.absolute_transformation())
+    agent_local_forward = env._sim._default_agent.body.object.absolute_transformation().transform_vector(mn.Vector3(0, 0, -1))
+    flat_to_obj = np.array([agent_to_obj[0], 0.0, agent_to_obj[2]])
+    flat_dist_to_obj = np.linalg.norm(flat_to_obj)
+    flat_to_obj /= flat_dist_to_obj
+    # move the agent closer to the objects if too far (this will be projected back to floor in set)
+    was_gt = False
+    if flat_dist_to_obj > 3.0:
+        was_gt = True
+        agent_state.position = object_position - flat_to_obj * 3.0
+    # unit y normal plane for rotation
+    det = (
+        flat_to_obj[0] * agent_local_forward[2]
+        - agent_local_forward[0] * flat_to_obj[2]
+    )
+    turn_angle = math.atan2(det, np.dot(agent_local_forward, flat_to_obj))
+    stop = "no_stop"
+    return np.rad2deg(turn_angle), stop, turn_angle
+
+
+def get_closest_goal(episode, sim):
+    goals = []
+    distance = []
+    min_dist = 1000.0
+    goal_location = None
+    agent_position = sim.get_agent_state().position
+    goal_rotation = sim.get_agent_state().rotation
+    for goal in episode.goals:
+        for view_point in goal.view_points:
+            position = view_point.agent_state.position
+            rotation = view_point.agent_state.rotation
+            
+            dist = sim.geodesic_distance(
+                agent_position, position
+            )
+            if min_dist > dist:
+                min_dist = dist
+                goal_location = position
+                goal_rotation = rotation
+    return goal_location, goal_rotation
+
+
+def generate_trajectories(cfg, episode_path, output_prefix="s_path", enable_turns=False, output_path=""):
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
     with habitat.Env(cfg) as env:
         goal_radius = 0.1
         spl = 0
         total_success = 0.0
         total_episodes = 0.0
-        total_coverage = 0.0
-        visible_area = 0.0
         fixed_episodes = 0
+        turn_fix_episodes = 0
 
-        dataset = load_dataset(episode_path)
-
-        dataset["episodes"] = []
-        failed_dataset = copy.deepcopy(dataset)
-        failed_dataset["episodes"] = []
+        observation_list = []
+        info = {}
 
         logger.info("Total episodes: {}".format(len(env.episodes)))
+        success_episodes = []
         for ep_id in range(len(env.episodes)):
-            follower = ShortestPathFollower(
-                env._sim, goal_radius, False
-            )
-            observation_list = []
             env.reset()
-            goal_idx = 0
-            success = 0
-            reference_replay = []
+
             episode = env.current_episode
-            goal_position = get_closest_goal(episode, env.sim, follower)
-            info = {}
-            replay_data = []
-            reference_replay.append(get_action_data(HabitatSimActions.STOP, env._sim))
-            i = 0
-            if goal_position is None:
-                continue
+            goal_position, goal_rotation = get_closest_goal(episode, env.sim)
+
+            turns_count = -1
             while not env.episode_over:
-                best_action = follower.get_next_action(
-                    goal_position
-                )
+                best_action = HabitatSimActions.MOVE_FORWARD
+
+                if enable_turns:
+                    angle, stop, rad_agle = calculate_turnn_angle(env, goal_position)
+                    if turns_count == -1:
+                        turns_count = abs(angle) / 30 + 1
+                    
+                    if turns_count > 0:
+                        if angle > 0:
+                            best_action = HabitatSimActions.TURN_LEFT
+                        else:
+                            best_action = HabitatSimActions.TURN_RIGHT
+                        turns_count -= 1
 
                 if "distance_to_goal" in info.keys() and info["distance_to_goal"] < 0.1 and best_action != HabitatSimActions.STOP:
                     best_action = HabitatSimActions.STOP
@@ -242,87 +287,51 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="d
                 info = env.get_metrics()
                 # Generate frames
                 frame = observations_to_image({"rgb": observations["rgb"]}, info)
-                frame = append_text_to_image(frame, "Find: {}".format(env.current_episode.object_category))
-                observation_list.append(frame)
+                save_image(frame, "ep_{}.jpg".format(ep_id))
+                
+                # frame = append_text_to_image(frame, "Find: {}".format(env.current_episode.object_category))
+                # observation_list.append(frame)
                 success = info["success"]
+                break
 
-                action_data = get_action_data(best_action, env._sim)
-                reference_replay.append(action_data)
-                replay_data.append(get_agent_pose(env._sim))
-                i += 1
-
-            ep_data = get_episode_json(env.current_episode, reference_replay)
-            del ep_data["_shortest_path_cache"]
             total_success += success
             spl += info["spl"]
             total_episodes += 1
-
-            #visible_area += get_visible_area(info["top_down_map"])
-            # total_coverage += get_coverage(info["top_down_map"])
-
-            logger.info("Episode success: {}, Total: {}, Success: {}, Fixed episodes: {}, Steps: {}".format(success, total_episodes, total_success/total_episodes, fixed_episodes, i))
-            # if not success:
-            #     make_videos([observation_list], output_prefix, ep_id)
-            # save_image(frame, "{}_s_path.png".format(ep_data["episode_id"]))
             if success:
-                dataset["episodes"].append(ep_data)
-            if not success:
-                failed_dataset["episodes"].append(ep_data)
-            
-            # trajectory = create_episode_trajectory(replay_data, episode)
-            # write_json(trajectory, "data/visualizations/teaser/trajectories/{}_{}_s_path_trajectory.json".format(episode.scene_id.split("/")[-1].split(".")[0], ep_id))
-            # save_top_down_map(info)
+                success_episodes.append({
+                    "episode_id": episode.episode_id,
+                    "scene_id": episode.scene_id,
+                    "info": info
+                })
 
-            if (ep_id + 1) % 1000 == 0:
-                logger.info("Saving checkpoint at {} episodes".format(ep_id))
-                write_json(dataset, "{}/{}.json".format(output_path, scene_id))
-                write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
+            logger.info("Episode success: {}, Total: {}, Success: {}, Fixed episodes: {}".format(success, total_episodes, total_success/total_episodes, fixed_episodes))
         
         print("Total episodes: {}".format(total_episodes))
 
         print("\n\nEpisode success: {}".format(total_success / total_episodes))
         print("Total episode success: {}".format(total_success))
         print("SPL: {}, {}, {}".format(spl/total_episodes, spl, total_episodes))
-        print("SPL: {}, {}, {}".format(spl/total_success, spl, total_success))
         print("Success: {}, {}, {}".format(total_success/total_episodes, total_success, total_episodes))
-        print("Coverage: {}, {}, {}".format(total_coverage/total_episodes, total_coverage, total_episodes))
-        print("Visible area: {}, {}, {}".format(visible_area/total_episodes, visible_area, total_episodes))
-        print("Total sample episodes: {}/{}".format(len(dataset["episodes"]), total_episodes))
-        write_json(dataset, "{}/{}.json".format(output_path, scene_id))
-        write_gzip("{}/{}.json".format(output_path, scene_id), "{}/{}.json".format(output_path, scene_id))
-
-        if len(failed_dataset["episodes"]) > 0:
-            write_json(failed_dataset, "{}/{}_failed.json".format(output_path, scene_id))
-            write_gzip("{}/{}_failed.json".format(output_path, scene_id), "{}/{}_failed.json".format(output_path, scene_id))
-
+        write_json(success_episodes, output_path)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--num-episodes", type=int, default=1
-    )
-    parser.add_argument(
-        "--scene", type=str, default="objectnav_round_2"
-    )
-    parser.add_argument(
-        "--split", type=str, default="split_1"
-    )
-    parser.add_argument(
         "--episodes", type=str, default="data/episodes/sampled.json.gz"
     )
     parser.add_argument(
-        "--output-path", type=str, default="data/episodes/s_path_objectnav/round_2_full/extended_v2/"
+        "--enable-turns", dest="enable_turns", action="store_true"
+    )
+    parser.add_argument(
+        "--output-path", type=str, default="success.json"
     )
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.episodes
-    split = objectnav_scene_splits[args.split]
-    if len(split) > 1:
-        cfg.DATASET.CONTENT_SCENES = split
     cfg.freeze()
 
-    observations = generate_trajectories(cfg, args.episodes, scene_id=args.scene, output_path=args.output_path)
+    observations = generate_trajectories(cfg, args.episodes, enable_turns=args.enable_turns, output_path=args.output_path)
 
 if __name__ == "__main__":
     main()

@@ -81,6 +81,19 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             model = SemSegSeqModel(observation_space, action_space, model_config, device)
         else:
             model = Seq2SeqModel(observation_space, action_space, model_config)
+        
+        if hasattr(model_config.RGB_ENCODER, "pretrained_ckpt") and model_config.RGB_ENCODER.pretrained_ckpt != "None":
+            state_dict = torch.load(model_config.RGB_ENCODER.pretrained_ckpt, map_location="cpu")["teacher"]
+            state_dict = {"{}.{}".format("visual_encoder", k): v for k, v in state_dict.items()}
+            msg = model.net.rgb_encoder.load_state_dict(state_dict, strict=False)
+            logger.info("Pretrained weights found at {} and loaded with msg: {}".format(
+                model_config.RGB_ENCODER.pretrained_ckpt,
+                msg
+            ))
+
+            if not model_config.RGB_ENCODER.train_encoder:
+                for param in model.net.rgb_encoder.visual_encoder.backbone.parameters():
+                    param.requires_grad_(False)
         return model   
 
     def _setup_actor_critic_agent(self, il_cfg: Config, model_config: Config) -> None:
@@ -647,7 +660,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         logger.info("Start eval")
         evaluation_meta = []
         ep_actions = [
-            [] for _ in range(self.config.NUM_PROCESSES)
+            [{"action": "STOP"}] for _ in range(self.config.NUM_PROCESSES)
         ]  # type: List[List[np.ndarray]]
         possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
         while (
@@ -744,13 +757,13 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                         ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
                     if "exploration_metrics" in infos[i]:
                         ep_metrics["exploration_metrics"] = infos[i]["exploration_metrics"]
-                    # evaluation_meta.append({
-                    #     "scene_id": current_episodes[i].scene_id,
-                    #     "episode_id": current_episodes[i].episode_id,
-                    #     "metrics": ep_metrics,
-                    #     "object_category": current_episodes[i].object_category
-                    # })
-                    # write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
+                    evaluation_meta.append({
+                        "scene_id": current_episodes[i].scene_id,
+                        "episode_id": current_episodes[i].episode_id,
+                        "metrics": ep_metrics,
+                        "object_category": current_episodes[i].object_category
+                    })
+                    write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (
@@ -759,8 +772,9 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                         )
                     ] = episode_stats
 
-                    ep_metrics = get_episode_json(current_episodes[i], ep_actions[i])
-                    evaluation_meta.append(ep_metrics)
+                    # Record for replay
+                    # ep_data = get_episode_json(current_episodes[i], ep_actions[i])
+                    # evaluation_meta.append(ep_data)
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
@@ -783,7 +797,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                         )
 
                         rgb_frames[i] = []
-                        ep_actions[i] = []
 
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
@@ -792,10 +805,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                         {"rgb": batch["rgb"][i]}, infos[i]
                     )
                     #frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
-                    rgb_frames[i].append(frame)
-                    ep_actions[i].append({
-                        "action": action_names[i]
-                    })
+                    rgb_frames[i].append(frame)                
 
                     # self._save_results(
                     #     batch,

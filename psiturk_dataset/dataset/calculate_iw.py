@@ -54,6 +54,7 @@ def calculate_inflection_weight(path, stats_path):
     }
     ep_success_count = 0
     actions_lt_2k = 0
+    ep_lt_than_2k = 0
     wall_clock_time = 0
     for episode in tqdm(episodes):
         num_inflections, num_actions = caclulate_inflections(episode)
@@ -68,8 +69,9 @@ def calculate_inflection_weight(path, stats_path):
         
         if len(reference_replay) <= 1500:
             ep_success_count += 1
-        if len(reference_replay) < 1000:
+        if len(reference_replay) <= 1800:
             actions_lt_2k += num_actions
+            ep_lt_than_2k += 1
 
         inflections += num_inflections
         total_actions += num_actions
@@ -77,6 +79,7 @@ def calculate_inflection_weight(path, stats_path):
     save_meta_for_analysis(data, stats_path)
 
     print("Total episodes: {}".format(len(episodes)))
+    print("Episodes less than 1.5k: {}".format(ep_lt_than_2k))
     print("Inflection weight: {}".format(total_actions / inflections))
     print("Average episode length: {}".format(total_actions / total_episodes))
     print("Total actions: {}".format(total_actions))
@@ -136,7 +139,7 @@ def calculate_inflection_weight_objectnav(path, stats_path):
             if len(reference_replay) < 2000:
                 actions_lt_2k += num_actions
             
-            if len(reference_replay) < 500:
+            if len(reference_replay) <= 500:
                 ep_lt_than_500 += 1
 
     save_meta_for_analysis(data_stats, stats_path)

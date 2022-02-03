@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
 #SBATCH --signal=USR1@300
-#SBATCH --partition=user-overcap
+#SBATCH --partition=short
 #SBATCH --qos=ram-special
 #SBATCH --constraint=a40
 #SBATCH --output=slurm_logs/ddppo-%j.out
