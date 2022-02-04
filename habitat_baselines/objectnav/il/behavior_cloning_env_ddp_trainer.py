@@ -106,8 +106,12 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
         logger.add_filehandler(self.config.LOG_FILE)
 
         observation_space = self.envs.observation_spaces[0]
-        self.obs_space = observation_space
         self.obs_transforms = get_active_obs_transforms(self.config)
+        # observation_space = apply_obs_transforms_obs_space(
+        #     observation_space, self.obs_transforms
+        # )
+        self.obs_space = observation_space
+
         logger.info("obs transforms: {}".format(self.obs_transforms))
         self.model = self._setup_model(
             observation_space, self.envs.action_spaces[0], model_config, self.device

@@ -47,6 +47,8 @@ IL:
     use_linear_lr_decay: True
     reward_window_size: 50
     sync_frac: 0.6
+  OBS_TRANSFORMS:
+    ENABLED_TRANSFORMS: ("ResizeShortestEdge", "CenterCropper",)
 
 RL:
   SUCCESS_REWARD: 2.5
