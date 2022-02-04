@@ -19,7 +19,7 @@ OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 NUM_CHECKPOINTS: -1
-CHECKPOINT_INTERVAL: 100
+CHECKPOINT_INTERVAL: 500
 SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/overfitting_ssl/rgbd/{split}/{type}"
@@ -31,7 +31,7 @@ EVAL:
   sample: False
   semantic_metrics: False
   evaluation_meta_file: "tb/objectnav/overfitting_ssl/rgbd/seed_1_1ep/evaluation_meta_35k_3.json"
-NUM_UPDATES: 5000
+NUM_UPDATES: 16000
 
 IL:
   USE_IW: True

@@ -21,7 +21,7 @@ from habitat.utils.visualizations import maps
 
 from PIL import Image
 
-config = habitat.get_config("configs/tasks/shortest_path_objectnav_mp3d.yaml")
+#config = habitat.get_config("configs/tasks/shortest_path_objectnav_mp3d.yaml")
 
 objectnav_scene_splits = {
     "split_1": ['17DRP5sb8fy', '1LXtFkjw3qL', '1pXnuDYAj8r', '29hnd4uzFmX', '5LpN3gDmAk7', '5q7pvUzZiYa', '759xd9YjKW5', '7y3sRwLe3Va', '82sE5b5pLXE', '8WUmhLawc2A', 'B6ByNegPMKs', 'D7G3Y4RVNrH', 'D7N2EKCX4Sj', 'E9uDoFAP3SH'],
