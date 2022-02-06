@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Callable
 
 import math
 import numpy as np
@@ -87,9 +87,11 @@ class ResNetEncoder(nn.Module):
         make_backbone=None,
         normalize_visual_inputs: bool = False,
         sem_embedding_size=4,
-        dropout_prob: float = 0.0
+        dropout_prob: float = 0.0,
+        obs_augmentations: Dict[str, Callable] = None,
     ):
         super().__init__()
+        self.obs_augmentations = obs_augmentations
 
         if "rgb" in observation_space.spaces:
             self._frame_size = tuple(observation_space.spaces["rgb"].shape[:2])
@@ -185,6 +187,8 @@ class ResNetEncoder(nn.Module):
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             rgb_observations = rgb_observations / 255.0  # normalize RGB
+            if self.obs_augmentations is not None:
+                rgb_observations = self.obs_augmentations(rgb_observations)
             cnn_input.append(rgb_observations)
 
         if self._n_input_depth > 0:

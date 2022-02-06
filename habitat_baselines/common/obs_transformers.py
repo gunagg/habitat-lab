@@ -1265,9 +1265,7 @@ def get_active_obs_transforms(config: Config) -> List[ObservationTransformer]:
             active_obs_transforms.append(obs_transform)
     
     if hasattr(config, "IL") and hasattr(config.IL, "OBS_TRANSFORMS"):
-        obs_transform_names = (
-            config.IL.OBS_TRANSFORMS.ENABLED_TRANSFORMS, 
-        )
+        obs_transform_names = config.IL.OBS_TRANSFORMS.ENABLED_TRANSFORMS
         for obs_transform_name in obs_transform_names:
             obs_trans_cls = baseline_registry.get_obs_transformer(
                 obs_transform_name
@@ -1289,6 +1287,8 @@ def apply_obs_transforms_batch(
 def apply_obs_transforms_obs_space(
     obs_space: spaces.Dict, obs_transforms: Iterable[ObservationTransformer]
 ) -> spaces.Dict:
+    print(obs_transforms)
     for obs_transform in obs_transforms:
+        print(obs_transform)
         obs_space = obs_transform.transform_observation_space(obs_space)
     return obs_space

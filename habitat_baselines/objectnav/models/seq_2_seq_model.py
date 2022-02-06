@@ -38,7 +38,7 @@ class Seq2SeqNet(Net):
         RNN state encoder
     """
 
-    def __init__(self, observation_space: Space, model_config: Config, num_actions):
+    def __init__(self, observation_space: Space, model_config: Config, num_actions, obs_augmentations):
         super().__init__()
         self.model_config = model_config
         rnn_input_size = 0
@@ -89,6 +89,7 @@ class Seq2SeqNet(Net):
                     backbone=model_config.RGB_ENCODER.backbone,
                     trainable=model_config.RGB_ENCODER.train_encoder,
                     normalize_visual_inputs=model_config.normalize_visual_inputs,
+                    obs_augmentations=obs_augmentations,
                 )
 
             # Init the RNN state decoder
@@ -212,13 +213,14 @@ class Seq2SeqNet(Net):
 
 class Seq2SeqModel(nn.Module):
     def __init__(
-        self, observation_space: Space, action_space: Space, model_config: Config
+        self, observation_space: Space, action_space: Space, model_config: Config, obs_augmentations
     ):
         super().__init__()
         self.net = Seq2SeqNet(
             observation_space=observation_space,
             model_config=model_config,
             num_actions=action_space.n,
+            obs_augmentations=obs_augmentations,
         )
         self.action_distribution = CategoricalNet(
             self.net.output_size, action_space.n

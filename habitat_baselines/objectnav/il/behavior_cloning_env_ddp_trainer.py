@@ -25,7 +25,8 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
-    get_active_obs_transforms
+    get_active_obs_transforms,
+    apply_obs_transforms_obs_space
 )
 from habitat_baselines.rearrangement.common.il_rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -47,6 +48,7 @@ from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
 from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
 from habitat_baselines.objectnav.models.rednet import load_rednet
+from habitat_baselines.objectnav.common.data_augmentations import compose_augmentations
 
 
 @baseline_registry.register_trainer(name="ddp-objectnav-bc-env")
@@ -71,13 +73,19 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
         model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
         model_config.freeze()
 
+        self.obs_augmentations = compose_augmentations(
+            self.config.IL.OBS_AUGMENTATIONS,
+            self.config.IL.OBS_AUGMENTATIONS_PARAMS
+        )
+
+
         model = None
         if hasattr(model_config, "VISUAL_ENCODER"):
             model = SingleResNetSeqModel(observation_space, action_space, model_config, device)
         elif model_config.USE_SEMANTICS:
-            model = SemSegSeqModel(observation_space, action_space, model_config, device)
+            model = SemSegSeqModel(observation_space, action_space, model_config, self.obs_augmentations, device)
         else:
-            model = Seq2SeqModel(observation_space, action_space, model_config)
+            model = Seq2SeqModel(observation_space, action_space, model_config, self.obs_augmentations)
 
         if hasattr(model_config.RGB_ENCODER, "pretrained_ckpt") and model_config.RGB_ENCODER.pretrained_ckpt != "None":
             state_dict = torch.load(model_config.RGB_ENCODER.pretrained_ckpt, map_location="cpu")["teacher"]
@@ -106,9 +114,11 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
         logger.add_filehandler(self.config.LOG_FILE)
 
         observation_space = self.envs.observation_spaces[0]
-        self.obs_space = observation_space
         self.obs_transforms = get_active_obs_transforms(self.config)
-        logger.info("obs transforms: {}".format(self.obs_transforms))
+        observation_space = apply_obs_transforms_obs_space(
+            observation_space, self.obs_transforms
+        )
+        self.obs_space = observation_space
         self.model = self._setup_model(
             observation_space, self.envs.action_spaces[0], model_config, self.device
         )
@@ -241,6 +251,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
                 # Subtract 1 from class labels for THDA YCB categories
                 if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
                     semantic_obs = semantic_obs - 1
+                semantic_obs = semantic_obs.unsqueeze(-1)
                 rollouts.observations[sensor][0].copy_(semantic_obs)
 
         # batch and observations may contain shared PyTorch CUDA

@@ -247,6 +247,7 @@ class ResnetRGBEncoder(nn.Module):
         normalize_visual_inputs=False,
         trainable=False,
         spatial_output: bool = False,
+        obs_augmentations = None
     ):
         super().__init__()
 
@@ -264,6 +265,7 @@ class ResnetRGBEncoder(nn.Module):
             ngroups=resnet_baseplanes // 2,
             make_backbone=make_backbone,
             normalize_visual_inputs=normalize_visual_inputs,
+            obs_augmentations=obs_augmentations,
         )
 
         for param in self.visual_encoder.parameters():

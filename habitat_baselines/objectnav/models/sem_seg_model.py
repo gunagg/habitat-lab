@@ -51,7 +51,9 @@ class SemSegSeqNet(Net):
         RNN state encoder
     """
 
-    def __init__(self, observation_space: Space, model_config: Config, num_actions, device=None):
+    def __init__(
+        self, observation_space: Space, model_config: Config, num_actions, obs_augmentations, device=None
+    ):
         super().__init__()
         self.model_config = model_config
         rnn_input_size = 0
@@ -109,6 +111,7 @@ class SemSegSeqNet(Net):
                 backbone=model_config.RGB_ENCODER.backbone,
                 trainable=model_config.RGB_ENCODER.train_encoder,
                 normalize_visual_inputs=model_config.normalize_visual_inputs,
+                obs_augmentations=obs_augmentations,
             )
             rnn_input_size += model_config.RGB_ENCODER.output_size
         else:
@@ -266,7 +269,7 @@ class SemSegSeqNet(Net):
             goal_visible_area = torch.true_divide(goal_visible_pixels, obj_semantic.size(-1)).float()
             
             # logger.info("goaL: {}".format(goal_visible_area))
-            #logger.info("goal sem shape : {}, object gaol shape: {}".format(goal_semantic.shape, observations["objectgoal"].shape))
+            # logger.info("goal sem shape : {}, object gaol shape: {}".format(goal_semantic.shape, observations["objectgoal"].shape))
             goal_sem_seg_mask = (goal_semantic == observations["objectgoal"].contiguous().unsqueeze(-1)).float()
             #logger.info("goal visible shape: {}".format(goal_sem_seg_mask.shape))
             return goal_visible_area.unsqueeze(-1), goal_sem_seg_mask.unsqueeze(-1)
@@ -303,7 +306,7 @@ class SemSegSeqNet(Net):
             rgb_embedding = self.rgb_encoder(observations)
             x.append(rgb_embedding)
 
-        semantic_obs = observations["semantic"]
+        semantic_obs = observations["semantic"].squeeze(-1)
         if len(semantic_obs.size()) == 4:
             observations["semantic"] = semantic_obs.contiguous().view(
                 -1, semantic_obs.size(2), semantic_obs.size(3)
@@ -359,13 +362,14 @@ class SemSegSeqNet(Net):
 
 class SemSegSeqModel(nn.Module):
     def __init__(
-        self, observation_space: Space, action_space: Space, model_config: Config, device=None
+        self, observation_space: Space, action_space: Space, model_config: Config, obs_augmentations, device=None
     ):
         super().__init__()
         self.net = SemSegSeqNet(
             observation_space=observation_space,
             model_config=model_config,
             num_actions=action_space.n,
+            obs_augmentations=obs_augmentations,
             device=device,
         )
         self.action_distribution = CategoricalNet(

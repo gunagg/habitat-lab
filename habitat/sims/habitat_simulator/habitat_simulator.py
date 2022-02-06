@@ -163,7 +163,7 @@ class HabitatSimSemanticSensor(SemanticSensor):
         return spaces.Box(
             low=np.iinfo(np.uint32).min,
             high=np.iinfo(np.uint32).max,
-            shape=(self.config.HEIGHT, self.config.WIDTH),
+            shape=(self.config.HEIGHT, self.config.WIDTH, 1),
             dtype=np.uint32,
         )
 
@@ -172,6 +172,12 @@ class HabitatSimSemanticSensor(SemanticSensor):
     ) -> VisualObservation:
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
+        if isinstance(obs, np.ndarray):
+            obs = np.expand_dims(
+                obs, axis=2
+            )  # make depth observation a 3D array
+        else:
+            obs = obs.unsqueeze(-1)  # type: ignore[attr-defined]
         return obs
 
 

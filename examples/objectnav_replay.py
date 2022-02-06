@@ -64,9 +64,9 @@ task_cat2mpcat40 = [
 ]
 
 
-def save_image(img, file_name):
+def save_image(img, dir, file_name):
     im = Image.fromarray(img)
-    im.save("demos/" + file_name)
+    im.save("demos/{}/".format(dir) + file_name)
 
 
 def make_videos(observations_list, output_prefix, ep_id):
@@ -331,6 +331,9 @@ def run_reference_replay(
 
             if len(episode.reference_replay) > 2500:
                 continue
+            scene_id = env.current_episode.scene_id.split("/")[-1].split(".")[0]
+            dir_path = "{}_{}".format(scene_id, ep_id)
+            # os.mkdir("demos/{}".format(dir_path))
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
                     log_action_data(data, i)
@@ -343,8 +346,7 @@ def run_reference_replay(
                     observations = env.step(action=action)
 
                     info = env.get_metrics()
-                    # sem_obs_gt_goal = get_goal_semantic(torch.Tensor(observations["semantic"]), observations["objectgoal"], task_cat2mpcat40, episode)
-                    
+
                     frame = observations_to_image({"rgb": observations["rgb"]}, info)
                     top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
                     if semantic_predictor is not None:
@@ -352,12 +354,8 @@ def run_reference_replay(
                         
                         max_sem_id = max(max_sem_id, sem_obs.max().item())
                         if True: # is_thda:
-                            # print("softmax {}".format(sem_obs.shape))
-                            # sem_obs = F.softmax(sem_obs, 1)
                             sem_obs = sem_obs - 1
-                            #sem_obs = (torch.max(sem_obs, 1)[1]).float()
                             h, w, c = observations["rgb"].shape
-                            #print("softmax {} -- {} - {} - {}".format(sem_obs.shape, h, w, c))
                             idx = mapping_mpcat40_to_goal[
                                 task_cat2pred_cat[
                                     torch.Tensor(observations["objectgoal"]).long().squeeze()
@@ -365,12 +363,8 @@ def run_reference_replay(
                             ]
                             sem_obs_goal = (sem_obs == idx)
 
-                        # sem_obs_2 = semantic_predictor_2(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
-                        # sem_obs_2 = parse_gt_semantic(env._sim, observations["semantic"])
                         sem_obs_2 = torch.Tensor(observations["semantic"]).long().to(device)
                         observations["predicted_sem_obs"] = sem_obs
-                        # sem_obs_goal = get_goal_semantic(sem_obs, observations["objectgoal"], task_cat2mpcat40, episode)
-                        # sem_obs_gt_goal = get_goal_semantic(sem_obs_2, observations["objectgoal"], task_cat2mpcat40, episode).detach().cpu()
                         idx = mapping_mpcat40_to_goal[
                             task_cat2pred_cat[
                                 torch.Tensor(observations["objectgoal"]).long().squeeze()
@@ -378,14 +372,11 @@ def run_reference_replay(
                         ]
                         sem_obs_gt_goal = (sem_obs_2 == idx)
 
-                        # if sem_obs_gt_goal.sum() > 0:
-                        #     print(torch.sum(sem_obs_goal))
-                        #     #print(torch.unique((sem_obs_goal.squeeze(-1).squeeze(0) * sem_obs_gt_goal)))
-                        #     print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
                         frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
 
-                    frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
+                    # frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
                     replay_data.append(get_agent_pose(env._sim))
+                    # save_image(frame, dir_path, "{}_{}.png".format(dir_path, i))
 
                     if info["success"]:
                         ep_success = 1
