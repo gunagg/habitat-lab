@@ -160,7 +160,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
         )
 
-        interrupted_state = load_interrupted_state()
+        interrupted_state = load_interrupted_state(self.config.INTERRUPTED_STATE_FILE)
         if interrupted_state is not None:
             logger.info("Overriding current config with interrupted state config")
             self.config = interrupted_state["config"]
@@ -339,7 +339,8 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
                                 lr_sched_state=lr_scheduler.state_dict(),
                                 config=self.config,
                                 requeue_stats=requeue_stats,
-                            )
+                            ),
+                            self.config.INTERRUPTED_STATE_FILE
                         )
 
                     requeue_job()

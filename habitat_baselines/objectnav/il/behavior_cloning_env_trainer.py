@@ -774,7 +774,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                         "metrics": ep_metrics,
                         "object_category": current_episodes[i].object_category
                     })
-                    write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
+                    # write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (
@@ -869,7 +869,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             step_id,
         )
 
-        write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
+        # write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
 
         metrics = {k: v for k, v in aggregated_stats.items() if k not in ["reward", "pred_reward"]}
         if len(metrics) > 0:
