@@ -31,8 +31,8 @@ EVAL:
   SPLIT: "sample"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/overfitting_ssl/rgbd/seed_1_obs_transform/evaluation_meta_35k_3.json"
-NUM_UPDATES: 500
+  evaluation_meta_file: "/checkpoint/alexclegg/objectnav/objectnav_pretrained/0/logs/temp.json"
+NUM_UPDATES: 16000
 
 IL:
   USE_IW: True

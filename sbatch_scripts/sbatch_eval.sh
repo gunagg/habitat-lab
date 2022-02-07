@@ -41,6 +41,7 @@ echo "Date: " $CURRENT_DATETIME
 echo "Commands Provided: " $CMD_OPTS
 
 set -x
+cd habitat_baselines/
 srun -u --kill-on-bad-exit=1 \
     python -u -m run \
     --run-type eval ${CMD_OPTS}

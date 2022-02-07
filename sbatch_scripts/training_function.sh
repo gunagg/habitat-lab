@@ -63,10 +63,10 @@ run_training() {
 	         EVAL.SPLIT ${VAL_SPLIT} \
 	         TASK_CONFIG.DATASET.CONTENT_SCENES [\"*\"] \
 	         TEST_EPISODE_COUNT ${TEST_EPISODE_COUNT} \
-	         NUM_ENVIRONMENTS 10 \
+	         NUM_PROCESSES ${NUM_PROCESSES} \
 	         RL.PPO.num_mini_batch 1 \
-	         TASK_CONFIG.DATASET.DATA_PATH ${REPO_PATH}/data/datasets/objectnav_mp3d/${ENVIRONMENT}/${VAL_SPLIT}/${VAL_SPLIT}.json.gz \
-	         TASK_CONFIG.TASK.TOP_DOWN_MAP.MAP_RESOLUTION 1024"
+	         TASK_CONFIG.DATASET.DATA_PATH ${REPO_PATH}/data/datasets/objectnav_mp3d_v2/${VAL_SPLIT}/${VAL_SPLIT}.json.gz \
+		 TASK_CONFIG.TASK.TOP_DOWN_MAP.MAP_RESOLUTION 1024"
 	         #WANDB_NAME ${EXP_NAME} \
 	         #WANDB_MODE ${WANDB_MODE}"
 	   

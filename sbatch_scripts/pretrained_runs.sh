@@ -20,30 +20,38 @@ VIDEO_OPTION="[]"
 NUM_UPDATES=16000
 TIME="72:00:00"
 #NUM_ENV=10
-#TEST_EPISODE_COUNT=4200
+TEST_EPISODE_COUNT=10000
 NUM_PROCESSES=8
-RUN_TRAIN_SCRIPT=true
-RUN_EVAL_SCRIPT=false
+RUN_TRAIN_SCRIPT=false
+RUN_EVAL_SCRIPT=true
 
 EXP_NAME="objectnav_pretrained"
 WEIGHTS_NAME="omnidata_DINO_02.pth"
 BACKBONE="resnet50_gn"
-#EXTRA_CMDS="RL.DDPPO.pretrained_encoder True \
-#            RL.DDPPO.pretrained_goal_encoder True \
-#            RL.DDPPO.train_encoder True \
-#            RL.DDPPO.train_goal_encoder True \
-#            RL.POLICY.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.brightness 0.3 \
-#            RL.POLICY.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.contrast 0.3 \
-#            RL.POLICY.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.saturation 0.3 \
-#            RL.POLICY.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.hue 0.3 \
-#            RL.POLICY.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.color_p 1.0 \
-#            RL.POLICY.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.pad 4 \
-#            RL.POLICY.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 128 \
-#            RL.POLICY.OBS_AUGMENTATIONS color_jitter-translate_v2 \
-#            RL.PPO.weight_decay 1e-6 \
-#            RL.PPO.resnet_baseplanes 64 \
-#            RL.DDPPO.pretraining_type groupnorm \
-#            ${TASK_CONFIG_SMALL}"
-EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746"
+EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+	    IL.BehaviorCloning.num_steps 64 \
+	    IL.BehaviorCloning.num_mini_batch 2"
 SPLIT="train"
 run_training 0
+
+#EXP_NAME="objectnav_pretrained_nccl"
+#WEIGHTS_NAME="omnidata_DINO_02.pth"
+#BACKBONE="resnet50_gn"
+#EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+#            IL.BehaviorCloning.num_steps 64 \
+#            IL.BehaviorCloning.num_mini_batch 2 \
+#	    IL.distrib_backend NCCL"
+#SPLIT="train"
+#CHKP_NAME="ckpt.17.pth"
+#run_training 0
+
+#EXP_NAME="objectnav_pretrained_semantics"
+#WEIGHTS_NAME="omnidata_DINO_02.pth"
+#BACKBONE="resnet50_gn"
+#EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+#            IL.BehaviorCloning.num_steps 64 \
+#            IL.BehaviorCloning.num_mini_batch 2 \
+#            IL.distrib_backend NCCL"
+#EXP_CONFIG_PATH="${REPO_PATH}/habitat_baselines/config/objectnav/ddpil_ssl_rgbd_objectnav.yaml"
+#SPLIT="train"
+#run_training 0
