@@ -300,7 +300,6 @@ def run_reference_replay(
         num_episodes = 0
         print("Total episodes: {}".format(len(env.episodes)))
         fails = []
-        episode_meta = []
         max_sem_id = 0
         for ep_id in range(len(env.episodes)):
             observation_list = []
@@ -334,6 +333,8 @@ def run_reference_replay(
             scene_id = env.current_episode.scene_id.split("/")[-1].split(".")[0]
             dir_path = "{}_{}".format(scene_id, ep_id)
             # os.mkdir("demos/{}".format(dir_path))
+            episode_meta = []
+
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
                     log_action_data(data, i)
@@ -376,7 +377,13 @@ def run_reference_replay(
 
                     # frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
                     replay_data.append(get_agent_pose(env._sim))
-                    # save_image(frame, dir_path, "{}_{}.png".format(dir_path, i))
+                    save_image(frame, dir_path, "{}_{}.png".format(dir_path, i))
+                    episode_meta.append({
+                        "scene_id": episode.scene_id,
+                        "episode_id": ep_id,
+                        "agent_pose": get_agent_pose(env.sim),
+                        "object_category": episode.object_category
+                    })
 
                     if info["success"]:
                         ep_success = 1
@@ -391,6 +398,7 @@ def run_reference_replay(
                     print("found max sem id")
                     break
                 i+=1
+            write_json(episode_meta, "demos/{}/meta.json".format(dir_path))
             make_videos([observation_list], output_prefix, ep_id)
             # make_videos([top_down_obs_list], "{}_top_down".format(output_prefix), ep_id)
             print(info["distance_to_goal"])
@@ -409,12 +417,12 @@ def run_reference_replay(
             ep_metrics = copy.deepcopy(info)
             if "top_down_map" in ep_metrics.keys():
                 del ep_metrics["top_down_map"]
-            episode_meta.append({
-                "scene_id": env.current_episode.scene_id,
-                "episode_id": env.current_episode.episode_id,
-                "metrics": ep_metrics,
-                "object_category": env.current_episode.object_category
-            })
+            # episode_meta.append({
+            #     "scene_id": env.current_episode.scene_id,
+            #     "episode_id": env.current_episode.episode_id,
+            #     "metrics": ep_metrics,
+            #     "object_category": env.current_episode.object_category
+            # })
 
             meta_f = open(meta_file, "w")
             meta_f.write(json.dumps(episode_meta))
