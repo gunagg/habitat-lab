@@ -181,6 +181,7 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
     episodes: List[ObjectGoalNavEpisode] = []  # type: ignore
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
     goals_by_category: Dict[str, Sequence[ObjectGoal]]
+    gibson_to_mp3d_category_map: Dict[str, str] = {'couch': 'sofa', 'toilet': 'toilet', 'bed': 'bed', 'tv': 'tv_monitor', 'potted plant': 'plant', 'chair': 'chair'}
 
     @staticmethod
     def dedup_goals(dataset: Dict[str, Any]) -> Dict[str, Any]:
@@ -279,9 +280,7 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
             
             if "gibson" in episode["scene_id"]:
                 episode["scene_id"] = "gibson_semantic/{}".format(episode["scene_id"].split("/")[-1])
-            # del episode["object_id"]
-            # del episode["floor_id"]
-            # episode["reference_replay"] = []
+
             episode = ObjectGoalNavEpisode(**episode)
             # episode.episode_id = str(i)
 
@@ -295,6 +294,8 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
 
             if not episode.is_thda:
                 episode.goals = self.goals_by_category[episode.goals_key]
+                if episode.scene_dataset == "gibson":
+                    episode.object_category = self.gibson_to_mp3d_category_map[episode.object_category]
             else:
                 goals = []
                 for g in episode.goals:
