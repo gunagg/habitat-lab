@@ -22,8 +22,8 @@ TIME="72:00:00"
 #NUM_ENV=10
 TEST_EPISODE_COUNT=10000
 NUM_PROCESSES=8
-RUN_TRAIN_SCRIPT=false
-RUN_EVAL_SCRIPT=true
+RUN_TRAIN_SCRIPT=true
+RUN_EVAL_SCRIPT=false
 
 #EXP_NAME="objectnav_pretrained"
 #WEIGHTS_NAME="omnidata_DINO_02.pth"
@@ -52,9 +52,13 @@ RUN_EVAL_SCRIPT=true
 #EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
 #            IL.BehaviorCloning.num_steps 64 \
 #            IL.BehaviorCloning.num_mini_batch 2 \
-#            IL.distrib_backend NCCL"
+#            IL.distrib_backend NCCL \
+#	    TASK_CONFIG.SIMULATOR.RGB_SENSOR.WIDTH 640 \
+#	    TASK_CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT 480 \
+#	    TASK_CONFIG.SIMULATOR.DEPTH_SENSOR.WIDTH 640 \
+#	    TASK_CONFIG.SIMULATOR.DEPTH_SENSOR.WIDTH 480"
 #SPLIT="train"
-#CHKP_NAME="159"
+#CHKP_NAME="158"
 #run_training 0
 
 #EXP_NAME="objectnav_pretrained_augmentation_imagenav_augs"
@@ -73,8 +77,23 @@ RUN_EVAL_SCRIPT=true
 #            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
 #            IL.OBS_AUGMENTATIONS color_jitter-translate_v2"
 #SPLIT="train"
+#CHKP_NAME="89"
+#run_training 0
+#CHKP_NAME="99"
+#run_training 0
+#CHKP_NAME="109"
+#run_training 0
+#CHKP_NAME="119"
+#run_training 0
+#CHKP_NAME="129"
+#run_training 0
+#CHKP_NAME="139"
+#run_training 0
+#CHKP_NAME="149"
+#run_training 0
 #CHKP_NAME="159"
 #run_training 0
+
 
 #EXP_NAME="objectnav_pretrained_augmentation_imagenav_augs_color_0_2"
 #WEIGHTS_NAME="omnidata_DINO_02.pth"
@@ -92,9 +111,23 @@ RUN_EVAL_SCRIPT=true
 #            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
 #            IL.OBS_AUGMENTATIONS color_jitter-translate_v2"
 #SPLIT="train"
-##CHKP_NAME="145"
+#CHKP_NAME="89"
 #run_training 0
-#
+#CHKP_NAME="99"
+#run_training 0
+#CHKP_NAME="109"
+#run_training 0
+#CHKP_NAME="119"
+#run_training 0
+#CHKP_NAME="129"
+#run_training 0
+#CHKP_NAME="139"
+#run_training 0
+#CHKP_NAME="149"
+#run_training 0
+#CHKP_NAME="159"
+#run_training 0
+
 #EXP_NAME="objectnav_pretrained_augmentation_imagenav_translate_4"
 #WEIGHTS_NAME="omnidata_DINO_02.pth"
 #BACKBONE="resnet50_gn"
@@ -111,18 +144,306 @@ RUN_EVAL_SCRIPT=true
 #            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
 #            IL.OBS_AUGMENTATIONS color_jitter-translate_v2"
 #SPLIT="train"
-##CHKP_NAME="145"
+#CHKP_NAME="89"
+#run_training 0
+#CHKP_NAME="99"
+#run_training 0
+#CHKP_NAME="109"
+#run_training 0
+#CHKP_NAME="119"
+#run_training 0
+#CHKP_NAME="129"
+#run_training 0
+#CHKP_NAME="139"
+#run_training 0
+#CHKP_NAME="149"
+#run_training 0
+#CHKP_NAME="159"
 #run_training 0
 
-EXP_NAME="objectnav_pretrained_semantics"
+#EXP_NAME="objectnav_pretrained_augmentation_imagenav_augs_color_jitter_0_4"
+#WEIGHTS_NAME="omnidata_DINO_02.pth"
+#BACKBONE="resnet50_gn"
+#EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+#            IL.BehaviorCloning.num_steps 64 \
+#            IL.BehaviorCloning.num_mini_batch 2 \
+#            IL.distrib_backend NCCL \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.brightness 0.4 \
+#	    IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.contrast 0.4 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.saturation 0.4 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.hue 0.4 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.color_p 1.0 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.pad 16 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
+#            IL.OBS_AUGMENTATIONS color_jitter-translate_v2"
+#SPLIT="train"
+#CHKP_NAME="16"
+#run_training 0
+#CHKP_NAME="18"
+#run_training 0
+#CHKP_NAME="20"
+#run_training 0
+#CHKP_NAME="22"
+#run_training 0
+#CHKP_NAME="24"
+#run_training 0
+#CHKP_NAME="26"
+#run_training 0
+#CHKP_NAME="28"
+#run_training 0
+#CHKP_NAME="30"
+#run_training 0
+#CHKP_NAME="31"
+#run_training 0
+
+#EXP_NAME="objectnav_pretrained_augmentation_imagenav_augs_translate_32"
+#WEIGHTS_NAME="omnidata_DINO_02.pth"
+#BACKBONE="resnet50_gn"
+#EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+#            IL.BehaviorCloning.num_steps 64 \
+#            IL.BehaviorCloning.num_mini_batch 2 \
+#            IL.distrib_backend NCCL \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.brightness 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.contrast 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.saturation 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.hue 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.color_p 1.0 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.pad 32 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
+#            IL.OBS_AUGMENTATIONS color_jitter-translate_v2"
+#SPLIT="train"
+#CHKP_NAME="16"
+#run_training 0
+#CHKP_NAME="18"
+#run_training 0
+#CHKP_NAME="20"
+#run_training 0
+#CHKP_NAME="22"
+#run_training 0
+#CHKP_NAME="24"
+#run_training 0
+#CHKP_NAME="26"
+#run_training 0
+#CHKP_NAME="28"
+#run_training 0
+#CHKP_NAME="30"
+#run_training 0
+#CHKP_NAME="31"
+#run_training 0
+
+EXP_NAME="objectnav_pretrained_augmentation_imagenav_augs_translate_32_cj_0_4"
 WEIGHTS_NAME="omnidata_DINO_02.pth"
 BACKBONE="resnet50_gn"
 EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
-            IL.BehaviorCloning.num_steps 32 \
+            IL.BehaviorCloning.num_steps 64 \
             IL.BehaviorCloning.num_mini_batch 2 \
-            IL.distrib_backend NCCL"
-EXP_CONFIG_PATH="${REPO_PATH}/habitat_baselines/config/objectnav/ddpil_ssl_sem_seg_objectnav.yaml"
-NODES=16
+            IL.distrib_backend NCCL \
+            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.brightness 0.4 \
+            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.contrast 0.4 \
+            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.saturation 0.4 \
+            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.hue 0.4 \
+            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.color_p 1.0 \
+            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.pad 32 \
+            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
+            IL.OBS_AUGMENTATIONS color_jitter-translate_v2"
 SPLIT="train"
-CHKP_NAME="15"
+#CHKP_NAME="16"
 run_training 0
+#CHKP_NAME="18"
+#run_training 0
+#CHKP_NAME="20"
+#run_training 0
+#CHKP_NAME="22"
+#run_training 0
+#CHKP_NAME="24"
+#run_training 0
+#CHKP_NAME="26"
+#run_training 0
+#CHKP_NAME="28"
+#run_training 0
+#CHKP_NAME="30"
+#run_training 0
+#CHKP_NAME="31"
+#run_training 0
+
+#EXP_NAME="objectnav_scratch_rgbd"
+#WEIGHTS_NAME="omnidata_DINO_02.pth"
+#BACKBONE="resnet50_gn"
+#EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+#            IL.BehaviorCloning.num_steps 64 \
+#            IL.BehaviorCloning.num_mini_batch 2 \
+#            IL.distrib_backend NCCL \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.brightness 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.contrast 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.saturation 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.hue 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.color_p 1.0 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.pad 16 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
+#            IL.OBS_AUGMENTATIONS - \
+#            MODEL.RGB_ENCODER.pretrained_ckpt \"None\""
+#SPLIT="train"
+#CHKP_NAME="16"
+#run_training 0
+#CHKP_NAME="18"
+#run_training 0
+#CHKP_NAME="20"
+#run_training 0
+#CHKP_NAME="22"
+#run_training 0
+#CHKP_NAME="24"
+#run_training 0
+#CHKP_NAME="26"
+#run_training 0
+#CHKP_NAME="28"
+#run_training 0
+#CHKP_NAME="30"
+#run_training 0
+#CHKP_NAME="31"
+#run_training 0
+
+#EXP_NAME="objectnav_scratch_augmentation_imagenav_augs"
+#WEIGHTS_NAME="omnidata_DINO_02.pth"
+#BACKBONE="resnet50_gn"
+#EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+#            IL.BehaviorCloning.num_steps 64 \
+#            IL.BehaviorCloning.num_mini_batch 2 \
+#            IL.distrib_backend NCCL \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.brightness 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.contrast 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.saturation 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.hue 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.color_p 1.0 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.pad 16 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
+#            IL.OBS_AUGMENTATIONS color_jitter-translate_v2 \
+# 	     MODEL.RGB_ENCODER.pretrained_ckpt \"None\""
+#SPLIT="train"
+#CHKP_NAME="16"
+#run_training 0
+#CHKP_NAME="18"
+#run_training 0
+#CHKP_NAME="20"
+#run_training 0
+#CHKP_NAME="22"
+#run_training 0
+#CHKP_NAME="24"
+#run_training 0
+#CHKP_NAME="26"
+#run_training 0
+#CHKP_NAME="28"
+#run_training 0
+#CHKP_NAME="30"
+#run_training 0
+#CHKP_NAME="31"
+#run_training 0
+
+#EXP_NAME="objectnav_pretrained_semantics"
+#WEIGHTS_NAME="omnidata_DINO_02.pth"
+#BACKBONE="resnet50_gn"
+#EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+#            IL.BehaviorCloning.num_steps 32 \
+#            IL.BehaviorCloning.num_mini_batch 2 \
+#            IL.distrib_backend NCCL"
+#EXP_CONFIG_PATH="${REPO_PATH}/habitat_baselines/config/objectnav/ddpil_ssl_sem_seg_objectnav.yaml"
+#NODES=16
+#SPLIT="train"
+#CHKP_NAME="15"
+#run_training 0
+#CHKP_NAME="16"
+#run_training 0
+#CHKP_NAME="17"
+#run_training 0
+#CHKP_NAME="18"
+#run_training 0
+#CHKP_NAME="19"
+#run_training 0
+#CHKP_NAME="20"
+#run_training 0
+#CHKP_NAME="22"
+#run_training 0
+#CHKP_NAME="24"
+#run_training 0
+#CHKP_NAME="26"
+#run_training 0
+#CHKP_NAME="28"
+#run_training 0
+#CHKP_NAME="30"
+#run_training 0
+#CHKP_NAME="31"
+#run_training 0
+
+#EXP_NAME="objectnav_scratch_semantics"
+#WEIGHTS_NAME="omnidata_DINO_02.pth"
+#BACKBONE="resnet50_gn"
+#EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+#            IL.BehaviorCloning.num_steps 32 \
+#            IL.BehaviorCloning.num_mini_batch 2 \
+#            IL.distrib_backend NCCL \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.brightness 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.contrast 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.saturation 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.hue 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.color_p 1.0 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.pad 16 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
+#            IL.OBS_AUGMENTATIONS color_jitter-translate_v2 \
+#            MODEL.RGB_ENCODER.pretrained_ckpt \"None\""
+#EXP_CONFIG_PATH="${REPO_PATH}/habitat_baselines/config/objectnav/ddpil_ssl_sem_seg_objectnav.yaml"
+#NODES=16
+#SPLIT="train"
+#CHKP_NAME="16"
+#run_training 0
+#CHKP_NAME="18"
+#run_training 0
+#CHKP_NAME="20"
+#run_training 0
+#CHKP_NAME="22"
+#run_training 0
+#CHKP_NAME="24"
+#run_training 0
+#CHKP_NAME="26"
+#run_training 0
+#CHKP_NAME="28"
+#run_training 0
+#CHKP_NAME="30"
+#run_training 0
+#CHKP_NAME="31"
+#run_training 0
+
+#EXP_NAME="objectnav_pretrained_semantics_imagenav_augs"
+#WEIGHTS_NAME="omnidata_DINO_02.pth"
+#BACKBONE="resnet50_gn"
+#EXTRA_CMDS="TASK_CONFIG.TASK.INFLECTION_WEIGHT_SENSOR.INFLECTION_COEF 3.501094552723746 \
+#            IL.BehaviorCloning.num_steps 32 \
+#            IL.BehaviorCloning.num_mini_batch 2 \
+#            IL.distrib_backend NCCL \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.brightness 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.contrast 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.saturation 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.hue 0.3 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.COLOR_JITTER.color_p 1.0 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.pad 16 \
+#            IL.OBS_AUGMENTATIONS_PARAMS.TRANSLATE.crop_size 256 \
+#            IL.OBS_AUGMENTATIONS color_jitter-translate_v2"
+#EXP_CONFIG_PATH="${REPO_PATH}/habitat_baselines/config/objectnav/ddpil_ssl_sem_seg_objectnav.yaml"
+#NODES=16
+#SPLIT="train"
+#CHKP_NAME="16"
+#run_training 0
+#CHKP_NAME="18"
+#run_training 0
+#CHKP_NAME="20"
+#run_training 0
+#CHKP_NAME="22"
+#run_training 0
+#CHKP_NAME="24"
+#run_training 0
+#CHKP_NAME="26"
+#run_training 0
+#CHKP_NAME="28"
+#run_training 0
+#CHKP_NAME="30"
+#run_training 0
+#CHKP_NAME="31"
+#run_training 0
