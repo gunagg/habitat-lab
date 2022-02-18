@@ -47,6 +47,10 @@ from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
 from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
 from habitat_baselines.objectnav.models.rednet import load_rednet
 from habitat_baselines.objectnav.common.data_augmentations import compose_augmentations
+from habitat.tasks.nav.object_nav_task import (
+    task_cat2mpcat40,
+    mapping_mpcat40_to_goal21
+)
 from psiturk_dataset.utils.utils import write_json
 from psiturk_dataset.generator.objectnav_shortest_path_generator import get_episode_json
 
@@ -111,6 +115,20 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         Returns:
             None
         """
+
+        self.task_cat2mpcat40 = torch.tensor(task_cat2mpcat40, device=self.device)
+        self.mapping_mpcat40_to_goal = np.zeros(
+            max(
+                max(mapping_mpcat40_to_goal21.keys()) + 1,
+                50,
+            ),
+            dtype=np.int8,
+        )
+
+        for key, value in mapping_mpcat40_to_goal21.items():
+            self.mapping_mpcat40_to_goal[key] = value
+        self.mapping_mpcat40_to_goal = torch.tensor(self.mapping_mpcat40_to_goal, device=self.device)
+
         logger.add_filehandler(self.config.LOG_FILE)
 
         observation_space = self.envs.observation_spaces[0]
@@ -150,7 +168,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         path: str,
         env_idx: int,
         split: str,
-        episode_id: int
+        episode_id: int,
+        step_id: int
     ) -> None:
         r"""For saving EQA-CNN-Pretrain reconstruction results.
 
@@ -163,21 +182,23 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             pred_depth: depth map output
             path: to write file
         """
+        idx = self.task_cat2mpcat40[
+                observations["objectgoal"].long()
+            ]
+        idx = self.mapping_mpcat40_to_goal[idx].long()
+
+        goal_visible_pixels = (observations["semantic"][env_idx] == idx).sum() # Sum over all since we're not batched
+        goal_visible_area = torch.true_divide(goal_visible_pixels, observations["semantic"].size(1)*observations["semantic"].size(2)).float()
+
         rgb_frame = observations_to_image(
-                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
-                    )
-        dirname = os.path.join(path.format(split=split, type="rgb"), "{}".format(episode_id.split("_")[0]))
+            {"rgb": observations["rgb"][env_idx], "semantic": (observations["semantic"][env_idx] == idx)}, infos[env_idx]
+        )
+
+        dirname = os.path.join(path.format(split=split, type="rgb"), "{}".format(episode_id))
         if not os.path.isdir(dirname):
             os.mkdir(dirname)
-        rgb_path = os.path.join(dirname, "frame_{}".format(episode_id))
+        rgb_path = os.path.join(dirname, "frame_{}".format(step_id))
         save_frame(rgb_frame, rgb_path)
-        if "top_down_map" in infos[env_idx]:
-            top_down_frame = observations_to_image(
-                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx], top_down_map_only=True
-                    )
-            top_down_path = os.path.join(path.format(split=split, type="top_down_map"), "frame_{}".format(episode_id))
-            save_frame(top_down_frame, top_down_path)
-        
 
     def _make_results_dir(self, split="val"):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
@@ -298,6 +319,17 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
                 batch["semantic"] = batch["semantic"] - 1
             batch["semantic"] = batch["semantic"].unsqueeze(-1)
+        
+        if self.config.SAVE_FRAMES:
+            self._save_results(
+                batch,
+                infos,
+                self.config.RESULTS_DIR,
+                0,
+                "train",
+                "rollout_{}".format(self.current_update),
+                rollouts.step,
+            )
 
         rewards = torch.tensor(
             rewards_l, dtype=torch.float, device=current_episode_reward.device
@@ -371,6 +403,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         self.envs = construct_envs(
             self.config, get_env_class(self.config.ENV_NAME)
         )
+        self._make_results_dir("train")
 
         il_cfg = self.config.IL.BehaviorCloning
         self.device = (
@@ -815,17 +848,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {"rgb": batch["rgb"][i]}, infos[i]
                     )
-                    #frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
-                    rgb_frames[i].append(frame)                
-
-                    # self._save_results(
-                    #     batch,
-                    #     infos,
-                    #     config.RESULTS_DIR,
-                    #     i,
-                    #     config.EVAL.SPLIT,
-                    #     "{}_{}".format(current_episodes[i].episode_id, len(rgb_frames[i])),
-                    # )
+                    rgb_frames[i].append(frame)
 
             (
                 self.envs,
