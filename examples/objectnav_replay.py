@@ -229,6 +229,26 @@ def save_top_down_map(info):
     )
     save_image(top_down_map, "top_down_map.png")
 
+def aabb_contains(position, aabb):
+    aabb_min = aabb.min()
+    aabb_max = aabb.max()
+    if aabb_min[0] <= position[0] and aabb_max[0] >= position[0] and aabb_min[2] <= position[2] and aabb_max[2] >= position[2] and aabb_min[1] <= position[1] and aabb_max[1] >= position[1]:
+        return True
+    return False
+
+def get_rooms(sim):
+    semantic_scene = sim.semantic_scene
+    agent_state = sim.get_agent_state()
+    agent_position = agent_state.position
+    rooms = []
+    for level in semantic_scene.levels:
+        for region in level.regions:
+            region_name = region.category.name()
+            aabb = region.aabb
+
+            if aabb_contains(agent_position, aabb):
+                rooms.append(region_name)
+    return rooms
 
 def run_reference_replay(
     cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None, task_cat2mpcat40=None, sem_seg=False, is_thda=False, meta_file=None
@@ -332,7 +352,9 @@ def run_reference_replay(
                 continue
             scene_id = env.current_episode.scene_id.split("/")[-1].split(".")[0]
             dir_path = "{}_{}".format(scene_id, ep_id)
-            # os.mkdir("demos/{}".format(dir_path))
+            
+            if not os.path.isdir("demos/{}".format(dir_path)):
+                os.mkdir("demos/{}".format(dir_path))
             episode_meta = []
 
             for data in env.current_episode.reference_replay[step_index:]:
@@ -382,7 +404,8 @@ def run_reference_replay(
                         "scene_id": episode.scene_id,
                         "episode_id": ep_id,
                         "agent_pose": get_agent_pose(env.sim),
-                        "object_category": episode.object_category
+                        "object_category": episode.object_category,
+                        "room": get_rooms(env._sim)
                     })
 
                     if info["success"]:
@@ -399,7 +422,7 @@ def run_reference_replay(
                     break
                 i+=1
             write_json(episode_meta, "demos/{}/meta.json".format(dir_path))
-            make_videos([observation_list], output_prefix, ep_id)
+            make_videos([observation_list], scene_id, ep_id)
             # make_videos([top_down_obs_list], "{}_top_down".format(output_prefix), ep_id)
             print(info["distance_to_goal"])
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
@@ -451,6 +474,9 @@ def run_reference_replay(
                     "episodeId": instructions[-1]["episodeId"],
                     "distanceToGoal": info["distance_to_goal"]
                 })
+            
+            if num_episodes == 50:
+                break
         
         # print("Average delta cov: {}".format(avg_delta_coverage / avg_delta_count, avg_delta_coverage, avg_delta_count))
 
@@ -519,7 +545,7 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
-    #cfg.DATASET.CONTENT_SCENES = ['17DRP5sb8fy', '1LXtFkjw3qL', '1pXnuDYAj8r', '29hnd4uzFmX', '5LpN3gDmAk7', '5q7pvUzZiYa', '759xd9YjKW5', '7y3sRwLe3Va', '82sE5b5pLXE', '8WUmhLawc2A', 'B6ByNegPMKs', 'D7G3Y4RVNrH', 'D7N2EKCX4Sj', 'E9uDoFAP3SH']
+    cfg.DATASET.CONTENT_SCENES = ['1LXtFkjw3qL']
 
     if args.metrics:
         cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]
