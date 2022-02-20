@@ -13,11 +13,9 @@ from torch import optim as optim
 
 from habitat import logger
 from habitat.utils import profiling_wrapper
-from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.rl.ppo.policy import Policy
 
 
-class BCAgent(nn.Module):
+class ILAgent(nn.Module):
     def __init__(
         self,
         model: nn.Module,
@@ -47,7 +45,7 @@ class BCAgent(nn.Module):
     def forward(self, *x):
         raise NotImplementedError
 
-    def update(self, rollouts: RolloutStorage) -> Tuple[float, float, float]:
+    def update(self, rollouts) -> Tuple[float, float, float]:
         total_loss_epoch = 0.0
 
         profiling_wrapper.range_push("BC.update epoch")
@@ -165,5 +163,5 @@ class DecentralizedDistributedMixin:
             self.reducer.prepare_for_backward([])  # type: ignore
 
 
-class DDPBCAgent(DecentralizedDistributedMixin, BCAgent):
+class DDPILAgent(DecentralizedDistributedMixin, ILAgent):
     pass

@@ -45,7 +45,6 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 from habitat_baselines.utils.common import batch_obs, linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
-from habitat_baselines.objectnav.models.rednet import load_rednet
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -87,16 +86,6 @@ class DDPPOTrainer(PPOTrainer):
         )
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
-
-        self.semantic_predictor = None
-        if self.config.MODEL.USE_PRED_SEMANTICS:
-            self.semantic_predictor = load_rednet(
-                self.device,
-                ckpt=self.config.MODEL.SEMANTIC_ENCODER.rednet_ckpt,
-                resize=True, # since we train on half-vision
-                num_classes=self.config.MODEL.SEMANTIC_ENCODER.num_classes
-            )
-            self.semantic_predictor.eval()
 
         if (
             self.config.RL.DDPPO.pretrained_encoder

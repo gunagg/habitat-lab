@@ -206,7 +206,6 @@ class BaseRLTrainer(BaseTrainer):
         prev_actions: Tensor,
         batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
-        current_episode_cross_entropy=None,
     ) -> Tuple[
         Union[VectorEnv, RLEnv, Env],
         Tensor,
@@ -230,76 +229,6 @@ class BaseRLTrainer(BaseTrainer):
             not_done_masks = not_done_masks[state_index]
             current_episode_reward = current_episode_reward[state_index]
             prev_actions = prev_actions[state_index]
-            if current_episode_cross_entropy is not None:
-                current_episode_cross_entropy = current_episode_cross_entropy[state_index]
-
-            for k, v in batch.items():
-                batch[k] = v[state_index]
-
-            rgb_frames = [rgb_frames[i] for i in state_index]
-
-        if current_episode_cross_entropy is not None:
-            return (
-                envs,
-                test_recurrent_hidden_states,
-                not_done_masks,
-                current_episode_reward,
-                prev_actions,
-                batch,
-                rgb_frames,
-                current_episode_cross_entropy,
-            )
-
-        return (
-            envs,
-            test_recurrent_hidden_states,
-            not_done_masks,
-            current_episode_reward,
-            prev_actions,
-            batch,
-            rgb_frames,
-        )
-
-    @staticmethod
-    def _pause_envs_discr(
-        envs_to_pause: List[int],
-        envs: Union[VectorEnv, RLEnv, Env],
-        test_recurrent_hidden_states: Tensor,
-        not_done_masks: Tensor,
-        current_episode_reward: Tensor,
-        prev_actions: Tensor,
-        batch: Dict[str, Tensor],
-        rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
-        discr_recurrent_hidden_states: Tensor,
-        current_episode_pred_reward: Tensor,
-    ) -> Tuple[
-        Union[VectorEnv, RLEnv, Env],
-        Tensor,
-        Tensor,
-        Tensor,
-        Tensor,
-        Dict[str, Tensor],
-        List[List[Any]],
-        Tensor,
-    ]:
-        # pausing self.envs with no new episode
-        if len(envs_to_pause) > 0:
-            state_index = list(range(envs.num_envs))
-            for idx in reversed(envs_to_pause):
-                state_index.pop(idx)
-                envs.pause_at(idx)
-
-            # indexing along the batch dimensions
-            test_recurrent_hidden_states = test_recurrent_hidden_states[
-                :, state_index
-            ]
-            discr_recurrent_hidden_states = discr_recurrent_hidden_states[
-                :, state_index
-            ]
-            not_done_masks = not_done_masks[state_index]
-            current_episode_reward = current_episode_reward[state_index]
-            current_episode_pred_reward = current_episode_pred_reward[state_index]
-            prev_actions = prev_actions[state_index]
 
             for k, v in batch.items():
                 batch[k] = v[state_index]
@@ -314,6 +243,5 @@ class BaseRLTrainer(BaseTrainer):
             prev_actions,
             batch,
             rgb_frames,
-            discr_recurrent_hidden_states,
-            current_episode_pred_reward
         )
+

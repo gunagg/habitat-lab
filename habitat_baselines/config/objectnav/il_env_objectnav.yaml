@@ -13,7 +13,7 @@ VIDEO_DIR: "video_dir/objectnav/overfitting/rgbd/seed_1/"
 TEST_EPISODE_COUNT: 10
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_env_v4/rgbd/seed_1_70M/ckpt.22.pth"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 8
+NUM_PROCESSES: 1
 CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting/rgbd/seed_1"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
@@ -36,7 +36,7 @@ IL:
     lr: 0.001
     eps: 1.0e-5
     clip_param: 0.2
-    num_mini_batch: 2
+    num_mini_batch: 1
     max_grad_norm: 0.2
     num_steps: 64
     use_linear_clip_decay: False

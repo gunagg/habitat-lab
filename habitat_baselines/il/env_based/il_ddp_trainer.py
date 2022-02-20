@@ -5,16 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 import contextlib
-from logging import log
 import os
 import random
 import time
+import numpy as np
+import torch
+
 from collections import defaultdict, deque
 from typing import DefaultDict, Optional
 
-import numpy as np
-import torch
-from gym import spaces
 from torch import distributed as distrib
 from torch import nn as nn
 from torch.optim.lr_scheduler import LambdaLR
@@ -25,9 +24,10 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
+    apply_obs_transforms_obs_space,
     get_active_obs_transforms
 )
-from habitat_baselines.rearrangement.common.il_rollout_storage import RolloutStorage
+from habitat_baselines.il.env_based.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     EXIT,
@@ -38,15 +38,14 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     requeue_job,
     save_interrupted_state,
 )
-from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 from habitat_baselines.utils.common import batch_obs, linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
-from habitat_baselines.objectnav.il.agent import BCAgent, DDPBCAgent
-from habitat_baselines.objectnav.il.behavior_cloning_env_trainer import ObjectNavBCEnvTrainer
-from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
-from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
-from habitat_baselines.objectnav.models.single_resnet_model import SingleResNetSeqModel
-from habitat_baselines.objectnav.models.rednet import load_rednet
+from habitat_baselines.il.env_based.algos.agent import DDPILAgent
+from habitat_baselines.il.env_based.il_trainer import ObjectNavBCEnvTrainer
+from habitat_baselines.il.env_based.policy.seq_2_seq_model import Seq2SeqModel
+from habitat_baselines.il.env_based.policy.sem_seg_model import SemSegSeqModel
+from habitat_baselines.il.env_based.policy.single_resnet_model import SingleResNetSeqModel
+from habitat_baselines.il.env_based.policy.rednet import load_rednet
 
 
 @baseline_registry.register_trainer(name="ddp-objectnav-bc-env")
@@ -107,9 +106,9 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
 
         observation_space = self.envs.observation_spaces[0]
         self.obs_transforms = get_active_obs_transforms(self.config)
-        # observation_space = apply_obs_transforms_obs_space(
-        #     observation_space, self.obs_transforms
-        # )
+        observation_space = apply_obs_transforms_obs_space(
+            observation_space, self.obs_transforms
+        )
         self.obs_space = observation_space
 
         logger.info("obs transforms: {}".format(self.obs_transforms))
@@ -128,7 +127,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             )
             self.semantic_predictor.eval()
 
-        self.agent = DDPBCAgent(
+        self.agent = DDPILAgent(
             model=self.model,
             num_envs=self.envs.num_envs,
             num_mini_batch=il_cfg.num_mini_batch,

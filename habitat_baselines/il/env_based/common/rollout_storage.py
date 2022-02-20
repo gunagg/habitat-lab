@@ -4,14 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from collections import defaultdict
-
-import numpy as np
-import sys
 import torch
 
-from habitat_baselines.rearrangement.common.dictlist import DictList
-from habitat.utils.visualizations.utils import observations_to_image, images_to_video
+from collections import defaultdict
 
 
 class RolloutStorage:
@@ -171,16 +166,6 @@ class RolloutStorage:
             recurrent_hidden_states_batch = torch.stack(
                 recurrent_hidden_states_batch, 1
             )
-
-            # Flatten the (T, N, ...) tensors to (T * N, ...)
-            # for sensor in observations_batch:
-            #     observations_batch[sensor] = self._flatten_helper(
-            #         T, N, observations_batch[sensor]
-            #     )
-
-            # actions_batch = self._flatten_helper(T, N, actions_batch)
-            # prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
-            # masks_batch = self._flatten_helper(T, N, masks_batch)
 
             yield (
                 observations_batch,

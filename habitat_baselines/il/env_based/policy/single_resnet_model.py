@@ -1,15 +1,8 @@
-import math
-import sys
-from typing import Dict, Iterable, Tuple
-
-import copy
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from gym import Space
-from gym.spaces import Discrete, Dict, Box
 from habitat import Config, logger
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
@@ -19,15 +12,11 @@ from habitat.tasks.nav.object_nav_task import (
     ObjectGoalSensor,
     task_cat2mpcat40
 )
-from habitat_baselines.rearrangement.models.encoders.instruction import InstructionEncoder
-from habitat_baselines.rearrangement.models.encoders.resnet_encoders import (
+from habitat_baselines.il.disk_based.models.encoders.resnet_encoders import (
     ResnetEncoder
 )
-from habitat_baselines.rearrangement.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo.policy import Net
-from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetNet
-from habitat_baselines.objectnav.models.rednet import load_rednet
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
 
 

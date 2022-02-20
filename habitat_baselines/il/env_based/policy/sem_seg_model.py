@@ -20,18 +20,15 @@ from habitat.tasks.nav.object_nav_task import (
     task_cat2mpcat40,
     mapping_mpcat40_to_goal21
 )
-from habitat_baselines.rearrangement.models.encoders.instruction import InstructionEncoder
-from habitat_baselines.rearrangement.models.encoders.resnet_encoders import (
+from habitat_baselines.il.disk_based.models.encoders.resnet_encoders import (
     TorchVisionResNet50,
     VlnResnetDepthEncoder,
     ResnetRGBEncoder,
     ResnetSemSeqEncoder,
 )
-from habitat_baselines.rearrangement.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
+from habitat_baselines.il.disk_based.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo.policy import Net
-from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetNet
-from habitat_baselines.objectnav.models.rednet import load_rednet
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
 from habitat_baselines.rl.ddppo.algo.ddppo import DecentralizedDistributedMixin
 from habitat_baselines.common.baseline_registry import baseline_registry
