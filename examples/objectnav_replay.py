@@ -3,31 +3,22 @@ import copy
 import cv2
 import habitat
 import json
-import sys
-import time
-import os
 import torch
 import numpy as np
 import torch.nn.functional as F
 
-from habitat import Config
-from habitat.core.simulator import Observations
 from habitat_sim.utils import viz_utils as vut
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_sim.utils.common import quat_to_coeffs
-from habitat.utils.visualizations import maps
-from habitat.utils.visualizations.utils import make_video_cv2, observations_to_image, images_to_video, append_text_to_image
-from habitat_sim.utils.common import quat_to_coeffs, quat_from_magnum, quat_from_angle_axis
+from habitat_sim.utils.common import quat_to_coeffs, quat_from_magnum
 
-from threading import Thread
-from time import sleep
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.utils.visualizations import maps
+from habitat.utils.visualizations.utils import observations_to_image, images_to_video, append_text_to_image
 
 from PIL import Image
 
-from habitat_baselines.objectnav.models.rednet import load_rednet
-from habitat_baselines.objectnav.models.rednet_ycb import RedNet
-from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
-from psiturk_dataset.utils.utils import write_json
+from habitat_baselines.il.env_based.policy.rednet import load_rednet
+from habitat_baselines.il.env_based.policy.resnet_policy import SemSegSeqModel
 from habitat.tasks.nav.object_nav_task import mapping_mpcat40_to_goal21
 
 config = habitat.get_config("configs/tasks/objectnav_mp3d_video.yaml")

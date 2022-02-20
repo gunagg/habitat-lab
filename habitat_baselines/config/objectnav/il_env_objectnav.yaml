@@ -2,7 +2,7 @@
 # for better hyperparameters for actual training
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il.yaml"
-TRAINER_NAME: "objectnav-bc-env"
+TRAINER_NAME: "il-trainer"
 ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
@@ -19,7 +19,7 @@ OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 100
-SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
@@ -30,6 +30,9 @@ EVAL:
   SPLIT: "human_val_sample"
 
 IL:
+  POLICY:
+    name: "ObjectNavILPolicy"
+
   USE_IW: True
   distrib_backend: GLOO
   BehaviorCloning:
@@ -38,7 +41,7 @@ IL:
     clip_param: 0.2
     num_mini_batch: 1
     max_grad_norm: 0.2
-    num_steps: 64
+    num_steps: 16
     use_linear_clip_decay: False
     use_linear_lr_decay: True
     reward_window_size: 50
@@ -61,8 +64,8 @@ MODEL:
   embed_sge: True
   embed_goal_seg: False
   NO_VISION: False
-  USE_SEMANTICS: False
-  USE_PRED_SEMANTICS: False
+  USE_SEMANTICS: True
+  USE_PRED_SEMANTICS: True
   SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
   SEMANTIC_ENCODER:
     rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"

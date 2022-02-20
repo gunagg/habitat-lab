@@ -1,7 +1,4 @@
-from logging import log
-import math
-import sys
-from typing import Dict, Iterable, Tuple
+from typing import Dict
 
 import numpy as np
 import torch
@@ -9,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from gym import Space
-from gym.spaces import Discrete, Dict, Box
+from gym.spaces import Dict, Box
 from habitat import Config, logger
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
@@ -21,24 +18,17 @@ from habitat.tasks.nav.object_nav_task import (
     mapping_mpcat40_to_goal21
 )
 from habitat_baselines.il.disk_based.models.encoders.resnet_encoders import (
-    TorchVisionResNet50,
     VlnResnetDepthEncoder,
     ResnetRGBEncoder,
     ResnetSemSeqEncoder,
 )
-from habitat_baselines.il.disk_based.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo.policy import Net
-from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
-from habitat_baselines.rl.ddppo.algo.ddppo import DecentralizedDistributedMixin
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ppo import Net, Policy
 
-from habitat.utils.visualizations.utils import observations_to_image, images_to_video
 
-
-SEMANTIC_EMBEDDING_SIZE = 4
-class SemSegSeqNet(Net):
+class ObjectNavILNet(Net):
     r"""A baseline sequence to sequence network that concatenates instruction,
     RGB, and depth encodings before decoding an action distribution with an RNN.
     Modules:
@@ -55,16 +45,10 @@ class SemSegSeqNet(Net):
 
         # Init the depth encoder
         assert model_config.DEPTH_ENCODER.cnn_type in [
-            "SimpleDepthCNN",
             "VlnResnetDepthEncoder",
             "None",
-        ], "DEPTH_ENCODER.cnn_type must be SimpleDepthCNN or VlnResnetDepthEncoder"
-        if model_config.DEPTH_ENCODER.cnn_type == "SimpleDepthCNN":
-            self.depth_encoder = SimpleDepthCNN(
-                observation_space, model_config.DEPTH_ENCODER.output_size
-            )
-            rnn_input_size += model_config.DEPTH_ENCODER.output_size
-        elif model_config.DEPTH_ENCODER.cnn_type == "VlnResnetDepthEncoder":
+        ], "DEPTH_ENCODER.cnn_type must be VlnResnetDepthEncoder"
+        if model_config.DEPTH_ENCODER.cnn_type == "VlnResnetDepthEncoder":
             self.depth_encoder = VlnResnetDepthEncoder(
                 observation_space,
                 output_size=model_config.DEPTH_ENCODER.output_size,
@@ -78,28 +62,11 @@ class SemSegSeqNet(Net):
 
         # Init the RGB visual encoder
         assert model_config.RGB_ENCODER.cnn_type in [
-            "SimpleRGBCNN",
-            "TorchVisionResNet50",
             "ResnetRGBEncoder",
-            "NoEncoder",
-        ], "RGB_ENCODER.cnn_type must be either 'SimpleRGBCNN' or 'TorchVisionResNet50'."
+            "None",
+        ], "RGB_ENCODER.cnn_type must be 'ResnetRGBEncoder'."
 
-        if model_config.RGB_ENCODER.cnn_type == "SimpleRGBCNN":
-            self.rgb_encoder = SimpleRGBCNN(
-                observation_space, model_config.RGB_ENCODER.output_size
-            )
-            rnn_input_size += model_config.RGB_ENCODER.output_size
-        elif model_config.RGB_ENCODER.cnn_type == "TorchVisionResNet50":
-            device = (
-                torch.device("cuda", model_config.TORCH_GPU_ID)
-                if torch.cuda.is_available()
-                else torch.device("cpu")
-            )
-            self.rgb_encoder = TorchVisionResNet50(
-                observation_space, model_config.RGB_ENCODER.output_size, device
-            )
-            rnn_input_size += model_config.RGB_ENCODER.output_size
-        elif model_config.RGB_ENCODER.cnn_type == "ResnetRGBEncoder":
+        if model_config.RGB_ENCODER.cnn_type == "ResnetRGBEncoder":
             self.rgb_encoder = ResnetRGBEncoder(
                 observation_space,
                 output_size=model_config.RGB_ENCODER.output_size,
@@ -117,13 +84,8 @@ class SemSegSeqNet(Net):
         self.is_thda = False
         if model_config.USE_SEMANTICS:
             sem_embedding_size = model_config.SEMANTIC_ENCODER.embedding_size
-            # self.semantic_embedder = nn.Embedding(40 + 2, sem_embedding_size)
-            self.embed_goal_seg = hasattr(model_config, "embed_goal_seg") and model_config.embed_goal_seg 
+
             self.is_thda = model_config.SEMANTIC_ENCODER.is_thda
-            if self.embed_goal_seg:
-                sem_embedding_size = 1
-            else:
-                logger.info("Not setting up goal seg")
             rgb_shape = observation_space.spaces["rgb"].shape
             spaces = {
                 "semantic": Box(
@@ -140,19 +102,27 @@ class SemSegSeqNet(Net):
                 backbone=model_config.SEMANTIC_ENCODER.backbone,
                 trainable=model_config.SEMANTIC_ENCODER.train_encoder,
                 semantic_embedding_size=sem_embedding_size,
-                use_goal_seg=self.embed_goal_seg,
                 is_thda=self.is_thda
             )
             sem_seg_output_size = model_config.SEMANTIC_ENCODER.output_size
             logger.info("Setting up Sem Seg model")
             rnn_input_size += sem_seg_output_size
 
-        # Init the RNN state decoder
-        # rnn_input_size = (
-        #     model_config.DEPTH_ENCODER.output_size
-        #     + model_config.RGB_ENCODER.output_size
-        #     + sem_seg_output_size
-        # )
+            self.embed_sge = model_config.embed_sge
+            if self.embed_sge:
+                self.task_cat2mpcat40 = torch.tensor(task_cat2mpcat40, device=device)
+                self.mapping_mpcat40_to_goal = np.zeros(
+                    max(
+                        max(mapping_mpcat40_to_goal21.keys()) + 1,
+                        50,
+                    ),
+                    dtype=np.int8,
+                )
+
+                for key, value in mapping_mpcat40_to_goal21.items():
+                    self.mapping_mpcat40_to_goal[key] = value
+                self.mapping_mpcat40_to_goal = torch.tensor(self.mapping_mpcat40_to_goal, device=device)
+                rnn_input_size += 1
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
@@ -195,21 +165,7 @@ class SemSegSeqNet(Net):
             self.prev_action_embedding = nn.Embedding(num_actions + 1, 32)
             rnn_input_size += self.prev_action_embedding.embedding_dim
 
-        self.embed_sge = model_config.embed_sge
-        if self.embed_sge:
-            self.task_cat2mpcat40 = torch.tensor(task_cat2mpcat40, device=device)
-            self.mapping_mpcat40_to_goal = np.zeros(
-                max(
-                    max(mapping_mpcat40_to_goal21.keys()) + 1,
-                    50,
-                ),
-                dtype=np.int8,
-            )
-
-            for key, value in mapping_mpcat40_to_goal21.items():
-                self.mapping_mpcat40_to_goal[key] = value
-            self.mapping_mpcat40_to_goal = torch.tensor(self.mapping_mpcat40_to_goal, device=device)
-            rnn_input_size += 1
+        self.rnn_input_size = rnn_input_size
 
         self.state_encoder = RNNStateEncoder(
             input_size=rnn_input_size,
@@ -226,22 +182,15 @@ class SemSegSeqNet(Net):
 
     @property
     def is_blind(self):
-        return self.rgb_encoder.is_blind or self.depth_encoder.is_blind
+        return self.rgb_encoder.is_blind and self.depth_encoder.is_blind
 
     @property
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
-    def get_semantic_observations(self, observations_batch):
-        with torch.no_grad():
-            semantic_observations = self.semantic_predictor(observations_batch["rgb"], observations_batch["depth"])
-            return semantic_observations
-
     def _extract_sge(self, observations):
         # recalculating to keep this self-contained instead of depending on training infra
         if "semantic" in observations and "objectgoal" in observations:
-            goal_semantic = observations["semantic"].contiguous()
-            # logger.info("Semantic goal input: {}".format(obj_semantic.shape))
             obj_semantic = observations["semantic"].contiguous().flatten(start_dim=1)
             
             if len(observations["objectgoal"].size()) == 3:
@@ -249,26 +198,19 @@ class SemSegSeqNet(Net):
                     -1, observations["objectgoal"].size(2)
                 )
 
-            # logger.info("Objectgoal input: {}".format(observations["objectgoal"].shape))
             idx = self.task_cat2mpcat40[
                 observations["objectgoal"].long()
             ]
             if self.is_thda:
-                # logger.info("idx: {}".format(idx.shape))
                 idx = self.mapping_mpcat40_to_goal[idx].long()
-                # logger.info("idx: {}".format(idx.shape))
             idx = idx.to(obj_semantic.device)
+
             if len(idx.size()) == 3:
                 idx = idx.squeeze(1)
 
-            goal_visible_pixels = (obj_semantic == idx).sum(dim=1) # Sum over all since we're not batched
+            goal_visible_pixels = (obj_semantic == idx).sum(dim=1)
             goal_visible_area = torch.true_divide(goal_visible_pixels, obj_semantic.size(-1)).float()
-            
-            # logger.info("goaL: {}".format(goal_visible_area))
-            #logger.info("goal sem shape : {}, object gaol shape: {}".format(goal_semantic.shape, observations["objectgoal"].shape))
-            goal_sem_seg_mask = (goal_semantic == observations["objectgoal"].contiguous().unsqueeze(-1)).float()
-            #logger.info("goal visible shape: {}".format(goal_sem_seg_mask.shape))
-            return goal_visible_area.unsqueeze(-1), goal_sem_seg_mask.unsqueeze(-1)
+            return goal_visible_area.unsqueeze(-1)
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         r"""
@@ -276,12 +218,9 @@ class SemSegSeqNet(Net):
         depth_embedding: [batch_size x DEPTH_ENCODER.output_size]
         rgb_embedding: [batch_size x RGB_ENCODER.output_size]
         """
-
         rgb_obs = observations["rgb"]
         depth_obs = observations["depth"]
 
-        rgb_embedding = []
-        depth_embedding = []
         x = []
 
         if self.depth_encoder is not None:
@@ -302,19 +241,16 @@ class SemSegSeqNet(Net):
             rgb_embedding = self.rgb_encoder(observations)
             x.append(rgb_embedding)
 
-        semantic_obs = observations["semantic"]
-        if len(semantic_obs.size()) == 4:
-            observations["semantic"] = semantic_obs.contiguous().view(
-                -1, semantic_obs.size(2), semantic_obs.size(3)
-            )
-
         if self.model_config.USE_SEMANTICS:
-            sge_embedding, goal_sem_seg_mask = self._extract_sge(observations)
-            x.append(sge_embedding)
-            # Use goal segmentation instead of full segmentation mask
-            # for all object categories
-            if self.embed_goal_seg:
-                observations["semantic"] = goal_sem_seg_mask
+            semantic_obs = observations["semantic"]
+            if len(semantic_obs.size()) == 4:
+                observations["semantic"] = semantic_obs.contiguous().view(
+                    -1, semantic_obs.size(2), semantic_obs.size(3)
+                )
+            if self.embed_sge:
+                sge_embedding = self._extract_sge(observations)
+                x.append(sge_embedding)
+
             sem_seg_embedding = self.sem_seg_encoder(observations)
             x.append(sem_seg_embedding)
 
@@ -356,65 +292,13 @@ class SemSegSeqNet(Net):
         return x, rnn_hidden_states
 
 
-class SemSegSeqModel(nn.Module):
-    def __init__(
-        self, observation_space: Space, action_space: Space, model_config: Config, device=None
-    ):
-        super().__init__()
-        self.net = SemSegSeqNet(
-            observation_space=observation_space,
-            model_config=model_config,
-            num_actions=action_space.n,
-            device=device,
-        )
-        self.action_distribution = CategoricalNet(
-            self.net.output_size, action_space.n
-        )
-        self.train()
-    
-    def forward(
-        self, observations, rnn_hidden_states, prev_actions, masks
-    ) -> CustomFixedCategorical:
-
-        features, rnn_hidden_states = self.net(
-            observations, rnn_hidden_states, prev_actions, masks
-        )
-        distribution = self.action_distribution(features)
-
-        return distribution.logits, rnn_hidden_states
-
-
-class SemSegSeqPolicy(nn.Module):
-    def __init__(
-        self, observation_space: Space, action_space: Space, model_config: Config, device
-    ):
-        super().__init__()
-        self.actor_critic = SemSegSeqModel(
-            observation_space=observation_space,
-            model_config=model_config,
-            action_space=action_space,
-            device=device,
-        )
-        self.device = device
-    
-    def forward(
-        self, observations, rnn_hidden_states, prev_actions, masks
-    ) -> CustomFixedCategorical:
-
-        logits, rnn_hidden_states = self.actor_critic(
-            observations, rnn_hidden_states, prev_actions, masks
-        )
-
-        return logits, rnn_hidden_states
-
-
 @baseline_registry.register_policy
-class SemSegILPolicy(Policy):
+class ObjectNavILPolicy(Policy):
     def __init__(
         self, observation_space: Space, action_space: Space, model_config: Config
     ):
         super().__init__(
-            SemSegSeqNet(
+            ObjectNavILNet(
                 observation_space=observation_space,
                 model_config=model_config,
                 num_actions=action_space.n,
@@ -431,7 +315,3 @@ class SemSegILPolicy(Policy):
             action_space=action_space,
             model_config=config.MODEL,            
         )
-
-
-class DDPSemSegSeqModel(DecentralizedDistributedMixin, SemSegSeqPolicy):
-    pass

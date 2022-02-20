@@ -33,7 +33,12 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
         self.critic = CriticHead(self.net.output_size)
 
     def forward(self, *x):
-        raise NotImplementedError
+        features, rnn_hidden_states = self.net(
+            *x
+        )
+        distribution = self.action_distribution(features)
+
+        return distribution.logits, rnn_hidden_states
 
     def act(
         self,

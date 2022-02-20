@@ -2,7 +2,7 @@
 # for better hyperparameters for actual training
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il_thda.yaml"
-TRAINER_NAME: "objectnav-bc-env"
+TRAINER_NAME: "il-trainer"
 ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0

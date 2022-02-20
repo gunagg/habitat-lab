@@ -10,8 +10,8 @@ from habitat_baselines.rl.ddppo import DDPPOTrainer  # noqa: F401
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer, RolloutStorage
 # from habitat_baselines.rearrangement.il.behavior_cloning_trainer import RearrangementBCTrainer
 # from habitat_baselines.rearrangement.il.behavior_cloning_distrib_trainer import RearrangementBCDistribTrainer
-from habitat_baselines.il.env_based.il_trainer import ObjectNavBCEnvTrainer
-from habitat_baselines.il.env_based.il_ddp_trainer import ObjectNavBCEnvDDPTrainer
+from habitat_baselines.il.env_based.il_trainer import ILEnvTrainer
+from habitat_baselines.il.env_based.il_ddp_trainer import ILEnvDDPTrainer
 
 __all__ = [
     "BaseTrainer",
@@ -19,6 +19,6 @@ __all__ = [
     "BaseILTrainer",
     "PPOTrainer",
     "RolloutStorage",
-    "ObjectNavBCEnvTrainer",
-    "ObjectNavBCEnvDDPTrainer",
+    "ILEnvTrainer",
+    "ILEnvDDPTrainer",
 ]

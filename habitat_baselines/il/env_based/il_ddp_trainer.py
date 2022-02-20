@@ -41,15 +41,12 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
 from habitat_baselines.utils.common import batch_obs, linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.il.env_based.algos.agent import DDPILAgent
-from habitat_baselines.il.env_based.il_trainer import ObjectNavBCEnvTrainer
-from habitat_baselines.il.env_based.policy.seq_2_seq_model import Seq2SeqModel
-from habitat_baselines.il.env_based.policy.sem_seg_model import SemSegSeqModel
-from habitat_baselines.il.env_based.policy.single_resnet_model import SingleResNetSeqModel
+from habitat_baselines.il.env_based.il_trainer import ILEnvTrainer
 from habitat_baselines.il.env_based.policy.rednet import load_rednet
 
 
-@baseline_registry.register_trainer(name="ddp-objectnav-bc-env")
-class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
+@baseline_registry.register_trainer(name="ddp-il-trainer")
+class ILEnvDDPTrainer(ILEnvTrainer):
     # DD-PPO cuts rollouts short to mitigate the straggler effect
     # This, in theory, can cause some rollouts to be very short.
     # All rollouts contributed equally to the loss/model-update,
@@ -63,35 +60,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
         if interrupted_state is not None:
             config = interrupted_state["config"]
 
-        super().__init__(config)
-
-    def _setup_model(self, observation_space, action_space, model_config, device):
-        model_config.defrost()
-        model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
-        model_config.freeze()
-
-        model = None
-        if hasattr(model_config, "VISUAL_ENCODER"):
-            model = SingleResNetSeqModel(observation_space, action_space, model_config, device)
-        elif model_config.USE_SEMANTICS:
-            model = SemSegSeqModel(observation_space, action_space, model_config, device)
-        else:
-            model = Seq2SeqModel(observation_space, action_space, model_config)
-
-        if hasattr(model_config.RGB_ENCODER, "pretrained_ckpt") and model_config.RGB_ENCODER.pretrained_ckpt != "None":
-            state_dict = torch.load(model_config.RGB_ENCODER.pretrained_ckpt, map_location="cpu")["teacher"]
-            state_dict = {"{}.{}".format("visual_encoder", k): v for k, v in state_dict.items()}
-            msg = model.net.rgb_encoder.load_state_dict(state_dict, strict=False)
-            logger.info("Pretrained weights found at {} and loaded with msg: {}".format(
-                model_config.RGB_ENCODER.pretrained_ckpt,
-                msg
-            ))
-
-            if not model_config.RGB_ENCODER.train_encoder:
-                for param in model.net.rgb_encoder.visual_encoder.backbone.parameters():
-                    param.requires_grad_(False)
-
-        return model   
+        super().__init__(config)  
 
     def _setup_actor_critic_agent(self, il_cfg: Config, model_config: Config) -> None:
         r"""Sets up actor critic and agent for PPO.
@@ -111,11 +80,15 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
         )
         self.obs_space = observation_space
 
-        logger.info("obs transforms: {}".format(self.obs_transforms))
-        self.model = self._setup_model(
-            observation_space, self.envs.action_spaces[0], model_config, self.device
+        model_config.defrost()
+        model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
+        model_config.freeze()
+
+        policy = baseline_registry.get_policy(self.config.IL.POLICY.name)
+        self.policy = policy.from_config(
+            self.config, observation_space, self.envs.action_spaces[0]
         )
-        self.model.to(self.device)
+        self.policy.to(self.device)
 
         self.semantic_predictor = None
         if model_config.USE_PRED_SEMANTICS:
@@ -128,7 +101,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             self.semantic_predictor.eval()
 
         self.agent = DDPILAgent(
-            model=self.model,
+            model=self.policy,
             num_envs=self.envs.num_envs,
             num_mini_batch=il_cfg.num_mini_batch,
             lr=il_cfg.lr,

@@ -25,6 +25,7 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
+    apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
 from habitat_baselines.il.env_based.common.rollout_storage import RolloutStorage
@@ -35,62 +36,24 @@ from habitat_baselines.utils.common import (
     generate_video,
     linear_decay,
 )
-from habitat_baselines.utils.visualizations.utils import (
-    save_frame,
-)
 from habitat_baselines.utils.env_utils import construct_envs
-from habitat_baselines.il.env_based.policy.seq_2_seq_model import Seq2SeqModel
-from habitat_baselines.il.env_based.policy.sem_seg_model import SemSegSeqModel
-from habitat_baselines.il.env_based.policy.single_resnet_model import SingleResNetSeqModel
 from habitat_baselines.il.env_based.policy.rednet import load_rednet
-from psiturk_dataset.utils.utils import write_json
 
 
-@baseline_registry.register_trainer(name="objectnav-bc-env")
-class ObjectNavBCEnvTrainer(BaseRLTrainer):
+@baseline_registry.register_trainer(name="il-trainer")
+class ILEnvTrainer(BaseRLTrainer):
     r"""Trainer class for behavior cloning.
     """
     supported_tasks = ["ObjectNav-v1"]
 
     def __init__(self, config=None):
         super().__init__(config)
-        self.actor_critic = None
+        self.policy = None
         self.agent = None
         self.envs = None
         self.obs_transforms = []
         if config is not None:
             logger.info(f"config: {config}")
-
-        self._static_encoder = False
-        self._encoder = None
-    
-    def _setup_model(self, observation_space, action_space, model_config, device):
-        model_config.defrost()
-        model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
-        model_config.freeze()
-
-        model = None
-        if hasattr(model_config, "VISUAL_ENCODER"):
-            model = SingleResNetSeqModel(observation_space, action_space, model_config, device)
-            logger.info("Setting up single visual encoder")
-        elif model_config.USE_SEMANTICS:
-            model = SemSegSeqModel(observation_space, action_space, model_config, device)
-        else:
-            model = Seq2SeqModel(observation_space, action_space, model_config)
-        
-        if hasattr(model_config.RGB_ENCODER, "pretrained_ckpt") and model_config.RGB_ENCODER.pretrained_ckpt != "None":
-            state_dict = torch.load(model_config.RGB_ENCODER.pretrained_ckpt, map_location="cpu")["teacher"]
-            state_dict = {"{}.{}".format("visual_encoder", k): v for k, v in state_dict.items()}
-            msg = model.net.rgb_encoder.load_state_dict(state_dict, strict=False)
-            logger.info("Pretrained weights found at {} and loaded with msg: {}".format(
-                model_config.RGB_ENCODER.pretrained_ckpt,
-                msg
-            ))
-
-            if not model_config.RGB_ENCODER.train_encoder:
-                for param in model.net.rgb_encoder.visual_encoder.backbone.parameters():
-                    param.requires_grad_(False)
-        return model   
 
     def _setup_actor_critic_agent(self, il_cfg: Config, model_config: Config) -> None:
         r"""Sets up actor critic and agent for PPO.
@@ -105,15 +68,20 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         observation_space = self.envs.observation_spaces[0]
         self.obs_transforms = get_active_obs_transforms(self.config)
-        # observation_space = apply_obs_transforms_obs_space(
-        #     observation_space, self.obs_transforms
-        # )
+        observation_space = apply_obs_transforms_obs_space(
+            observation_space, self.obs_transforms
+        )
         self.obs_space = observation_space
 
-        self.model = self._setup_model(
-            observation_space, self.envs.action_spaces[0], model_config, self.device
+        model_config.defrost()
+        model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
+        model_config.freeze()
+
+        policy = baseline_registry.get_policy(self.config.IL.POLICY.name)
+        self.policy = policy.from_config(
+            self.config, observation_space, self.envs.action_spaces[0]
         )
-        self.model.to(self.device)
+        self.policy.to(self.device)
 
         self.semantic_predictor = None
         if model_config.USE_PRED_SEMANTICS:
@@ -126,49 +94,13 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             self.semantic_predictor.eval()
 
         self.agent = ILAgent(
-            model=self.model,
+            model=self.policy,
             num_envs=self.envs.num_envs,
             num_mini_batch=il_cfg.num_mini_batch,
             lr=il_cfg.lr,
             eps=il_cfg.eps,
             max_grad_norm=il_cfg.max_grad_norm,
         )
-    
-    def _save_results(
-        self,
-        observations,
-        infos,
-        path: str,
-        env_idx: int,
-        split: str,
-        episode_id: int
-    ) -> None:
-        r"""For saving EQA-CNN-Pretrain reconstruction results.
-
-        Args:
-            gt_rgb: rgb ground truth
-            preg_rgb: autoencoder output rgb reconstruction
-            gt_seg: segmentation ground truth
-            pred_seg: segmentation output
-            gt_depth: depth map ground truth
-            pred_depth: depth map output
-            path: to write file
-        """
-        rgb_frame = observations_to_image(
-                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
-                    )
-        dirname = os.path.join(path.format(split=split, type="rgb"), "{}".format(episode_id.split("_")[0]))
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
-        rgb_path = os.path.join(dirname, "frame_{}".format(episode_id))
-        save_frame(rgb_frame, rgb_path)
-        if "top_down_map" in infos[env_idx]:
-            top_down_frame = observations_to_image(
-                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx], top_down_map_only=True
-                    )
-            top_down_path = os.path.join(path.format(split=split, type="top_down_map"), "frame_{}".format(episode_id))
-            save_frame(top_down_frame, top_down_path)
-        
 
     def _make_results_dir(self, split="val"):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
@@ -176,7 +108,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             dir_name = self.config.RESULTS_DIR.format(split=split, type=s_type)
             if not os.path.isdir(dir_name):
                 os.makedirs(dir_name)
-
 
     @profiling_wrapper.RangeContext("save_checkpoint")
     def save_checkpoint(
@@ -316,10 +247,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         current_episode_reward *= masks
 
-        if self._static_encoder:
-            with torch.no_grad():
-                batch["visual_features"] = self._encoder(batch)
-
         rollouts.insert(
             batch,
             actions,
@@ -343,7 +270,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             time.time() - t_update_model,
             total_loss,
         )
-
 
     @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
@@ -590,8 +516,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
 
         self.agent.load_state_dict(ckpt_dict["state_dict"], strict=True)
         logger.info("state dict loaded")
-        self.model = self.agent.model
-        self.model.eval()
+        self.policy = self.agent.model
+        self.policy.eval()
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
@@ -655,7 +581,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 (
                     logits,
                     test_recurrent_hidden_states,
-                ) = self.model(
+                ) = self.policy(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,
