@@ -612,6 +612,12 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
+        with torch.no_grad():
+            if self.semantic_predictor is not None:
+                batch["pred_semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+                if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                    batch["pred_semantic"] = batch["semantic"] - 1
+
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
         )
@@ -674,10 +680,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
-                if self.semantic_predictor is not None:
-                    batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
-                    if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
-                        batch["semantic"] = batch["semantic"] - 1
+                batch["semantic"] = batch["pred_semantic"]
                 (
                     logits,
                     test_recurrent_hidden_states,
@@ -714,6 +717,12 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             ]
             batch = batch_obs(observations, device=self.device)
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+
+            with torch.no_grad():
+                if self.semantic_predictor is not None:
+                    batch["pred_semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+                    if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                        batch["pred_semantic"] = batch["pred_semantic"] - 1
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -806,19 +815,14 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
-                        {"rgb": batch["rgb"][i]}, infos[i]
+                        {
+                            "rgb": batch["rgb"][i],
+                            "semantic": (batch["pred_semantic"][i] == batch["objectgoal"][i]),
+                            "gt_semantic": (batch["semantic"][i] == batch["objectgoal"][i])
+                        }, infos[i]
                     )
-                    #frame = append_text_to_image(frame, "Find: {}".format(current_episodes[i].object_category))
-                    rgb_frames[i].append(frame)                
-
-                    # self._save_results(
-                    #     batch,
-                    #     infos,
-                    #     config.RESULTS_DIR,
-                    #     i,
-                    #     config.EVAL.SPLIT,
-                    #     "{}_{}".format(current_episodes[i].episode_id, len(rgb_frames[i])),
-                    # )
+                    frame = append_text_to_image(frame, "Find and go to {}".format(current_episodes[i].object_category))
+                    rgb_frames[i].append(frame)
 
             (
                 self.envs,
