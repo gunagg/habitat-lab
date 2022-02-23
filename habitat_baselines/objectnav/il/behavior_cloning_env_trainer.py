@@ -41,6 +41,7 @@ from habitat_baselines.utils.common import (
 from habitat_baselines.utils.visualizations.utils import (
     save_frame,
 )
+from habitat.tasks.nav.object_nav_task import task_cat2mpcat40
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.objectnav.models.seq_2_seq_model import Seq2SeqModel
 from habitat_baselines.objectnav.models.sem_seg_model import SemSegSeqModel
@@ -180,7 +181,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             dir_name = self.config.RESULTS_DIR.format(split=split, type=s_type)
             if not os.path.isdir(dir_name):
                 os.makedirs(dir_name)
-
 
     @profiling_wrapper.RangeContext("save_checkpoint")
     def save_checkpoint(
@@ -737,6 +737,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             next_episodes = self.envs.current_episodes()
             envs_to_pause = []
             n_envs = self.envs.num_envs
+            task_cat2mpcat40_t = torch.tensor(task_cat2mpcat40, device=self.device)
             for i in range(n_envs):
                 if (
                     next_episodes[i].scene_id,
@@ -814,11 +815,14 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
+                    idx = task_cat2mpcat40_t[
+                        batch["objectgoal"].long()
+                    ]
                     frame = observations_to_image(
                         {
                             "rgb": batch["rgb"][i],
-                            "semantic": (batch["pred_semantic"][i] == batch["objectgoal"][i]),
-                            "gt_semantic": (batch["semantic"][i] == batch["objectgoal"][i])
+                            "semantic": (batch["pred_semantic"][i] == idx),
+                            "gt_semantic": (batch["semantic"][i] == idx)
                         }, infos[i]
                     )
                     frame = append_text_to_image(frame, "Find and go to {}".format(current_episodes[i].object_category))

@@ -190,22 +190,20 @@ def observations_to_image(observation: Dict, info: Dict, top_down_map_only=False
         egocentric_view_l.append(depth_map)
 
     if "semantic" in observation:
-        semantic_map = observation["semantic"].squeeze()
+        semantic_map = observation["semantic"].squeeze() * 255.0
         if not isinstance(semantic_map, np.ndarray):
             semantic_map = semantic_map.cpu().numpy()
-        colors = make_rgb_palette(45)
-        semantic_colors = colors[semantic_map % 45] * 255
-        semantic_colors = semantic_colors.astype(np.uint8)
-        egocentric_view_l.append(semantic_colors)
+        semantic_map = semantic_map.astype(np.uint8)
+        semantic_map = np.stack([semantic_map for _ in range(3)], axis=2)
+        egocentric_view_l.append(semantic_map)
 
         if "gt_semantic" in observation:
-            semantic_map = observation["gt_semantic"].squeeze()
+            semantic_map = observation["gt_semantic"].squeeze() * 255.0
             if not isinstance(semantic_map, np.ndarray):
                 semantic_map = semantic_map.cpu().numpy()
-            colors = make_rgb_palette(45)
-            semantic_colors = colors[semantic_map % 45] * 255
-            semantic_colors = semantic_colors.astype(np.uint8)
-            egocentric_view_l.append(semantic_colors)
+            semantic_map = semantic_map.astype(np.uint8)
+            semantic_map = np.stack([semantic_map for _ in range(3)], axis=2)
+            egocentric_view_l.append(semantic_map)
 
     # add image goal if observation has image_goal info
     if "imagegoal" in observation:
