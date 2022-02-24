@@ -32,6 +32,7 @@ export MAGNUM_LOG=quiet
 # export GLOO_SOCKET_IFNAME=“”
 
 export MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
+export PYTHONPATH="/private/home/alexclegg/karmesh_code/objectnav/habitat-sim/"
 
 set -x
 repeat_number=${SLURM_ARRAY_TASK_ID}

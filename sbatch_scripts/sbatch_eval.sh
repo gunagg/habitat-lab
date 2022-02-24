@@ -31,6 +31,7 @@ export NCCL_SOCKET_IFNAME=“”
 export GLOO_SOCKET_IFNAME=“”
 
 export MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
+export PYTHONPATH="/private/home/alexclegg/karmesh_code/objectnav/habitat-sim/"
 
 repeat_number=${SLURM_ARRAY_TASK_ID}
 CMD_OPTS=$(cat "$CMD_OPTS_FILE")
