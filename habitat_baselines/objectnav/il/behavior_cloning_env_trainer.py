@@ -195,7 +195,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         )
 
         dirname = os.path.join(path.format(split=split, type="rgb"), "{}".format(episode_id))
-        if not os.path.isdir(dirname):
+        if not os.path.exists(dirname):
             os.mkdir(dirname)
         rgb_path = os.path.join(dirname, "frame_{}".format(step_id))
         save_frame(rgb_frame, rgb_path)
@@ -204,7 +204,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
         for s_type in ["rgb", "seg", "depth", "top_down_map"]:
             dir_name = self.config.RESULTS_DIR.format(split=split, type=s_type)
-            if not os.path.isdir(dir_name):
+            if not os.path.exists(dir_name):
                 os.makedirs(dir_name)
 
 

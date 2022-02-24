@@ -5,6 +5,7 @@ run_training() {
 	     LOG_DIR="${RUN_FOLDER}/logs"
 	     CHKP_DIR="${RUN_FOLDER}/chkp"
 	     VIDEO_DIR="${RUN_FOLDER}/videos"
+	     RESULTS_DIR="${RUN_FOLDER}/results"
 	     CMD_TRAIN_OPTS_FILE="${LOG_DIR}/cmd_opt.txt"
 	     INTERRUPTED_STATE_FILE="${CHKP_DIR}/interrupted_state.pth"
 
@@ -12,6 +13,7 @@ run_training() {
 	     mkdir -p ${CHKP_DIR}
 	     mkdir -p ${LOG_DIR}
 	     mkdir -p ${VIDEO_DIR}
+	     mkdir -p ${RESULTS_DIR}
 
 	     if [ -z "${CHKP_NAME}" ]; then
 	         EVAL_CKPT_PATH_DIR="${CHKP_DIR}"
@@ -26,6 +28,7 @@ run_training() {
 	         CHECKPOINT_FOLDER ${CHKP_DIR} \
 	         TENSORBOARD_DIR ${LOG_DIR} \
 	         VIDEO_DIR ${VIDEO_DIR} \
+		 RESULTS_DIR ${RESULTS_DIR}/{split}/{type} \
 		 INTERRUPTED_STATE_FILE ${INTERRUPTED_STATE_FILE} \
 	         MODEL.RGB_ENCODER.pretrained_ckpt ${REPO_PATH}/data/new_checkpoints/rgb_encoders/${WEIGHTS_NAME} \
 		 MODEL.DEPTH_ENCODER.ddppo_checkpoint ${REPO_PATH}/data/ddppo-models/gibson-2plus-resnet50.pth \

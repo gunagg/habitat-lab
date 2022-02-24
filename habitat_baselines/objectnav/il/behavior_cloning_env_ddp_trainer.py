@@ -159,7 +159,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
             num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
         )
-        self._make_results_dir("train")
+        #self._make_results_dir("train")
 
         interrupted_state = load_interrupted_state(self.config.INTERRUPTED_STATE_FILE)
         if interrupted_state is not None:

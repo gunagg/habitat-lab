@@ -38,6 +38,49 @@ class RandomShiftsAug(nn.Module):
                              padding_mode='zeros',
                              align_corners=False)
 
+class RandomShiftsAug2(nn.Module):
+    def __init__(self, pad):
+        super().__init__()
+        self.pad = pad
+
+    def forward(self, x):
+        n, c, h, w = x.size()
+        padding = tuple([self.pad] * 4)
+        x = F.pad(x, padding, 'replicate')
+
+        eps = 1.0 / (w + 2 * self.pad)
+        arange_w = torch.linspace(-1.0 + eps,
+                                  1.0 - eps,
+                                  w + 2 * self.pad,
+                                  device=x.device,
+                                  dtype=x.dtype)[:w]
+        arange_w = arange_w.unsqueeze(0).repeat(h, 1).unsqueeze(2)
+
+        eps = 1.0 / (h + 2 * self.pad)
+        arange_h = torch.linspace(-1.0 + eps,
+                                  1.0 - eps,
+                                  h + 2 * self.pad,
+                                  device=x.device,
+                                  dtype=x.dtype)[:h]
+        arange_h = arange_h.unsqueeze(1).repeat(1, w).unsqueeze(2)
+
+        base_grid = torch.cat([arange_w, arange_h], dim=2)
+        base_grid = base_grid.unsqueeze(0).repeat(n, 1, 1, 1)
+
+        shift = torch.randint(0,
+                              2 * self.pad + 1,
+                              size=(n, 1, 1, 2),
+                              device=x.device,
+                              dtype=x.dtype)
+        shift[0,0,0,0] *= 2.0 / (w + 2 * self.pad)
+        shift[0,0,0,1] *= 2.0 / (h + 2 * self.pad)
+
+        grid = base_grid + shift
+        return F.grid_sample(x,
+                             grid,
+                             padding_mode='zeros',
+                             align_corners=False)
+
 def compose_augmentations(args_list, config):
     """
     Uses the args list to compose a single augmentation function.
@@ -82,6 +125,8 @@ def compose_augmentations(args_list, config):
             ))
         elif aug_name == "translate_v2":
             augs_funcs.append(RandomShiftsAug(config.TRANSLATE.pad))
+        elif aug_name == "translate_v3":
+            augs_funcs.append(RandomShiftsAug2(config.TRANSLATE.pad))
         elif aug_name == "":
             pass
         else:

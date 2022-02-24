@@ -32,7 +32,8 @@ EVAL:
   sample: False
   semantic_metrics: False
   evaluation_meta_file: "tb/objectnav/overfitting_ssl/semseg/seed_1_obs_transform/evaluation_meta_35k_3.json"
-NUM_UPDATES: 20000
+NUM_UPDATES: 16000
+SAVE_FRAMES: False
 
 IL:
   USE_IW: True

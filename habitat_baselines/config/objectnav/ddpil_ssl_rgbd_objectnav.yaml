@@ -33,6 +33,7 @@ EVAL:
   semantic_metrics: False
   evaluation_meta_file: "/checkpoint/alexclegg/objectnav/objectnav_pretrained/0/logs/temp.json"
 NUM_UPDATES: 16000
+SAVE_FRAMES: False
 
 IL:
   USE_IW: True
