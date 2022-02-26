@@ -831,14 +831,15 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                             tb_writer=writer,
                         )
 
-                        self._save_results(
-                            batch,
-                            infos,
-                            config.RESULTS_DIR,
-                            i,
-                            config.EVAL.SPLIT,
-                            current_episodes[i].episode_id,
-                        )
+                        # self._save_results(
+                        #     batch,
+                        #     infos,
+                        #     config.RESULTS_DIR,
+                        #     i,
+                        #     config.EVAL.SPLIT,
+                        #     current_episodes[i].episode_id,
+                        #     0
+                        # )
 
                         rgb_frames[i] = []
 
