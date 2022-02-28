@@ -112,8 +112,6 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             top_down_list = []
 
             obs = env.reset()
-            if ep_id <3:
-                continue
 
             print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
@@ -129,12 +127,14 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 "episodeLength": len(env.current_episode.reference_replay)
             }
             instructions.append(data)
-            step_index = 1
+            step_index = 0
             grab_seen = False
             grab_count = 0
             success = 0
             total_reward = 0.0
             episode = env.current_episode
+            print("len reference replay: {}".format(len(episode.reference_replay)))
+            print("first actions: {}".format(episode.reference_replay[0]))
 
             for data in env.current_episode.reference_replay[step_index:]:
                 
@@ -146,7 +146,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 action_name = env.task.get_action_name(
                     action
                 )
-                #print(action_name)
+                # print(action_name)
 
                 if step_env:
                     observations = env.step(action=action)

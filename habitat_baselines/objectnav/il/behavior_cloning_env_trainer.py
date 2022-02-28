@@ -766,18 +766,18 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     current_episode_steps[i] = 0
                     current_episode_cross_entropy[i] = 0
 
-                    ep_metrics = copy.deepcopy(episode_stats)
-                    if "room_visitation_map" in infos[i]:
-                        ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
-                    if "exploration_metrics" in infos[i]:
-                        ep_metrics["exploration_metrics"] = infos[i]["exploration_metrics"]
-                    evaluation_meta.append({
-                        "scene_id": current_episodes[i].scene_id,
-                        "episode_id": current_episodes[i].episode_id,
-                        "metrics": ep_metrics,
-                        "object_category": current_episodes[i].object_category
-                    })
-                    write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
+                    # ep_metrics = copy.deepcopy(episode_stats)
+                    # if "room_visitation_map" in infos[i]:
+                    #     ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
+                    # if "exploration_metrics" in infos[i]:
+                    #     ep_metrics["exploration_metrics"] = infos[i]["exploration_metrics"]
+                    # evaluation_meta.append({
+                    #     "scene_id": current_episodes[i].scene_id,
+                    #     "episode_id": current_episodes[i].episode_id,
+                    #     "metrics": ep_metrics,
+                    #     "object_category": current_episodes[i].object_category
+                    # })
+                    # write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (
@@ -787,8 +787,8 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     ] = episode_stats
 
                     # Record for replay
-                    # ep_data = get_episode_json(current_episodes[i], ep_actions[i])
-                    # evaluation_meta.append(ep_data)
+                    ep_data = get_episode_json(current_episodes[i], ep_actions[i])
+                    evaluation_meta.append(ep_data)
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
@@ -809,7 +809,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                             config.EVAL.SPLIT,
                             current_episodes[i].episode_id,
                         )
-
+                        ep_actions[i] = []
                         rgb_frames[i] = []
 
                 # episode continues
@@ -821,12 +821,13 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {
                             "rgb": batch["rgb"][i],
-                            "semantic": (batch["pred_semantic"][i] == idx),
-                            "gt_semantic": (batch["semantic"][i] == idx)
                         }, infos[i]
                     )
                     frame = append_text_to_image(frame, "Find and go to {}".format(current_episodes[i].object_category))
                     rgb_frames[i].append(frame)
+                    ep_actions[i].append({
+                        "action": action_names[i]
+                    })
 
             (
                 self.envs,

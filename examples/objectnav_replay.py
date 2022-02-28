@@ -16,7 +16,7 @@ from habitat_sim.utils import viz_utils as vut
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_sim.utils.common import quat_to_coeffs
 from habitat.utils.visualizations import maps
-from habitat.utils.visualizations.utils import make_video_cv2, observations_to_image, images_to_video, append_text_to_image
+from habitat.utils.visualizations.utils import observations_to_image, images_to_video, append_text_to_image
 from habitat_sim.utils.common import quat_to_coeffs, quat_from_magnum, quat_from_angle_axis
 
 from threading import Thread
@@ -321,7 +321,7 @@ def run_reference_replay(
                 "episodeLength": len(env.current_episode.reference_replay)
             }
             instructions.append(data)
-            step_index = 1
+            step_index = 0
             grab_count = 0
             total_reward = 0.0
             episode = env.current_episode
@@ -331,6 +331,8 @@ def run_reference_replay(
 
             if len(episode.reference_replay) > 2500:
                 continue
+            if episode.reference_replay[0].action == "STOP":
+                step_index = 1
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
                     log_action_data(data, i)
@@ -345,7 +347,7 @@ def run_reference_replay(
                     info = env.get_metrics()
                     # sem_obs_gt_goal = get_goal_semantic(torch.Tensor(observations["semantic"]), observations["objectgoal"], task_cat2mpcat40, episode)
                     
-                    frame = observations_to_image({"rgb": observations["rgb"]}, info)
+                    frame = observations_to_image({"rgb": observations["rgb"]}, {})
                     top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
                     if semantic_predictor is not None:
                         sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
@@ -382,7 +384,7 @@ def run_reference_replay(
                         #     print(torch.sum(sem_obs_goal))
                         #     #print(torch.unique((sem_obs_goal.squeeze(-1).squeeze(0) * sem_obs_gt_goal)))
                         #     print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
-                        frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
+                        # frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
 
                     frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
                     replay_data.append(get_agent_pose(env._sim))
@@ -401,7 +403,7 @@ def run_reference_replay(
                     break
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
-            # make_videos([top_down_obs_list], "{}_top_down".format(output_prefix), ep_id)
+            make_videos([top_down_obs_list], "{}_top_down".format(output_prefix), ep_id)
             print(info["distance_to_goal"])
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
             if len(episode.reference_replay) <= 500:
