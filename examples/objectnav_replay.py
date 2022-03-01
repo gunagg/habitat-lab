@@ -545,7 +545,7 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
-    cfg.DATASET.CONTENT_SCENES = ['1LXtFkjw3qL']
+    # cfg.DATASET.CONTENT_SCENES = ['1LXtFkjw3qL']
 
     if args.metrics:
         cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]

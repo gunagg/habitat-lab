@@ -80,6 +80,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
 
 
         model = None
+        logger.info("setting up semantics: {}".format(model_config.USE_SEMANTICS))
         if hasattr(model_config, "VISUAL_ENCODER"):
             model = SingleResNetSeqModel(observation_space, action_space, model_config, device)
         elif model_config.USE_SEMANTICS:

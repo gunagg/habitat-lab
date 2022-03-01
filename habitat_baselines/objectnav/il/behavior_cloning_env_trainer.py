@@ -319,17 +319,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
                 batch["semantic"] = batch["semantic"] - 1
             batch["semantic"] = batch["semantic"].unsqueeze(-1)
-        
-        if self.config.SAVE_FRAMES:
-            self._save_results(
-                batch,
-                infos,
-                self.config.RESULTS_DIR,
-                0,
-                "train",
-                "rollout_{}".format(self.current_update),
-                rollouts.step,
-            )
 
         rewards = torch.tensor(
             rewards_l, dtype=torch.float, device=current_episode_reward.device

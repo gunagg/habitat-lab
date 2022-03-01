@@ -48,11 +48,14 @@ class Seq2SeqNet(Net):
             assert model_config.DEPTH_ENCODER.cnn_type in [
                 "SimpleDepthCNN",
                 "VlnResnetDepthEncoder",
+                "None"
             ], "DEPTH_ENCODER.cnn_type must be SimpleDepthCNN or VlnResnetDepthEncoder"
+            logger.info("depth encoder: {}".format(model_config.DEPTH_ENCODER.cnn_type))
             if model_config.DEPTH_ENCODER.cnn_type == "SimpleDepthCNN":
                 self.depth_encoder = SimpleDepthCNN(
                     observation_space, model_config.DEPTH_ENCODER.output_size
                 )
+                rnn_input_size += model_config.DEPTH_ENCODER.output_size
             elif model_config.DEPTH_ENCODER.cnn_type == "VlnResnetDepthEncoder":
                 self.depth_encoder = VlnResnetDepthEncoder(
                     observation_space,
@@ -61,18 +64,24 @@ class Seq2SeqNet(Net):
                     backbone=model_config.DEPTH_ENCODER.backbone,
                     trainable=model_config.DEPTH_ENCODER.trainable,
                 )
+                rnn_input_size += model_config.DEPTH_ENCODER.output_size
+            else:
+                self.depth_encoder = None
+                logger.info("depth encoder is None: {}".format(self.depth_encoder))
 
             # Init the RGB visual encoder
             assert model_config.RGB_ENCODER.cnn_type in [
                 "SimpleRGBCNN",
                 "TorchVisionResNet50",
                 "ResnetRGBEncoder",
+                "None"
             ], "RGB_ENCODER.cnn_type must be either 'SimpleRGBCNN' or 'TorchVisionResNet50'."
 
             if model_config.RGB_ENCODER.cnn_type == "SimpleRGBCNN":
                 self.rgb_encoder = SimpleRGBCNN(
                     observation_space, model_config.RGB_ENCODER.output_size
                 )
+                rnn_input_size += model_config.RGB_ENCODER.output_size
             elif model_config.RGB_ENCODER.cnn_type == "TorchVisionResNet50":
                 device = (
                     torch.device("cuda", model_config.TORCH_GPU_ID)
@@ -82,6 +91,7 @@ class Seq2SeqNet(Net):
                 self.rgb_encoder = TorchVisionResNet50(
                     observation_space, model_config.RGB_ENCODER.output_size, device
                 )
+                rnn_input_size += model_config.RGB_ENCODER.output_size
             elif model_config.RGB_ENCODER.cnn_type == "ResnetRGBEncoder":
                 self.rgb_encoder = ResnetRGBEncoder(
                     observation_space,
@@ -91,12 +101,9 @@ class Seq2SeqNet(Net):
                     normalize_visual_inputs=model_config.normalize_visual_inputs,
                     obs_augmentations=obs_augmentations,
                 )
-
-            # Init the RNN state decoder
-            rnn_input_size += (
-                model_config.DEPTH_ENCODER.output_size
-                + model_config.RGB_ENCODER.output_size
-            )
+                rnn_input_size += model_config.RGB_ENCODER.output_size
+            else:
+                self.rgb_encoder = None
         else:
             logger.info("Setting up no vision baseline")
 
@@ -168,10 +175,13 @@ class Seq2SeqNet(Net):
         x = []
 
         if not self.model_config.NO_VISION:
-            depth_embedding = self.depth_encoder(observations)
-            rgb_embedding = self.rgb_encoder(observations)
-
-            x.extend([depth_embedding, rgb_embedding])
+            if self.depth_encoder is not None:
+                depth_embedding = self.depth_encoder(observations)
+                x.append(depth_embedding)
+            
+            if self.rgb_encoder is not None:
+                rgb_embedding = self.rgb_encoder(observations)
+                x.append(rgb_embedding)
 
         if EpisodicGPSSensor.cls_uuid in observations:
             obs_gps = observations[EpisodicGPSSensor.cls_uuid]
