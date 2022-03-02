@@ -341,14 +341,15 @@ def run_reference_replay(
                     action
                 )
 
-                for ii in range(1):
+                for ii in range(2):
                     observations = env.step(action=action)
 
                     info = env.get_metrics()
                     # sem_obs_gt_goal = get_goal_semantic(torch.Tensor(observations["semantic"]), observations["objectgoal"], task_cat2mpcat40, episode)
                     
                     frame = observations_to_image({"rgb": observations["rgb"]}, {})
-                    top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
+                    print(observations["rgb"].shape)
+                    #top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
                     if semantic_predictor is not None:
                         sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
                         
@@ -386,14 +387,14 @@ def run_reference_replay(
                         #     print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
                         # frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
 
-                    frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
+                    #frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
                     replay_data.append(get_agent_pose(env._sim))
 
                     if info["success"]:
                         ep_success = 1
 
                     observation_list.append(frame)
-                    top_down_obs_list.append(top_down_frame)
+                    #top_down_obs_list.append(top_down_frame)
                     if action_name == "STOP":
                         break
                 if action_name == "STOP":
@@ -403,7 +404,7 @@ def run_reference_replay(
                     break
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
-            make_videos([top_down_obs_list], "{}_top_down".format(output_prefix), ep_id)
+            #make_videos([top_down_obs_list], "{}_top_down".format(output_prefix), ep_id)
             print(info["distance_to_goal"])
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
             if len(episode.reference_replay) <= 500:
@@ -454,6 +455,7 @@ def run_reference_replay(
                     "episodeId": instructions[-1]["episodeId"],
                     "distanceToGoal": info["distance_to_goal"]
                 })
+            break
         
         # print("Average delta cov: {}".format(avg_delta_coverage / avg_delta_count, avg_delta_coverage, avg_delta_count))
 
@@ -523,7 +525,7 @@ def main():
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
     #cfg.DATASET.CONTENT_SCENES = ['17DRP5sb8fy', '1LXtFkjw3qL', '1pXnuDYAj8r', '29hnd4uzFmX', '5LpN3gDmAk7', '5q7pvUzZiYa', '759xd9YjKW5', '7y3sRwLe3Va', '82sE5b5pLXE', '8WUmhLawc2A', 'B6ByNegPMKs', 'D7G3Y4RVNrH', 'D7N2EKCX4Sj', 'E9uDoFAP3SH']
-
+    cfg.DATASET.CONTENT_SCENES = ['i5noydFURQK']
     if args.metrics:
         cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]
     
