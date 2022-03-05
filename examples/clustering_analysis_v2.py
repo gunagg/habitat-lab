@@ -1,8 +1,11 @@
 import os
+from pyexpat import features
 import torch
 import cv2
 import numpy as np
+import glob
 import json
+import random
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -12,7 +15,8 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from tqdm import tqdm
 from habitat_baselines.rl.ddppo.policy import resnet_gn
-from PIL import ImageColor
+from PIL import ImageColor, Image
+from torch.utils.data import DataLoader, Dataset
 
 colors = [
     '#4f7ac9',
@@ -39,6 +43,93 @@ colors = [
     ]
 TRAJECTORY="trajectory_4"
 
+INDOOR_CLASSES = [
+    "classroom",
+    "mansion",
+    "patio",
+    "airport_terminal",
+    "beauty_salon",
+    "closet",
+    "dorm_room",
+    "home_office",
+    "bedroom",
+    "engine_room",
+    "hospital_room",
+    "martial_arts_gym",
+    "shed",
+    "cockpit",
+    "hotel-outdoor",
+    "apartment_building-outdoor",
+    "bookstore",
+    "coffee_shop",
+    "hotel_room",
+    "shopfront",
+    "conference_center",
+    "shower",
+    "conference_room",
+    "motel",
+    "pulpit",
+    "fire_escape",
+    "art_gallery",
+    "art_studio",
+    "corridor",
+    "museum-indoor",
+    "railroad_track",
+    "inn-outdoor",
+    "music_studio",
+    "attic",
+    "nursery",
+    "auditorium",
+    "residential_neighborhood",
+    "cafeteria",
+    "office",
+    "restaurant",
+    "waiting_room",
+    "office_building",
+    "restaurant_kitchen",
+    "stage-indoor",
+    "ballroom",
+    "game_room",
+    "kitchen",
+    "restaurant_patio",
+    "staircase",
+    "banquet_hall",
+    "bar",
+    "dinette_home",
+    "living_room",
+    "swimming_pool-outdoor",
+    "basement",
+    "dining_room",
+    "lobby",
+    "parlor",
+    "locker_room",
+]
+
+
+class PlacessIndoor(Dataset):
+    def __init__(self, root):
+        self.files, self.labels = [], []
+        #classes = random.sample(INDOOR_CLASSES, 10)
+        for idx, c in enumerate(INDOOR_CLASSES):
+            folder = os.path.join(root, c)
+            if not os.path.isdir(folder):
+                print("Warning skipping:", folder)
+                continue
+            image_files = sorted(glob.glob(os.path.join(folder, "*.jpg")))
+            self.files.extend(image_files)
+            self.labels.extend([c] * len(image_files))
+        print("Samples: {}".format(len(self.files)))
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self, index: int):
+        path = self.files[index]
+        with open(path, "rb") as f:
+            img = Image.open(f).convert("RGB")
+        lbl = self.labels[index]
+        return np.array(img), lbl
+
 def plot_tsne(model, device, images, targets, ckpt):
     model.eval()
     features = []; labels = []
@@ -56,6 +147,7 @@ def plot_tsne(model, device, images, targets, ckpt):
             else: 
                 features = np.concatenate((features, pred), axis=0)
                 labels = np.concatenate((labels, target), axis=0)
+    print("before pca: {}".format(features.shape))
     pca = PCA(n_components=30)
     pca_result = pca.fit_transform(features)
     tsne = TSNE(n_components=2, verbose=1, perplexity=20, n_iter=500)
@@ -75,10 +167,56 @@ def plot_tsne(model, device, images, targets, ckpt):
 
     visualize_tsne_points(tx, ty, labels, ckpt, color_map)
     visualize_tsne_images(tx, ty, labels, images, ckpt, color_map)
+    # visualize_class_concepts_tsne(features, labels, ckpt, color_map)
 
     return tsne_results
 
-def visualize_tsne_points(tx, ty, labels, ckpt, color_map):
+def plot_places_tsne(model, device, dataloader, ckpt):
+    model.eval()
+    features = []; labels = []
+    images = []
+    with torch.no_grad():
+        for batch_idx, (image, target) in enumerate(tqdm(dataloader)):
+            data = torch.tensor(image).permute(0, 3, 1, 2).float().to(device)
+            # print(data.shape, target.shape)
+            # target = target[0]]), axis=0)
+
+            pred = model(data / 255.0)
+            pred = model.avgpool(pred).squeeze(-1).squeeze(-1).detach().cpu().numpy()
+            # print(pred.shape)
+            if batch_idx == 0: 
+                features = pred
+                labels = target
+                images = image
+            else: 
+                images = np.concatenate((images, image), axis=0)
+                features = np.concatenate((features, pred), axis=0)
+                labels = np.concatenate((labels, target), axis=0)
+    pca = PCA(n_components=30)
+    pca_result = pca.fit_transform(features)
+    tsne = TSNE(n_components=2, verbose=1, perplexity=20, n_iter=500)
+    tsne_results = tsne.fit_transform(pca_result)
+    
+    tx = tsne_results[:, 0]
+    ty = tsne_results[:, 1]
+
+    # scale and move the coordinates so they fit [0; 1] range
+    tx = scale_to_01_range(tx)
+    ty = scale_to_01_range(ty)
+
+    rooms = np.unique(labels).tolist()
+    colors = sns.color_palette(n_colors=len(rooms))
+    color_map = {}
+    for i in range(len(rooms)):
+        color_map[rooms[i]] = colors[i]
+
+    visualize_tsne_points(tx, ty, labels, ckpt, color_map, plot_id="places")
+    visualize_class_concepts_tsne(features, labels, ckpt, color_map, plot_id="places")
+    ##visualize_tsne_images(tx, ty, labels, images, ckpt, color_map, plot_id="places")
+
+    return tsne_results
+
+def visualize_tsne_points(tx, ty, labels, ckpt, color_map, plot_id="resnet50_tsne_v2"):
     df = pd.DataFrame({"tsne-2d-one": tx, 'tsne-2d-two': ty, 'labels': labels})
 
     pallete_size = np.unique(labels).shape[0]
@@ -86,9 +224,51 @@ def visualize_tsne_points(tx, ty, labels, ckpt, color_map):
     print(color_map)
 
     plt.figure(figsize=(16,10))
-    sns.scatterplot(data=df, x="tsne-2d-one", y="tsne-2d-two", hue="labels", \
-        palette=color_map, legend="full")
-    plt.savefig('demos_v1/{}/demos/resnet50_tsne_v2_{}.pdf'.format(TRAJECTORY, ckpt), bbox_inches='tight', dpi=300)
+    sns.scatterplot(data=df, x="tsne-2d-one", y="tsne-2d-two", hue="labels", legend="full")
+    plt.savefig('demos_v2/{}/demos/{}_{}.pdf'.format(TRAJECTORY, plot_id, ckpt), bbox_inches='tight', dpi=300)
+
+def visualize_class_concepts_tsne(features, labels, ckpt, color_map, plot_id="resnet50_tsne_v2"):
+    categories = np.unique(labels)
+    avg_features = []
+    avg_labels = []
+    for i, category in enumerate(categories.tolist()):
+        avg_feats = features[labels == category]
+        avg_feats = np.expand_dims(np.mean(avg_feats, axis=0), axis=0)
+        #print("feats", avg_feats.shape)
+        if i == 0:
+            avg_features = avg_feats
+            avg_labels = [category] 
+        else:
+            avg_features = np.concatenate((avg_features, avg_feats), axis=0)
+            avg_labels = np.concatenate((avg_labels, [category]), axis=0)
+    print("avg feats: {} {}".format(avg_features.shape, avg_labels.shape))
+
+    pca_2 = PCA(n_components=20)
+    pca_result = pca_2.fit_transform(np.zeros((30, 100)))
+    print(pca_result.shape, avg_features.shape)
+    pca_result = pca_2.fit_transform(avg_features)
+    print(pca_result.shape, avg_features.shape)
+    tsne = TSNE(n_components=2, verbose=1, perplexity=20, n_iter=500)
+    tsne_results = tsne.fit_transform(pca_result)
+
+    tx = tsne_results[:, 0]
+    ty = tsne_results[:, 1]
+    print(tx.shape, avg_labels.shape)
+    df = pd.DataFrame({"tsne-2d-one": tx, 'tsne-2d-two': ty, 'labels': avg_labels})
+
+    pallete_size = np.unique(labels).shape[0]
+
+    print(color_map)
+
+    plt.figure(figsize=(16,10))
+    ax = sns.scatterplot(data=df, x="tsne-2d-one", y="tsne-2d-two", hue="labels", \
+        palette=color_map, legend=False)
+    
+    for i, txt in enumerate(avg_labels):
+        print(txt)
+        ax.annotate(txt, (tx[i], ty[i]))
+    plt.savefig('demos_v2/{}/demos/{}_concepts_v2_{}.pdf'.format(TRAJECTORY, plot_id, ckpt), bbox_inches='tight', dpi=300)
+
 
 def compute_plot_coordinates(image, x, y, image_centers_area_size, offset):
     image_height, image_width, _ = image.shape
@@ -110,7 +290,7 @@ def compute_plot_coordinates(image, x, y, image_centers_area_size, offset):
  
     return tl_x, tl_y, br_x, br_y
 
-def visualize_tsne_images(tx, ty, labels, images, ckpt, color_map, plot_size=2000, max_image_size=100):
+def visualize_tsne_images(tx, ty, labels, images, ckpt, color_map, plot_size=2000, max_image_size=100, plot_id="resnet50_tsne_v2"):
     # we'll put the image centers in the central area of the plot
     # and use offsets to make sure the images fit the plot
 
@@ -128,8 +308,8 @@ def visualize_tsne_images(tx, ty, labels, images, ckpt, color_map, plot_size=200
             total=len(images)
     ):
         count += 1
-        if count%10 != 0:
-            continue
+        # if count%10 != 0:
+        #     continue
 
         image = np.transpose(image, (1, 2, 0))
 
@@ -154,7 +334,7 @@ def visualize_tsne_images(tx, ty, labels, images, ckpt, color_map, plot_size=200
                     1, color, 3, cv2.LINE_AA)
 
     # cv2.imshow('t-SNE', tsne_plot)
-    cv2.imwrite('demos_v1/{}/demos/resnet50_tsne_v2_{}.jpg'.format(TRAJECTORY, ckpt), tsne_plot)
+    cv2.imwrite('demos_v2/{}/demos/{}_{}.jpg'.format(TRAJECTORY, plot_id, ckpt), tsne_plot)
 
     # cv2.waitKey()
 
@@ -211,37 +391,51 @@ def load_trajectory():
     rooms = []
 
     room_map = {}
-    files = os.listdir("demos_v1/{}/demos/".format(TRAJECTORY))
+    files = os.listdir("demos_v2/{}/demos/".format(TRAJECTORY))
     # files = ["1LXtFkjw3qL_{}".format(i) for i in range(0, 39)]
-
+    room_image_map = {}
     for f in tqdm(files):
         if f.endswith(".mp4"):
             continue
-        meta_path = "demos_v1/{}/demos/{}/meta.json".format(TRAJECTORY, f)
-        traj_path = "demos_v1/{}/demos/{}".format(TRAJECTORY, f)
+        meta_path = "demos_v2/{}/demos/{}/meta.json".format(TRAJECTORY, f)
+        traj_path = "demos_v2/{}/demos/{}".format(TRAJECTORY, f)
         if not os.path.exists(meta_path):
             continue
         demo_id = f
+        scene_id = demo_id.split("_")[0]
         with open(meta_path, "r") as f:
             meta = json.load(f)
             for i, step in enumerate(meta):
                 if i%5 != 0:
                     continue
-                filename = "{}_{}.png".format(demo_id, i)        
+                filename = step["frame_id"] # "{}_{}.png".format(demo_id, i)        
                 img_path = os.path.join(traj_path, filename)
                 img = cv2.imread(img_path)
                 # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 img = cv2.resize(img, (256, 256))
                 img = np.transpose(img, (2, 0, 1))
 
-                if len(step["room"]) > 0 and step["room"][0].split("/")[0] not in ["hallway", "stairs", "workout", "stairs", "other room", "entryway"]:
+                if len(step["room"]) > 0 and step["room"][0].split("/")[0] not in ["hallway", "stairs", "workout", "stairs", "other room", "entryway", "office", "porch", "spa", "balcony"]:
                     room = step["room"][0].split("/")[0]
+                    if scene_id not in room_image_map.keys():
+                        room_image_map[scene_id] = {}
+                    if room not in room_image_map[scene_id].keys():
+                        room_image_map[scene_id][room] = []
+                    room_image_map[scene_id][room].append(img)
                     if room_map.get(room) is None:
                         room_map[room] = 1
                     rooms.append([room])
                     images.append(img)
                     image_paths.append(img_path)
-    print("Total frames: {}".format(len(images)))
+    images = []
+    rooms = []
+    for scene, room_img_mp in room_image_map.items():
+        for room, imgs in room_img_mp.items():
+            print(room, len(imgs))
+            rooms.extend([[room] for i in range(min(len(imgs), 20))])
+            images.extend(random.sample(imgs, min(len(imgs), 20)))
+
+    print("Total frames: {}, {}".format(len(images), len(rooms)))
     print("Total categories: {}".format(room_map.keys()))
     return np.array(images), np.array(rooms), image_paths, room_map
 
@@ -264,9 +458,24 @@ def main():
     scratch_model.to(device)
     finetuned_model.to(device)
 
-    plot_tsne(pretrained_model, device, images, targets, "pretrained")
-    plot_tsne(scratch_model, device, images, targets, "scratch")
-    plot_tsne(finetuned_model, device, images, targets, "finetuned")
+    data_path = "/srv/flash1/skuhar6/scaling_crl/new_scaling/temp_scaling/data/places365_standard/"
+    
+    if False:
+        plot_tsne(pretrained_model, device, images, targets, "pretrained")
+        plot_tsne(scratch_model, device, images, targets, "scratch")
+        plot_tsne(finetuned_model, device, images, targets, "finetuned")
+    else:
+        val_dataset = PlacessIndoor(os.path.join(data_path, "val"))
+        val_loader = DataLoader(
+            val_dataset,
+            batch_size=512,
+            num_workers=8,
+            shuffle=False,
+            drop_last=False,
+        )
+        plot_places_tsne(pretrained_model, device, val_loader, "pretrained")
+        plot_places_tsne(scratch_model, device, val_loader, "scratch")
+        plot_places_tsne(finetuned_model, device, val_loader, "finetuned")
 
 
 if __name__ == '__main__':

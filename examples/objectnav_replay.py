@@ -66,7 +66,7 @@ task_cat2mpcat40 = [
 
 def save_image(img, dir, file_name):
     im = Image.fromarray(img)
-    im.save("demos/{}/".format(dir) + file_name)
+    im.save("demos_v2/trajectory_6/demos/{}/".format(dir) + file_name)
 
 
 def make_videos(observations_list, output_prefix, ep_id):
@@ -353,9 +353,10 @@ def run_reference_replay(
             scene_id = env.current_episode.scene_id.split("/")[-1].split(".")[0]
             dir_path = "{}_{}".format(scene_id, ep_id)
             
-            if not os.path.isdir("demos/{}".format(dir_path)):
-                os.mkdir("demos/{}".format(dir_path))
+            if not os.path.isdir("demos_v2/trajectory_6/demos/{}".format(dir_path)):
+                os.mkdir("demos_v2/trajectory_6/demos/{}".format(dir_path))
             episode_meta = []
+            look_down_count = 0
 
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
@@ -364,6 +365,10 @@ def run_reference_replay(
                 action_name = env.task.get_action_name(
                     action
                 )
+                if action_name == "LOOK_DOWN":
+                    look_down_count += 1
+                elif action_name == "LOOK_UP":
+                    look_down_count -= 1
 
                 for ii in range(1):
                     observations = env.step(action=action)
@@ -371,6 +376,7 @@ def run_reference_replay(
                     info = env.get_metrics()
 
                     frame = observations_to_image({"rgb": observations["rgb"]}, info)
+                    depth_frame = observations_to_image({"depth": observations["depth"]}, info)
                     top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
                     if semantic_predictor is not None:
                         sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
@@ -399,14 +405,20 @@ def run_reference_replay(
 
                     # frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
                     replay_data.append(get_agent_pose(env._sim))
-                    save_image(frame, dir_path, "{}_{}.png".format(dir_path, i))
-                    episode_meta.append({
-                        "scene_id": episode.scene_id,
-                        "episode_id": ep_id,
-                        "agent_pose": get_agent_pose(env.sim),
-                        "object_category": episode.object_category,
-                        "room": get_rooms(env._sim)
-                    })
+                    rooms = get_rooms(env._sim)
+                    black_pixels = np.where(observations["rgb"].flatten() == 0)
+                    black_area = black_pixels[0].shape[0] / observations["rgb"].flatten().shape[0]
+                    if len(rooms) == 1 and look_down_count <= 2 and black_area < 0.5:
+                        save_image(frame, dir_path, "{}_{}.png".format(dir_path, i))
+                        save_image(depth_frame, dir_path, "{}_{}_depth.png".format(dir_path, i))
+                        episode_meta.append({
+                            "scene_id": episode.scene_id,
+                            "episode_id": ep_id,
+                            "agent_pose": get_agent_pose(env.sim),
+                            "object_category": episode.object_category,
+                            "room": get_rooms(env._sim),
+                            "frame_id": "{}_{}.png".format(dir_path, i)
+                        })
 
                     if info["success"]:
                         ep_success = 1
@@ -421,7 +433,7 @@ def run_reference_replay(
                     print("found max sem id")
                     break
                 i+=1
-            write_json(episode_meta, "demos/{}/meta.json".format(dir_path))
+            write_json(episode_meta, "demos_v2/trajectory_6/demos/{}/meta.json".format(dir_path))
             make_videos([observation_list], scene_id, ep_id)
             # make_videos([top_down_obs_list], "{}_top_down".format(output_prefix), ep_id)
             print(info["distance_to_goal"])
@@ -440,12 +452,6 @@ def run_reference_replay(
             ep_metrics = copy.deepcopy(info)
             if "top_down_map" in ep_metrics.keys():
                 del ep_metrics["top_down_map"]
-            # episode_meta.append({
-            #     "scene_id": env.current_episode.scene_id,
-            #     "episode_id": env.current_episode.episode_id,
-            #     "metrics": ep_metrics,
-            #     "object_category": env.current_episode.object_category
-            # })
 
             meta_f = open(meta_file, "w")
             meta_f.write(json.dumps(episode_meta))
@@ -474,9 +480,6 @@ def run_reference_replay(
                     "episodeId": instructions[-1]["episodeId"],
                     "distanceToGoal": info["distance_to_goal"]
                 })
-            
-            if num_episodes == 50:
-                break
         
         # print("Average delta cov: {}".format(avg_delta_coverage / avg_delta_count, avg_delta_coverage, avg_delta_count))
 
@@ -545,7 +548,7 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
-    # cfg.DATASET.CONTENT_SCENES = ['1LXtFkjw3qL']
+    cfg.DATASET.CONTENT_SCENES = ['1LXtFkjw3qL']
 
     if args.metrics:
         cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]

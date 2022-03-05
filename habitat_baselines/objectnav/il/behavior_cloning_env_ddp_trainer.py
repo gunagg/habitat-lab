@@ -77,7 +77,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
             self.config.IL.OBS_AUGMENTATIONS,
             self.config.IL.OBS_AUGMENTATIONS_PARAMS
         )
-
+        logger.info("obs augmentations: {}".format(self.obs_augmentations))
 
         model = None
         logger.info("setting up semantics: {}".format(model_config.USE_SEMANTICS))

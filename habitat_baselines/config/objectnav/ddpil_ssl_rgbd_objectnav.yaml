@@ -1,5 +1,5 @@
 # Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
-# for better hyperparameters for actual trainingrgbd
+# for better hyperparameters for actual trainingrgb
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il.yaml"
 TRAINER_NAME: "ddp-objectnav-bc-env"
@@ -7,14 +7,14 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/overfitting_ssl/rgbd/seed_2_obs_transform/"
-VIDEO_DIR: "video_dir/objectnav/overfitting_ssl/rgbd/seed_2_obs_transform/"
+TENSORBOARD_DIR: "tb/objectnav/overfitting_ssl/rgb/seed_2_obs_transform/"
+VIDEO_DIR: "video_dir/objectnav/overfitting_ssl/rgb/seed_2_obs_transform/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/overfitting_ssl/rgbd/seed_2_obs_transform/ckpt.4.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav_ssl/objectnav_mp3d_40k/rgb_best/seed_1/best_rgb_objectnav_ckpt_31.pth"
 SHOW_TOP_DOWN_MAP: False
-NUM_PROCESSES: 4
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting_ssl/rgbd/seed_2_obs_transform/"
+NUM_PROCESSES: 1
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/overfitting_ssl/rgb/seed_2_obs_transform/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -22,13 +22,14 @@ NUM_CHECKPOINTS: -1
 CHECKPOINT_INTERVAL: 100
 SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
-RESULTS_DIR: "data/objectnav/results/overfitting_ssl/rgbd/{split}/{type}"
+RESULTS_DIR: "data/objectnav/results/overfitting_ssl/rgb/{split}/{type}"
 INTERRUPTED_STATE_FILE: "data/new_checkpoints/objectnav/overfitting_ssl/semseg/seed_2_obs_transform/interrupted_state.pth"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "sample"
+  SPLIT: "val_mini"
+  USE_CKPT_CONFIG: False
   sample: False
   semantic_metrics: False
   evaluation_meta_file: "/checkpoint/alexclegg/objectnav/objectnav_pretrained/0/logs/temp.json"
@@ -50,6 +51,16 @@ IL:
     reward_window_size: 50
     sync_frac: 0.6
   OBS_AUGMENTATIONS: "color_jitter-translate_v2"
+  OBS_AUGMENTATIONS_PARAMS:
+    COLOR_JITTER:
+      brightness: 0.4
+      contrast: 0.4
+      saturation: 0.4
+      hue: 0.4
+      color_p: 1.0
+    TRANSLATE:
+      pad: 16
+      crop_size: 256
   OBS_TRANSFORMS:
     ENABLED_TRANSFORMS: ("ResizeShortestEdge", "CenterCropper")
 
@@ -59,7 +70,7 @@ RL:
 
 MODEL:
   ablate_depth: False
-  ablate_rgbd: False
+  ablate_rgb: False
   num_recurrent_layers: 2
   rnn_type: "GRU"
   backbone: "resnet18"

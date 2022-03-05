@@ -82,6 +82,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             self.config.IL.OBS_AUGMENTATIONS,
             self.config.IL.OBS_AUGMENTATIONS_PARAMS
         )
+        logger.info("obs augmentations: {}".format(self.obs_augmentations))
 
         model = None
         if hasattr(model_config, "VISUAL_ENCODER"):
