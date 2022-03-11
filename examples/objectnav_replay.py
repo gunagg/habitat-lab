@@ -340,15 +340,17 @@ def run_reference_replay(
                 action_name = env.task.get_action_name(
                     action
                 )
+                steps = 2
+                if "TURN" in action_name or "LOOK" in action_name:
+                    steps = 10
 
-                for ii in range(2):
+                for ii in range(steps):
                     observations = env.step(action=action)
 
                     info = env.get_metrics()
                     # sem_obs_gt_goal = get_goal_semantic(torch.Tensor(observations["semantic"]), observations["objectgoal"], task_cat2mpcat40, episode)
                     
                     frame = observations_to_image({"rgb": observations["rgb"]}, {})
-                    print(observations["rgb"].shape)
                     #top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
                     if semantic_predictor is not None:
                         sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
@@ -455,7 +457,6 @@ def run_reference_replay(
                     "episodeId": instructions[-1]["episodeId"],
                     "distanceToGoal": info["distance_to_goal"]
                 })
-            break
         
         # print("Average delta cov: {}".format(avg_delta_coverage / avg_delta_count, avg_delta_coverage, avg_delta_count))
 
@@ -524,8 +525,8 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
-    #cfg.DATASET.CONTENT_SCENES = ['17DRP5sb8fy', '1LXtFkjw3qL', '1pXnuDYAj8r', '29hnd4uzFmX', '5LpN3gDmAk7', '5q7pvUzZiYa', '759xd9YjKW5', '7y3sRwLe3Va', '82sE5b5pLXE', '8WUmhLawc2A', 'B6ByNegPMKs', 'D7G3Y4RVNrH', 'D7N2EKCX4Sj', 'E9uDoFAP3SH']
-    cfg.DATASET.CONTENT_SCENES = ['i5noydFURQK']
+    # cfg.DATASET.CONTENT_SCENES = ['17DRP5sb8fy', '1LXtFkjw3qL', '1pXnuDYAj8r', '29hnd4uzFmX', '5LpN3gDmAk7', '5q7pvUzZiYa', '759xd9YjKW5', '7y3sRwLe3Va', '82sE5b5pLXE', '8WUmhLawc2A', 'B6ByNegPMKs', 'D7G3Y4RVNrH', 'D7N2EKCX4Sj', 'E9uDoFAP3SH']
+
     if args.metrics:
         cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]
     

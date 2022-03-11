@@ -134,19 +134,16 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             total_reward = 0.0
             episode = env.current_episode
             print("len reference replay: {}".format(len(episode.reference_replay)))
-            print("first actions: {}".format(episode.reference_replay[0]))
 
             for data in env.current_episode.reference_replay[step_index:]:
                 
                 if log_action:
                     log_action_data(data, i)
                 action = possible_actions.index(data.action)
-                # action = possible_actions.index(episode.actions[i])
-                # action = get_habitat_sim_action(data)
+
                 action_name = env.task.get_action_name(
                     action
                 )
-                # print(action_name)
 
                 if step_env:
                     observations = env.step(action=action)
@@ -161,7 +158,7 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
                 info = env.get_metrics()
                 frame = observations_to_image({"rgb": observations["rgb"]}, {})
                 # top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
-                #frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
+                # frame = append_text_to_image(frame, "Instruction: {}".format(env.current_episode.instruction.instruction_text))
                 total_reward += info["rearrangement_reward"]
                 success = info["success"]
 
@@ -178,7 +175,6 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             make_videos([observation_list], output_prefix, ep_id)
             # make_videos([top_down_list], "{}_top_down".format(output_prefix), ep_id)
             print("Total reward for trajectory: {} - {}".format(total_reward, success))
-            # break
 
         print("split: {}".format(cfg.DATASET.DATA_PATH))
         print("Average success: {} - {} - {}".format(total_success / num_episodes, total_success, num_episodes))
@@ -191,8 +187,6 @@ def run_reference_replay(cfg, restore_state=False, step_env=False, log_action=Fa
             existing_instructions = json.loads(inst_file.read())
             instructions.extend(existing_instructions)
 
-        # inst_file = open("instructions.json", "w")
-        # inst_file.write(json.dumps(instructions))
         return obs_list
 
 

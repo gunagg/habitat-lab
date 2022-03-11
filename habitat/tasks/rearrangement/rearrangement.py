@@ -109,10 +109,10 @@ class GrabReleaseActionSpec:
     r"""Grab/Release action reaply data specifications that capture states
      of each grab/release action.
     """
-    new_object_translation: Optional[List[float]] = attr.ib(default=None)
-    gripped_object_id: Optional[int] = attr.ib(default=None)
-    new_object_id: Optional[int] = attr.ib(default=None)
-    object_handle: Optional[str] = attr.ib(default=None)
+    released_object_position: Optional[List[float]] = attr.ib(default=None)
+    released_object_id: Optional[int] = attr.ib(default=None)
+    released_object_handle: Optional[str] = attr.ib(default=None)
+    grab_object_id: Optional[int] = attr.ib(default=None)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
