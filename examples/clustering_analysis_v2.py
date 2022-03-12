@@ -449,7 +449,7 @@ def main():
     finetuned_model_path = "data/new_checkpoints/rgb_encoders/ckpt.99.pth"
     finetuned_model = get_finetuned_model(finetuned_model_path)
 
-    scratch_model_path = "data/new_checkpoints/rgb_encoders/ckpt.99.pth"
+    scratch_model_path = "data/new_checkpoints/rgb_encoders/ckpt_scratch.99.pth"
     scratch_model = get_finetuned_model(scratch_model_path)
 
     device = torch.device("cuda", 0) if torch.cuda.is_available() else torch.device("cpu")

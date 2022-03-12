@@ -12,11 +12,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from gym import spaces
+from habitat_baselines.rl.ddppo.policy import resnet_gn
 from habitat_baselines.rl.ddppo.policy import resnet
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
-
-from crl.crl_policy import ResNetEncoder
 
 # class list from:
 # https://github.com/yilundu/crl/blob/6adf009d30f292cdc995eb70bab500b0033c11d4/places_finetune/finetune_places.py
@@ -109,16 +108,19 @@ class PlacessIndoor(Dataset):
 class PlacesLinear(nn.Module):
     def __init__(self, dim, classes):
         super(PlacesLinear, self).__init__()
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(dim, classes)
 
     def forward(self, x):
+        x = self.avgpool(x)
+        x = x.view(x.shape[0], -1)
         return self.fc(x)
 
 
 def get_args():
     parser = argparse.ArgumentParser()
     # fmt: off
-    parser.add_argument("data", type=str, help="path to dataset")
+    parser.add_argument("--data", type=str, default="/srv/flash1/skuhar6/scaling_crl/new_scaling/temp_scaling/data/places365_standard/")
     parser.add_argument("--ckpt", type=str, help="path to checkpoint")
     parser.add_argument("--lr", default=1e-3, type=float, help="learning rate (default: 1e-3)")
     parser.add_argument("--epochs", default=60, type=int, help="number of epochs (default: 60)")
@@ -151,6 +153,12 @@ def get_args():
         action="store_true",
         help="normalize visual inputs (default: false)",
     )
+    parser.add_argument(
+        "--model",
+        default="pretrained",
+        type=str,
+        help="fintuneed/pretrained/scratch",
+    )
     # fmt: on
     return parser.parse_args()
 
@@ -176,7 +184,7 @@ def train(epoch, train_loader, model, classifier, criterion, optimizer):
         input = input.permute(0, 3, 1, 2) / 255.0
 
         with torch.no_grad():
-            feat = model.forward_eval(input)
+            feat = model(input)
         output = classifier(feat)
         loss = criterion(output, target)
 
@@ -192,7 +200,7 @@ def train(epoch, train_loader, model, classifier, criterion, optimizer):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if (idx + 1) % 10 == 0:
+        if (idx + 1) % 100 == 0:
             print(
                 "Epoch: [{0}][{1}/{2}]\t"
                 "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
@@ -213,7 +221,7 @@ def train(epoch, train_loader, model, classifier, criterion, optimizer):
             sys.stdout.flush()
 
 
-def validate(epoch, val_loader, model, classifier, criterion):
+def validate(epoch, val_loader, model, classifier, criterion, ckpt="scratch"):
     print("==> validtion...")
     batch_time = AverageMeter()
     losses = AverageMeter()
@@ -232,7 +240,7 @@ def validate(epoch, val_loader, model, classifier, criterion):
 
             input = input.permute(0, 3, 1, 2) / 255.0
 
-            feat = model.forward_eval(input)
+            feat = model(input)
             output = classifier(feat)
             loss = criterion(output, target)
 
@@ -264,12 +272,60 @@ def validate(epoch, val_loader, model, classifier, criterion):
             " * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}".format(top1=top1, top5=top5)
         )
 
-        with open("metrics.json", "a") as f:
+        with open("metrics_{}.json".format(ckpt), "a") as f:
             json.dump(
                 {"epoch": epoch + 1, "top1": top1.avg.item(), "top5": top5.avg.item()},
                 f,
             )
             f.write("\n")
+
+
+def get_imagenet_model(model_path=None, baseplanes=32):
+    model = resnet_gn.resnet50(3, baseplanes, 16)
+
+    state_dict = torch.load(model_path, map_location="cpu")["state_dict"] 
+    state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+    state_dict = {k.replace("backbone.", ""): v for k, v in state_dict.items()}
+    
+    if model_path is not None:
+        msg = model.load_state_dict(state_dict, strict=False)
+        print(msg)
+    return model
+
+
+def get_model(model_path=None, baseplanes=32):
+    model = resnet_gn.resnet50(3, baseplanes, 16)
+
+    state_dict = torch.load(model_path, map_location="cpu")["teacher"] 
+    state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+    state_dict = {k.replace("backbone.", ""): v for k, v in state_dict.items()}
+    
+    if model_path is not None:
+        msg = model.load_state_dict(state_dict, strict=False)
+        print(msg)
+    return model
+
+def get_finetuned_model(model_path):
+    model = resnet_gn.resnet50(3, 32, 16)
+
+    state_dict = torch.load(model_path, map_location="cpu")["state_dict"]
+    state_dict = {k: v for k, v in state_dict.items() if "actor_critic.net.visual_encoder.backbone" in k}
+    state_dict = {k.replace("actor_critic.net.visual_encoder.backbone.", ""): v for k, v in state_dict.items()}
+
+    msg = model.load_state_dict(state_dict, strict=False)
+    print(msg)
+    return model
+
+def get_crl_model(model_path):
+    model = resnet.resnet50(3, 32, 16)
+
+    state_dict = torch.load(model_path, map_location="cpu")["state_dict"]
+    state_dict = {k: v for k, v in state_dict.items() if "actor_critic.net.ssl_encoder.backbone" in k}
+    state_dict = {k.replace("actor_critic.net.ssl_encoder.backbone.", ""): v for k, v in state_dict.items()}
+
+    msg = model.load_state_dict(state_dict, strict=False)
+    print(msg)
+    return model
 
 
 def main():
@@ -301,13 +357,36 @@ def main():
     )
 
     # model
-    model = ResNetEncoder(
-        observation_space=spaces.Dict({"rgb": spaces.Box(0, 255, (256, 256, 3))}),
-        baseplanes=args.baseplanes,
-        make_backbone=getattr(resnet, args.arch),
-        normalize_visual_inputs=args.normalize,
-    ).cuda()
-    classifier = PlacesLinear(model.backbone.final_channels, len(INDOOR_CLASSES)).cuda()
+    model = None
+    if args.model == "pretrained":
+        model_path = "data/new_checkpoints/rgb_encoders/omnidata_DINO_02.pth"
+        model = get_model(model_path)
+        print("Setting up pretrained model")
+    elif args.model == "finetuned":
+        finetuned_model_path = "data/new_checkpoints/rgb_encoders/ckpt.99.pth"
+        model = get_finetuned_model(finetuned_model_path)
+        print("Setting up finetuned model")
+    elif args.model == "scratch":
+        scratch_model_path = "data/new_checkpoints/rgb_encoders/ckpt_scratch.99.pth"
+        model = get_finetuned_model(scratch_model_path)
+        print("Setting up scratch model")
+    elif args.model == "crl":
+        crl_path = "data/new_checkpoints/rgb_encoders/crl-resnet50-32bp-gibson-ckpt-1.500.pth"
+        model = get_crl_model(crl_path)
+        print("Setting up CRL model")
+    elif args.model == "imagenet":
+        imagenet_path = "data/new_checkpoints/rgb_encoders/ImageNet-ResNet50-GN.pth"
+        model = get_imagenet_model(imagenet_path, baseplanes=64)
+        print("Setting up Imagenet model")
+    elif args.model == "imagenet_ssl":
+        imagenet_path = "data/new_checkpoints/rgb_encoders/imagenet_offline_13_gn.pth"
+        model = get_model(imagenet_path)
+        print("Setting up Imagenet Dino model")
+    
+    device = torch.device("cuda", 0) if torch.cuda.is_available() else torch.device("cpu")
+    model.to(device)
+
+    classifier = PlacesLinear(model.final_channels, len(INDOOR_CLASSES)).cuda()
     optimizer = optim.Adam(classifier.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss().cuda()
 
@@ -330,7 +409,7 @@ def main():
     # training
     for epoch in range(args.epochs):
         train(epoch, train_loader, model, classifier, criterion, optimizer)
-        validate(epoch, val_loader, model, classifier, criterion)
+        validate(epoch, val_loader, model, classifier, criterion, args.model)
         if epoch == 0:
             double_check(model, args)
 
