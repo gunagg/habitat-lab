@@ -342,7 +342,7 @@ def run_reference_replay(
                 )
                 steps = 2
                 if "TURN" in action_name or "LOOK" in action_name:
-                    steps = 10
+                    steps = 5
 
                 for ii in range(steps):
                     observations = env.step(action=action)
@@ -526,6 +526,7 @@ def main():
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
     # cfg.DATASET.CONTENT_SCENES = ['17DRP5sb8fy', '1LXtFkjw3qL', '1pXnuDYAj8r', '29hnd4uzFmX', '5LpN3gDmAk7', '5q7pvUzZiYa', '759xd9YjKW5', '7y3sRwLe3Va', '82sE5b5pLXE', '8WUmhLawc2A', 'B6ByNegPMKs', 'D7G3Y4RVNrH', 'D7N2EKCX4Sj', 'E9uDoFAP3SH']
+    cfg.DATASET.CONTENT_SCENES = ["8WUmhLawc2A"]
 
     if args.metrics:
         cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]
