@@ -16,6 +16,7 @@ from habitat_baselines.rl.ddppo.policy import resnet_gn
 from habitat_baselines.rl.ddppo.policy import resnet
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
+import torchvision.models as t_models
 
 # class list from:
 # https://github.com/yilundu/crl/blob/6adf009d30f292cdc995eb70bab500b0033c11d4/places_finetune/finetune_places.py
@@ -112,7 +113,8 @@ class PlacesLinear(nn.Module):
         self.fc = nn.Linear(dim, classes)
 
     def forward(self, x):
-        x = self.avgpool(x)
+        if len(x.size()) > 2:
+            x = self.avgpool(x)
         x = x.view(x.shape[0], -1)
         return self.fc(x)
 
@@ -328,6 +330,23 @@ def get_crl_model(model_path):
     return model
 
 
+def get_torchvision_model():
+    model = t_models.resnet50(pretrained=True)
+    model.fc = nn.Sequential()
+    model.final_channels = 2048
+    
+    return model
+
+
+def get_imagenet_gn(model_path):
+    model = resnet_gn.resnet50(3, 32, 16)
+
+    state_dict = torch.load(model_path, map_location="cpu")["state_dict"] 
+    state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+
+    msg = model.load_state_dict(state_dict, strict=False)
+    return model
+
 def main():
     args = get_args()
 
@@ -382,8 +401,16 @@ def main():
         imagenet_path = "data/new_checkpoints/rgb_encoders/imagenet_offline_13_gn.pth"
         model = get_model(imagenet_path)
         print("Setting up Imagenet Dino model")
-    
+    elif args.model == "torchvision":
+        model = get_torchvision_model()
+        print("Setting up Imagenet torchvision model")
+    elif args.model == "imagenet_gn":
+        model = get_imagenet_gn("data/new_checkpoints/rgb_encoders/imagenet_supervised_01.pth.tar")
+        print("Setting up Imagenet 32BP model")
+
     device = torch.device("cuda", 0) if torch.cuda.is_available() else torch.device("cpu")
+    for param in model.parameters():
+        model.requires_grad = False
     model.to(device)
 
     classifier = PlacesLinear(model.final_channels, len(INDOOR_CLASSES)).cuda()

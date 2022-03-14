@@ -105,6 +105,21 @@ INDOOR_CLASSES = [
     "locker_room",
 ]
 
+INDOOR_CLASSES = [
+    "closet",
+   "home_office",
+   "bedroom",
+   "hotel_room",
+   "shower",
+   "corridor",
+   "kitchen",
+   "staircase",
+   "dinette_home",
+   "living_room",
+   "dining_room",
+   "lobby",
+   "parlor",
+]
 
 class PlacessIndoor(Dataset):
     def __init__(self, root):
@@ -205,14 +220,14 @@ def plot_places_tsne(model, device, dataloader, ckpt):
     ty = scale_to_01_range(ty)
 
     rooms = np.unique(labels).tolist()
-    colors = sns.color_palette(n_colors=len(rooms))
+    # colors = sns.color_palette(n_colors=len(rooms))
     color_map = {}
     for i in range(len(rooms)):
         color_map[rooms[i]] = colors[i]
 
     visualize_tsne_points(tx, ty, labels, ckpt, color_map, plot_id="places")
-    visualize_class_concepts_tsne(features, labels, ckpt, color_map, plot_id="places")
-    ##visualize_tsne_images(tx, ty, labels, images, ckpt, color_map, plot_id="places")
+    # visualize_class_concepts_tsne(features, labels, ckpt, color_map, plot_id="places")
+    visualize_tsne_images(tx, ty, labels, images, ckpt, color_map, plot_id="places")
 
     return tsne_results
 
@@ -244,8 +259,8 @@ def visualize_class_concepts_tsne(features, labels, ckpt, color_map, plot_id="re
     print("avg feats: {} {}".format(avg_features.shape, avg_labels.shape))
 
     pca_2 = PCA(n_components=20)
-    pca_result = pca_2.fit_transform(np.zeros((30, 100)))
-    print(pca_result.shape, avg_features.shape)
+    # pca_result = pca_2.fit_transform(np.zeros((30, 100)))
+    print("avg", avg_features.shape)
     pca_result = pca_2.fit_transform(avg_features)
     print(pca_result.shape, avg_features.shape)
     tsne = TSNE(n_components=2, verbose=1, perplexity=20, n_iter=500)
@@ -302,16 +317,16 @@ def visualize_tsne_images(tx, ty, labels, images, ckpt, color_map, plot_size=200
     count = 0
 
     # now we'll put a small copy of every image to its corresponding T-SNE coordinate
+    sampled_idx = random.sample(np.arange(0, images.shape[0]).tolist(), 100)
     for image, label, x, y in tqdm(
-            zip(images, labels, tx, ty),
+            zip(images[sampled_idx], labels[sampled_idx], tx, ty),
             desc='Building the T-SNE plot',
             total=len(images)
     ):
         count += 1
         # if count%10 != 0:
         #     continue
-
-        image = np.transpose(image, (1, 2, 0))
+        # image = np.transpose(image, (1, 2, 0))
 
         # scale the image to put it to the plot
         image = scale_image(image, max_image_size)
@@ -468,8 +483,8 @@ def main():
         val_dataset = PlacessIndoor(os.path.join(data_path, "val"))
         val_loader = DataLoader(
             val_dataset,
-            batch_size=512,
-            num_workers=8,
+            batch_size=1,
+            num_workers=1,
             shuffle=False,
             drop_last=False,
         )
@@ -480,3 +495,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
