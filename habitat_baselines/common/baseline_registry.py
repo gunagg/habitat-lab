@@ -135,9 +135,46 @@ class BaselineRegistry(Registry):
         )
 
     @classmethod
+    def register_discriminator_noseq(cls, to_register=None, *, name: Optional[str] = None):
+        r"""Register a IRL discriminator with :p:`name`.
+
+        :param name: Key with which the policy will be registered.
+            If :py:`None` will use the name of the class
+
+        .. code:: py
+
+            from habitat_baselines.rl.ppo.policy import Policy
+            from habitat_baselines.common.baseline_registry import (
+                baseline_registry
+            )
+
+            @baseline_registry.register_discriminator
+            class MyDiscriminator(Discriminator):
+                pass
+
+
+            # or
+
+            @baseline_registry.register_discriminator(name="MyDiscriminatorName")
+            class MyDiscriminator(Discriminator):
+                pass
+
+        """
+        from habitat_baselines.objectnav.il.policy.discriminator_noseq import DiscriminatorNoSeq 
+
+        return cls._register_impl(
+            "discriminator_noseq", to_register, name, assert_type=DiscriminatorNoSeq
+        )
+
+    @classmethod
     def get_discriminator(cls, name: str):
         r"""Get the IRL discriminator with :p:`name`."""
         return cls._get_impl("discriminator", name)
+    
+    @classmethod
+    def get_discriminator_noseq(cls, name: str):
+        r"""Get the IRL discriminator with :p:`name`."""
+        return cls._get_impl("discriminator_noseq", name)
 
     @classmethod
     def register_obs_transformer(

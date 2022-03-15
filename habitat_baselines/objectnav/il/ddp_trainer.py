@@ -78,7 +78,7 @@ class ObjectNavBCEnvDDPTrainer(ObjectNavBCEnvTrainer):
         else:
             model = Seq2SeqModel(observation_space, action_space, model_config)
         
-        if model_config.RGB_ENCODER.pretrained_ckpt:
+        if model_config.RGB_ENCODER.pretrained_ckpt != "None":
             state_dict = torch.load(model_config.RGB_ENCODER.pretrained_ckpt, map_location="cpu")["teacher"]
             state_dict = {"{}.{}".format("visual_encoder", k): v for k, v in state_dict.items()}
             msg = model.net.rgb_encoder.load_state_dict(state_dict, strict=False)

@@ -9,7 +9,6 @@ import copy
 import os
 import sys
 import time
-import tqdm
 from collections import defaultdict, deque
 from typing import Any, DefaultDict, Dict, List, Optional, Union
 
@@ -27,13 +26,11 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     get_active_obs_transforms,
 )
-from habitat_baselines.common.il_rollout_storage import ILRolloutStorage
-from habitat_baselines.common.rollout_storage import RolloutStorage
+from habitat_baselines.objectnav.il.common.no_seq_rollout_storage import StackRolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.utils.common import (
     batch_obs,
     linear_decay,
-    generate_video,
 )
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.rl.ppo import PPO
@@ -41,8 +38,8 @@ from habitat_baselines.objectnav.il.algos.gail import GAIL
 from habitat_baselines.objectnav.il.policy.discriminator import Discriminator 
 # from habitat_baselines.objectnav.il.policy.discriminator_noseq import DiscriminatorNoSeq 
 
-@baseline_registry.register_trainer(name="gail")
-class GAILTrainer(BaseRLTrainer):
+@baseline_registry.register_trainer(name="gail-noseq")
+class GAILNoSeqTrainer(BaseRLTrainer):
     r"""Trainer class for behavior cloning.
     """
     supported_tasks = ["ObjectNav-v1"]
@@ -74,7 +71,7 @@ class GAILTrainer(BaseRLTrainer):
         self.policy_action_space = self.agent_envs.action_spaces[0]
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
 
-        observation_space = self.agent_envs.observation_spaces[0]
+        observation_space = self.expert_envs.observation_spaces[0]
         self.obs_space = observation_space
         self.obs_transforms = get_active_obs_transforms(self.config)
 
@@ -103,6 +100,10 @@ class GAILTrainer(BaseRLTrainer):
         self.discriminator = discriminator.from_config(
             self.config, self.obs_space, self.policy_action_space
         )
+        # discriminator = baseline_registry.get_discriminator_noseq(il_cfg.DISCRIMINATOR.name)
+        # self.discriminator = discriminator.from_config(
+        #     self.config, self.obs_space, self.policy_action_space
+        # )
         self.discriminator.to(self.device)
 
         self.gail = GAIL(
@@ -166,7 +167,9 @@ class GAILTrainer(BaseRLTrainer):
         # fetch actions and environment state from replay buffer
         next_actions = rollouts.get_next_actions()
         actions = next_actions.long().unsqueeze(-1)
-        step_data = [a.item() for a in next_actions.long().to(device="cpu")]
+        logger.info("next actions: {}".format(next_actions.shape))
+        logger.info("next acs: {}".format(next_actions[:, -1].long()))
+        step_data = [a.item() for a in next_actions[:,-1].long().to(device="cpu")]
 
         pth_time += time.time() - t_sample_action
 
@@ -276,7 +279,6 @@ class GAILTrainer(BaseRLTrainer):
         profiling_wrapper.range_pop()  # compute actions
 
         action_accuracy = (actions == step_batch["observations"]["demonstration"].unsqueeze(-1)).float().to(device="cpu")
-        ## logger.info("actions shape: {}, preds: {}".format(actions, step_batch["observations"]["demonstration"].unsqueeze(-1)))
 
         outputs = self.agent_envs.step(step_data)
         observations, rewards_l, dones, infos = [
@@ -302,14 +304,16 @@ class GAILTrainer(BaseRLTrainer):
             device=current_episode_reward.device,
         )
         done_masks = torch.logical_not(masks)
+        # logger.info("{} - {} - {} - {}".format(action_accuracy.shape, actions.shape, step_batch["observations"]["demonstration"].shape, action_accuracy))
 
         current_episode_reward += rewards
-        current_episode_accuracy += action_accuracy / (84)
+        current_episode_accuracy += action_accuracy
         current_episode_steps += masks
 
         running_episode_stats["reward"] += done_masks * current_episode_reward  # type: ignore
         running_episode_stats["count"] += done_masks  # type: ignore
-        running_episode_stats["action_accuracy"] += done_masks * current_episode_accuracy # type: ignore
+        if running_episode_stats["count"].all() > 0:
+            running_episode_stats["action_accuracy"] += (done_masks * current_episode_accuracy  / (current_episode_steps + 1)) /  running_episode_stats["count"] # type: ignore
 
         for k, v_k in self._extract_scalars_from_infos(infos).items():
             v = torch.tensor(
@@ -382,8 +386,6 @@ class GAILTrainer(BaseRLTrainer):
                     step_batch["prev_actions"],
                     step_batch["masks"],
                 )
-                # if self.current_update > 100:
-                #     logger.info("Step: {}, GT action: {}, pred action:{}, pred reward: {}, GT reward: {}, mask: {}".format(i, step_batch["observations"]["demonstration"], step_batch["actions"], reward, agent_rollouts.buffers["rewards"][i], agent_rollouts.buffers["masks"][i]))
                 discr_recurrent_hidden_states = discr_recurrent_hidden_states.detach()
                 agent_rollouts.buffers["rewards"][i] = reward.detach()
                 current_episode_pred_reward += reward.detach().cpu()
@@ -451,7 +453,7 @@ class GAILTrainer(BaseRLTrainer):
 
         # Create only 1 env for expert
         self.config.defrost()
-        self.config.SENSORS = ["RGB_SENSOR"]
+        self.config.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
         self.config.NUM_PROCESSES = 1
         self.config.TASK_CONFIG.DATASET.NUM_EPISODES = 1
         self.config.freeze()
@@ -482,23 +484,20 @@ class GAILTrainer(BaseRLTrainer):
             )
         )
 
-        expert_rollouts = ILRolloutStorage(
+        expert_rollouts = StackRolloutStorage(
             gail_cfg.num_steps,
             self.expert_envs.num_envs,
             self.obs_space,
             self.expert_envs.action_spaces[0],
-            self.config.IL.GAIL.hidden_size,
-            self.discriminator.net.num_recurrent_layers,
+            n_stack_frames=self.config.IL.GAIL.n_stack_frames,
         )
         expert_rollouts.to(self.device)
 
-        agent_rollouts = RolloutStorage(
+        agent_rollouts = StackRolloutStorage(
             gail_cfg.num_steps,
             self.agent_envs.num_envs,
             self.obs_space,
             self.agent_envs.action_spaces[0],
-            self.config.RL.PPO.hidden_size,
-            self.actor_critic.net.num_recurrent_layers,
         )
         agent_rollouts.to(self.device)
 
@@ -768,247 +767,3 @@ class GAILTrainer(BaseRLTrainer):
 
             self.expert_envs.close()
             self.agent_envs.close()
-    
-    def _eval_checkpoint(
-        self,
-        checkpoint_path: str,
-        writer: TensorboardWriter,
-        checkpoint_index: int = 0,
-    ) -> None:
-        r"""Evaluates a single checkpoint.
-
-        Args:
-            checkpoint_path: path of checkpoint
-            writer: tensorboard writer object for logging to tensorboard
-            checkpoint_index: index of cur checkpoint for logging
-
-        Returns:
-            None
-        """
-        # Map location CPU is almost always better than mapping to a CUDA device.
-        ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
-
-        # self._make_results_dir(self.config.EVAL.SPLIT)
-
-        if self.config.EVAL.USE_CKPT_CONFIG:
-            conf = ckpt_dict["config"]
-            config = self._setup_eval_config(ckpt_dict["config"])
-        else:
-            config = self.config.clone()
-
-        config.defrost()
-        config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
-        config.freeze()
-
-        if len(self.config.VIDEO_OPTION) > 0:
-            config.defrost()
-            config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
-            config.freeze()
-
-        logger.info(f"env config: {config}")
-        self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
-        self.agent_envs = self.envs
-        self._setup_actor_critic_agent(self.config.RL.PPO)
-        logger.info("model setup")
-
-        self.agent.load_state_dict(ckpt_dict["state_dict"], strict=True)
-        logger.info("state dict loaded")
-
-        observations = self.envs.reset()
-        batch = batch_obs(observations, device=self.device)
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
-
-        current_episode_reward = torch.zeros(
-            self.envs.num_envs, 1, device=self.device
-        )
-
-        test_recurrent_hidden_states = torch.zeros(
-            self.config.NUM_PROCESSES,
-            self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
-            config.MODEL.STATE_ENCODER.hidden_size,
-            device=self.device,
-        )
-        prev_actions = torch.zeros(
-            self.config.NUM_PROCESSES, 1, device=self.device, dtype=torch.long
-        )
-        not_done_masks = torch.zeros(
-            self.config.NUM_PROCESSES, 1,
-            device=self.device,
-            dtype=torch.bool
-        )
-        stats_episodes: Dict[
-            Any, Any
-        ] = {}  # dict of dicts that stores stats per episode
-
-        current_episode_steps = torch.zeros(
-            self.envs.num_envs, 1, device=self.device
-        )
-
-        rgb_frames = [
-            [] for _ in range(self.config.NUM_PROCESSES)
-        ]  # type: List[List[np.ndarray]]
-        if len(self.config.VIDEO_OPTION) > 0:
-            os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
-
-        number_of_eval_episodes = self.config.TEST_EPISODE_COUNT
-        if number_of_eval_episodes == -1:
-            number_of_eval_episodes = sum(self.envs.number_of_episodes)
-        else:
-            total_num_eps = sum(self.envs.number_of_episodes)
-            if total_num_eps < number_of_eval_episodes:
-                logger.warn(
-                    f"Config specified {number_of_eval_episodes} eval episodes"
-                    ", dataset only has {total_num_eps}."
-                )
-                logger.warn(f"Evaluating with {total_num_eps} instead.")
-                number_of_eval_episodes = total_num_eps
-
-        pbar = tqdm.tqdm(total=number_of_eval_episodes)
-        cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
-        logger.info("Start eval")
-        possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
-        while (
-            len(stats_episodes) < number_of_eval_episodes
-            and self.envs.num_envs > 0
-        ):
-            current_episodes = self.envs.current_episodes()
-
-            with torch.no_grad():
-                (
-                    _,
-                    actions,
-                    _,
-                    test_recurrent_hidden_states,
-                ) = self.actor_critic.act(
-                    batch,
-                    test_recurrent_hidden_states,
-                    prev_actions,
-                    not_done_masks,
-                    deterministic=False,
-                )
-                # actions = torch.argmax(logits, dim=1)
-                logger.info("actions: {}".format(actions))
-                prev_actions.copy_(actions)  # type: ignore
-            action_names = [possible_actions[a.item()] for a in actions.to(device="cpu")]
-            print(action_names, batch["demonstration"], actions[0].item() == batch["demonstration"][0].item())
-
-            # NB: Move actions to CPU.  If CUDA tensors are
-            # sent in to env.step(), that will create CUDA contexts
-            # in the subprocesses.
-            # For backwards compatibility, we also call .item() to convert to
-            # an int
-            step_data = [a.item() for a in actions.to(device="cpu")]
-
-            outputs = self.envs.step(step_data)
-
-            observations, rewards_l, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
-            batch = batch_obs(observations, device=self.device)
-            batch = apply_obs_transforms_batch(batch, self.obs_transforms)
-
-            not_done_masks = torch.tensor(
-                [[0.0] if done else [1.0] for done in dones],
-                dtype=torch.bool,
-                device=self.device,
-            )
-
-            rewards = torch.tensor(
-                rewards_l, dtype=torch.float, device=self.device
-            ).unsqueeze(1)
-            current_episode_reward += rewards
-            next_episodes = self.envs.current_episodes()
-            envs_to_pause = []
-            n_envs = self.envs.num_envs
-            for i in range(n_envs):
-                if (
-                    next_episodes[i].scene_id,
-                    next_episodes[i].episode_id,
-                ) in stats_episodes:
-                    envs_to_pause.append(i)
-
-                # episode ended
-                if not_done_masks[i].item() == 0:
-                    pbar.update()
-                    episode_stats = {}
-                    episode_stats["reward"] = current_episode_reward[i].item()
-                    episode_stats.update(
-                        self._extract_scalars_from_info(infos[i])
-                    )
-                    current_episode_reward[i] = 0
-                    current_episode_steps[i] = 0
-
-                    # use scene_id + episode_id as unique id for storing stats
-                    stats_episodes[
-                        (
-                            current_episodes[i].scene_id,
-                            current_episodes[i].episode_id,
-                        )
-                    ] = episode_stats
-
-                    if len(self.config.VIDEO_OPTION) > 0:
-                        generate_video(
-                            video_option=self.config.VIDEO_OPTION,
-                            video_dir=self.config.VIDEO_DIR,
-                            images=rgb_frames[i],
-                            episode_id=current_episodes[i].episode_id,
-                            checkpoint_idx=checkpoint_index,
-                            metrics=self._extract_scalars_from_info(infos[i]),
-                            tb_writer=writer,
-                        )
-
-                        rgb_frames[i] = []
-
-                # episode continues
-                elif len(self.config.VIDEO_OPTION) > 0:
-                    # TODO move normalization / channel changing out of the policy and undo it here
-                    frame = observations_to_image(
-                        {"rgb": batch["rgb"][i]}, infos[i]
-                    )
-                    rgb_frames[i].append(frame)
-
-            (
-                self.envs,
-                test_recurrent_hidden_states,
-                not_done_masks,
-                current_episode_reward,
-                prev_actions,
-                batch,
-                rgb_frames,
-            ) = self._pause_envs(
-                envs_to_pause,
-                self.envs,
-                test_recurrent_hidden_states,
-                not_done_masks,
-                current_episode_reward,
-                prev_actions,
-                batch,
-                rgb_frames,
-            )
-
-        num_episodes = len(stats_episodes)
-        aggregated_stats = {}
-        for stat_key in next(iter(stats_episodes.values())).keys():
-            aggregated_stats[stat_key] = (
-                sum(v[stat_key] for v in stats_episodes.values())
-                / num_episodes
-            )
-
-        for k, v in aggregated_stats.items():
-            logger.info(f"Average episode {k}: {v:.4f}")
-
-        step_id = checkpoint_index
-        if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
-            step_id = ckpt_dict["extra_state"]["step"]
-
-        writer.add_scalars(
-            "eval_reward",
-            {"average reward": aggregated_stats["reward"]},
-            step_id,
-        )
-
-        metrics = {k: v for k, v in aggregated_stats.items() if k not in ["reward", "pred_reward"]}
-        if len(metrics) > 0:
-            writer.add_scalars("eval_metrics", metrics, step_id)
-
-        self.envs.close()

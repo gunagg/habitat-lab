@@ -4,17 +4,19 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import warnings
+from collections import defaultdict
 from typing import Optional, Tuple
 
 import numpy as np
+import sys
+import random
 import torch
 
 from habitat import logger
 from habitat_baselines.common.tensor_dict import TensorDict
 
 
-class RolloutStorage:
+class StackRolloutStorage:
     r"""Class for storing rollout information for RL trainers."""
 
     def __init__(
@@ -23,12 +25,10 @@ class RolloutStorage:
         num_envs,
         observation_space,
         action_space,
-        recurrent_hidden_state_size,
-        num_recurrent_layers=1,
         action_shape: Optional[Tuple[int]] = None,
         is_double_buffered: bool = False,
         discrete_actions: bool = True,
-        n_stack_frames: int = 5,
+        n_stack_frames: int = 1,
         n_samples: int = 8,
     ):
         self.buffers = TensorDict()
@@ -37,47 +37,39 @@ class RolloutStorage:
         self.n_samples = n_samples
 
         for sensor in observation_space.spaces:
+            dtype = observation_space.spaces[sensor].dtype
+            if dtype == np.uint32:
+                dtype = np.int
+            elif dtype == np.float64:
+                dtype = np.float32
+            
+            obs_shape = list(observation_space.spaces[sensor].shape)
+            logger.info("ob shape: {}, {}".format(sensor, obs_shape))
+            if len(obs_shape) > 0:
+                obs_shape[-1] = obs_shape[-1] * n_stack_frames
+                obs_shape = tuple(obs_shape)
+            else:
+                obs_shape = (n_stack_frames,)
+
             self.buffers["observations"][sensor] = torch.from_numpy(
                 np.zeros(
                     (
                         numsteps + 1,
                         num_envs,
-                        *observation_space.spaces[sensor].shape,
+                        *obs_shape,
                     ),
-                    dtype=observation_space.spaces[sensor].dtype,
+                    dtype=dtype
                 )
             )
 
-        self.buffers["recurrent_hidden_states"] = torch.zeros(
-            numsteps + 1,
-            num_envs,
-            num_recurrent_layers,
-            recurrent_hidden_state_size,
-        )
-
-        self.discr_recurrent_hidden_states = torch.zeros(
-            1,
-            num_envs,
-            num_recurrent_layers,
-            recurrent_hidden_state_size,
-        )
-
-        self.buffers["rewards"] = torch.zeros(numsteps + 1, num_envs, 1)
-        self.buffers["value_preds"] = torch.zeros(numsteps + 1, num_envs, 1)
-        self.buffers["returns"] = torch.zeros(numsteps + 1, num_envs, 1)
-
-        self.buffers["action_log_probs"] = torch.zeros(
-            numsteps + 1, num_envs, 1
-        )
-
         if action_shape is None:
             if action_space.__class__.__name__ == "ActionSpace":
-                action_shape = (1,)
+                action_shape = (1,) * n_stack_frames
             else:
                 action_shape = action_space.shape
 
         self.buffers["actions"] = torch.zeros(
-            numsteps + 1, num_envs, *action_shape
+            numsteps + 1, num_envs, *(action_shape)
         )
         self.buffers["prev_actions"] = torch.zeros(
             numsteps + 1, num_envs, *action_shape
@@ -90,7 +82,7 @@ class RolloutStorage:
             self.buffers["prev_actions"] = self.buffers["prev_actions"].long()
 
         self.buffers["masks"] = torch.zeros(
-            numsteps + 1, num_envs, 1, dtype=torch.bool
+            numsteps + 1, num_envs, n_stack_frames, dtype=torch.bool
         )
 
         self.is_double_buffered = is_double_buffered
@@ -112,17 +104,13 @@ class RolloutStorage:
 
     def to(self, device):
         self.buffers.map_in_place(lambda v: v.to(device))
-        self.discr_recurrent_hidden_states = self.discr_recurrent_hidden_states.to(device)
 
     def insert(
         self,
         next_observations=None,
-        next_recurrent_hidden_states=None,
         actions=None,
-        action_log_probs=None,
-        value_preds=None,
-        rewards=None,
         next_masks=None,
+        rewards=None,
         buffer_index: int = 0,
     ):
         if not self.is_double_buffered:
@@ -130,16 +118,12 @@ class RolloutStorage:
 
         next_step = dict(
             observations=next_observations,
-            recurrent_hidden_states=next_recurrent_hidden_states,
             prev_actions=actions,
             masks=next_masks,
         )
 
         current_step = dict(
             actions=actions,
-            action_log_probs=action_log_probs,
-            value_preds=value_preds,
-            rewards=rewards,
         )
 
         next_step = {k: v for k, v in next_step.items() if v is not None}
@@ -167,79 +151,18 @@ class RolloutStorage:
     def advance_rollout(self, buffer_index: int = 0):
         self.current_rollout_step_idxs[buffer_index] += 1
 
-    def after_update(self, discr_rnn_hidden_states=None):
+    def after_update(self, rnn_hidden_states = None):
         self.buffers[0] = self.buffers[self.current_rollout_step_idx]
-
-        if discr_rnn_hidden_states is not None:
-            self.discr_recurrent_hidden_states[0] = discr_rnn_hidden_states.detach()
-
         self.current_rollout_step_idxs = [
             0 for _ in self.current_rollout_step_idxs
         ]
 
-    def compute_returns(self, next_value, use_gae, gamma, tau):
-        if use_gae:
-            self.buffers["value_preds"][
-                self.current_rollout_step_idx
-            ] = next_value
-            gae = 0
-            for step in reversed(range(self.current_rollout_step_idx)):
-                delta = (
-                    self.buffers["rewards"][step]
-                    + gamma
-                    * self.buffers["value_preds"][step + 1]
-                    * self.buffers["masks"][step + 1]
-                    - self.buffers["value_preds"][step]
-                )
-                gae = (
-                    delta + gamma * tau * gae * self.buffers["masks"][step + 1]
-                )
-                self.buffers["returns"][step] = (
-                    gae + self.buffers["value_preds"][step]
-                )
-        else:
-            self.buffers["returns"][self.current_rollout_step_idx] = next_value
-            for step in reversed(range(self.current_rollout_step_idx)):
-                self.buffers["returns"][step] = (
-                    gamma
-                    * self.buffers["returns"][step + 1]
-                    * self.buffers["masks"][step + 1]
-                    + self.buffers["rewards"][step]
-                )
+    def get_next_actions(self):
+        next_action_observations = self.buffers["observations"]["demonstration"][self.current_rollout_step_idx]
+        actions = next_action_observations.clone()
+        return actions
 
-    def recurrent_generator(self, advantages, num_mini_batch) -> TensorDict:
-        num_environments = advantages.size(1)
-        assert num_environments >= num_mini_batch, (
-            "Trainer requires the number of environments ({}) "
-            "to be greater than or equal to the number of "
-            "trainer mini batches ({}).".format(
-                num_environments, num_mini_batch
-            )
-        )
-        if num_environments % num_mini_batch != 0:
-            warnings.warn(
-                "Number of environments ({}) is not a multiple of the"
-                " number of mini batches ({}).  This results in mini batches"
-                " of different sizes, which can harm training performance.".format(
-                    num_environments, num_mini_batch
-                )
-            )
-        
-        # NOTE: PPO doesn't necessarily need Envs input in same order every time.
-        # UNDO this change if you see weird results
-        for inds in torch.randperm(num_environments).chunk(num_mini_batch):
-            batch = self.buffers[0 : self.current_rollout_step_idx, inds]
-            batch["advantages"] = advantages[
-                0 : self.current_rollout_step_idx, inds
-            ]
-            batch["recurrent_hidden_states"] = batch[
-                "recurrent_hidden_states"
-            ][0:1]
-            batch = batch.map(lambda v: v.flatten(0, 1))
-            yield batch
-    
-
-    def recurrent_generator_v2(self, num_mini_batch) -> TensorDict:
+    def recurrent_generator(self, num_mini_batch) -> TensorDict:
         num_environments = self.buffers["masks"].size(1)
         assert num_environments >= num_mini_batch, (
             "Trainer requires the number of environments ({}) "
@@ -256,19 +179,17 @@ class RolloutStorage:
                     num_environments, num_mini_batch
                 )
             )
-        
-        # NOTE: PPO doesn't necessarily need Envs input in same order every time.
-        # UNDO this change if you see weird results
+        # TODO: Enable batch shuffling for IL generator
+        # for inds in torch.randperm(num_environments).chunk(num_mini_batch):
         for inds in torch.arange(num_environments).chunk(num_mini_batch):
             batch = self.buffers[0 : self.current_rollout_step_idx, inds]
             batch["recurrent_hidden_states"] = batch[
                 "recurrent_hidden_states"
             ][0:1]
-            batch = batch.map(lambda v: v.flatten(0, 1))
-            batch["discr_recurrent_hidden_states"] = self.discr_recurrent_hidden_states[0, inds]
 
-            yield batch
+            yield batch.map(lambda v: v.flatten(0, 1))
     
+
     def stacked_generator(self, num_mini_batch) -> TensorDict:
         num_environments = self.buffers["actions"].size(1)
         assert num_environments >= num_mini_batch, (
@@ -290,10 +211,6 @@ class RolloutStorage:
         # for inds in torch.randperm(num_environments).chunk(num_mini_batch):
         for inds in torch.randperm(num_environments).chunk(num_mini_batch):
             sampled_idxs = torch.randperm(self.current_rollout_step_idx)[:self.n_samples]
-            # for key in self.buffers.keys():
-            #     print(sampled_idxs)
-            #     print(key, self.buffers.shape)
-                #print(key, self.buffers[key][sampled_idxs][:, inds])
             print(type(self.buffers))
             batch = self.buffers[sampled_idxs][:, inds]
 

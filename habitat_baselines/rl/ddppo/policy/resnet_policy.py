@@ -132,6 +132,7 @@ class ResNetEncoder(nn.Module):
             self._n_input_semantics = sem_embedding_size # observation_space.spaces["semantic"].shape[2]
         else:
             self._n_input_semantics = 0
+        logger.info("input channels: {}, {}".format(self._n_input_depth, self._n_input_rgb))
         
         if self._frame_size == (256, 256):
             spatial_size = (128, 128)
@@ -139,7 +140,6 @@ class ResNetEncoder(nn.Module):
             spatial_size = (120, 108)
         elif self._frame_size == (480, 640):
             spatial_size = (120, 108)
-
 
         if normalize_visual_inputs:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
@@ -334,10 +334,8 @@ class PointNavResNetNet(Net):
         if len(backbone_split) > 1:
             if backbone_split[1] == "gn":
                 make_backbone = getattr(resnet_gn, backbone_split[0])
-            elif backbone_split[1] == "bn":
-                make_backbone = getattr(resnet_bn, backbone_split[0])
         else:
-            make_backbone = getattr(resnet_hab, backbone_split[0])
+            make_backbone = getattr(resnet, backbone_split[0])
 
         if ImageGoalSensor.cls_uuid in observation_space.spaces:
             goal_observation_space = spaces.Dict(

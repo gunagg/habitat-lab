@@ -262,7 +262,19 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         t_step_env = time.time()
         profiling_wrapper.range_pop()  # compute actions
 
-        outputs = self.envs.step(step_data)
+        num_envs = self.envs.num_envs
+
+        # outputs = self.envs.step(step_data)
+        for index_env, act in zip(
+            range(0, num_envs), actions.unbind(0)
+        ):
+            step_action = act.item()
+            self.envs.async_step_at(index_env, step_action)
+
+        outputs = [
+            self.envs.wait_step_at(index_env)
+            for index_env in range(0, num_envs)
+        ]
         observations, rewards_l, dones, infos = [
             list(x) for x in zip(*outputs)
         ]

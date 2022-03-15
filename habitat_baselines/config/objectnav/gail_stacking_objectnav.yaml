@@ -2,19 +2,19 @@
 # for better hyperparameters for actual trainingrgb
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_gail.yaml"
-TRAINER_NAME: "gail"
-ENV_NAME: NavRLEnv
+TRAINER_NAME: "gail-noseq"
+ENV_NAME: StackedNavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/gail/overfitting/rgb/v17_gps_full_noop/val_3/"
-VIDEO_DIR: "video_dir/objectnav/gail/overfitting/rgb/v17_gps_full_noop/val_3/"
+TENSORBOARD_DIR: "tb/objectnav/gail/overfitting/rgb/v15_stacking/"
+VIDEO_DIR: "video_dir/objectnav/gail/overfitting/rgb/v15_stacking/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/gail/overfitting/rgb/v17_gps_full_noop/ckpt.3.pth"
+EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/gail/overfitting/rgb/v15_stacking/ckpt.4.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "checkpoints/objectnav/gail/overfitting/rgb/v17_gps_full_noop/"
+CHECKPOINT_FOLDER: "checkpoints/objectnav/gail/overfitting/rgb/v15_stacking/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -27,11 +27,11 @@ EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "single_episode"
+  SPLIT: "sample"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/gail/overfitting/rgb/v17_gps_full_noop/evaluation_meta_35k_3.json"
-NUM_UPDATES: 2
+  evaluation_meta_file: "tb/objectnav/gail/overfitting/rgb/v15_stacking/evaluation_meta_35k_3.json"
+NUM_UPDATES: 10000
 
 RL:
   SUCCESS_REWARD: 2.5
@@ -41,7 +41,7 @@ RL:
     # overfitting params
     clip_param: 0.2
     overfitting_epoch: 4 
-    num_mini_batch: 1
+    num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.01
     lr: 2.5e-4
@@ -58,6 +58,7 @@ RL:
     use_normalized_advantage: False
 
     hidden_size: 512
+    n_stack_frames: 5
 
     # Use double buffered sampling, typically helps
     # when environment time is similar or large than
@@ -71,7 +72,7 @@ IL:
     lr: 1.0e-6
     eps: 1.0e-5
     clip_param: 0.2
-    num_mini_batch: 1
+    num_mini_batch: 2
     max_grad_norm: 0.2
     num_steps: 128
     use_linear_clip_decay: False
@@ -81,7 +82,8 @@ IL:
 
     hidden_size: 512
     embed_actions: False
-    force_blind_discriminator: True
+    n_stack_frames: 5
+    force_blind_discriminator: False
 
     use_normalized_advantage: False
     reward_type: "gail"

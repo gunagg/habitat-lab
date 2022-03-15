@@ -274,9 +274,10 @@ class ObjectNavigationTask(NavigationTask):
 
 @registry.register_sensor(name="DemonstrationSensor")
 class DemonstrationSensor(Sensor):
-    def __init__(self, **kwargs):
+    def __init__(self, config: Config, **kwargs):
         self.uuid = "demonstration"
         self.observation_space = spaces.Discrete(0)
+        self._config = config
         self.timestep = 0
         self.prev_action = 0
 
@@ -294,15 +295,15 @@ class DemonstrationSensor(Sensor):
         # Fetch next action as observation
         if task.is_resetting:  # reset
             self.timestep = 1
-            # logger.info("Episode start: {}".format(episode.episode_id))
         
         if self.timestep < len(episode.reference_replay):
             action_name = episode.reference_replay[self.timestep].action
-            action = get_habitat_sim_action(action_name)
-            # logger.info("{} -- {}".format(self.timestep, action_name))
+            if not hasattr(self._config, "SINGLE_ACTION") or not self._config.SINGLE_ACTION:
+                action = get_habitat_sim_action(action_name)
+            else:
+                action = get_habitat_sim_action(self._config.DEFAULT_ACTION)
         else:
             action = 0
-            # logger.info("{} -- {}".format(self.timestep, "STOP"))
 
         # logger.info("{} -- {}".format(self.timestep, action))
         self.timestep += 1

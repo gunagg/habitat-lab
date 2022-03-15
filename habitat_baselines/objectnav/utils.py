@@ -1,6 +1,7 @@
 import gzip
 import json
 
+from PIL import Image
 
 def write_json(data, path):
     with open(path, 'w') as file:

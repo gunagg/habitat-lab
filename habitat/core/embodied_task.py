@@ -261,6 +261,8 @@ class EmbodiedTask:
     ) -> OrderedDict:
         if entities_config is None:
             entities_config = self._config
+        
+        print(entity_names)
 
         entities = OrderedDict()
         for entity_name in entity_names:

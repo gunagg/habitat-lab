@@ -1036,7 +1036,7 @@ class StopAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        task.is_stop_called = True  # type: ignore
+        task.is_stop_called = False  # type: ignore
         return self._sim.get_observations_at()  # type: ignore
 
 
@@ -1056,6 +1056,17 @@ class LookDownAction(SimulatorTaskAction):
         ``step``.
         """
         return self._sim.step(HabitatSimActions.LOOK_DOWN)
+
+
+@registry.register_task_action
+class NoOpAction(SimulatorTaskAction):
+    name: str = "NO_OP"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        return self._sim.step(HabitatSimActions.NO_OP)
 
 
 @registry.register_task_action

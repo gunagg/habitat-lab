@@ -22,6 +22,7 @@ class _DefaultHabitatSimActions(Enum):
     TURN_RIGHT = 3
     LOOK_UP = 4
     LOOK_DOWN = 5
+    # NO_OP = 6
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -131,6 +132,33 @@ class HabitatSimV1ActionSpaceConfiguration(
         config.update(new_config)
 
         return config
+
+
+@registry.register_action_space_configuration(name="v2")
+class HabitatSimV2ActionSpaceConfiguration(
+    HabitatSimV0ActionSpaceConfiguration
+):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def get(self):
+        config = super().get()
+        new_config = {
+            HabitatSimActions.LOOK_UP: habitat_sim.ActionSpec(
+                "look_up",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+            ),
+            HabitatSimActions.LOOK_DOWN: habitat_sim.ActionSpec(
+                "look_down",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+            ),
+        }
+
+
+        config.update(new_config)
+
+        return config
+
 
 
 @registry.register_action_space_configuration(name="pyrobotnoisy")

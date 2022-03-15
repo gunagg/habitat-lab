@@ -195,6 +195,9 @@ def run_reference_replay(
             model_config.SENSORS = ["RGB_SENSOR"]
             model_config.NUM_PROCESSES = 1
             model_config.freeze()
+            
+            gail = setup_model(model_config, env.observation_space, env.action_space, device, checkpoint_path)
+            rnn_hidden_states = torch.zeros((1, model_config.RL.DDPPO.num_recurrent_layers, model_config.IL.GAIL.hidden_size))
 
             print('Scene has physiscs {}'.format(cfg.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS))
             physics_simulation_library = env._sim.get_physics_simulation_library()
@@ -214,24 +217,36 @@ def run_reference_replay(
                 
                 if env.episode_over:
                     break
-                action = possible_actions.index(data.action)
-                # if i < 20:
-                #     action = possible_actions.index(data.action)
-                # else:
-                #     action = possible_actions.index("NO_OP")
+                # action = possible_actions.index(data.action)
+                # action = possible_actions.index("MOVE_FORWARD")
+                action = possible_actions.index("TURN_LEFT")
                 action_name = env.task.get_action_name(
                     action
                 )
-                print("action: {}, action_name: {}".format(action, action_name))
 
                 observations = env.step(action=action)
 
+                batch = {
+                    "rgb": torch.from_numpy(observations["rgb"]).unsqueeze(0).to(device),
+                    "objectgoal": torch.from_numpy(observations["objectgoal"]).to(device)
+                }
+                print(batch["rgb"].shape, rnn_hidden_states.shape)
+
+                reward, rnn_hidden_states = gail.discriminator.compute_rewards(
+                    batch,
+                    rnn_hidden_states,
+                    torch.tensor([prev_action]).unsqueeze(0).to(device),
+                    torch.tensor([1]).unsqueeze(0).bool().to(device)
+                )
+                prev_action = action
+                print("step: {}, action: {}, reward: {}".format(i, action_name, reward.exp().detach()))
+                rnn_hidden_states = rnn_hidden_states.detach()
+
                 info = env.get_metrics()
-                # print("Step: {}, action: {}".format(i, action_name))
+                print("Step: {}, action: {}".format(i, action_name))
                 
                 frame = observations_to_image({"rgb": observations["rgb"]}, info)
                 frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
-                frame = append_text_to_image(frame, "Action: {}".format(action_name))
 
                 if info["success"]:
                     ep_success = 1
@@ -240,14 +255,13 @@ def run_reference_replay(
                 i+=1
 
             make_videos([observation_list], output_prefix, ep_id)
-            print("Total reward for trajectory: {} - {}".format(total_reward, info["distance_to_goal"]))
+            print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
             
             success += ep_success
             spl += info["spl"]
 
             num_episodes += 1
             avg_ep_length += len(episode.reference_replay)
-            break
 
 
         print("Total episode success: {}".format(success))

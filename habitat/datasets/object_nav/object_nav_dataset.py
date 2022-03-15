@@ -312,4 +312,4 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
             self.episodes.append(episode)  # type: ignore [attr-defined]
             if self.config.NUM_EPISODES != -1 and self.config.NUM_EPISODES <= len(self.episodes):
                 break
-        # logger.info("Episodes loaded: {}".format(len(self.episodes)))
+        logger.info("Episodes loaded: {}".format(len(self.episodes)))

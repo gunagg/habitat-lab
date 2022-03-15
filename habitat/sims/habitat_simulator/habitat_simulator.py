@@ -41,6 +41,7 @@ from habitat.core.simulator import (
     Simulator,
     VisualObservation,
 )
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.core.spaces import Space
 
 
@@ -385,9 +386,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return self._sensor_suite.get_observations(sim_obs)
 
     def step(self, action: Union[str, int]) -> Observations:
-        sim_obs = super().step(action)
-        self._prev_sim_obs = sim_obs
-        observations = self._sensor_suite.get_observations(sim_obs)
+        if action != 0:
+            sim_obs = super().step(action)
+            self._prev_sim_obs = sim_obs
+        observations = self._sensor_suite.get_observations(self._prev_sim_obs)
         return observations
 
     def render(self, mode: str = "rgb") -> Any:

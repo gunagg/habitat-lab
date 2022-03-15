@@ -20,7 +20,7 @@ LOG_INTERVAL: 10
 LOG_METRICS: True
 NUM_CHECKPOINTS: -1
 CHECKPOINT_INTERVAL: 100
-SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/overfitting/rgbd/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
@@ -80,9 +80,9 @@ MODEL:
   RGB_ENCODER:
     cnn_type: "ResnetRGBEncoder"
     output_size: 256
-    backbone: "resnet50_gn"
+    backbone: "resnet18"
     train_encoder: True
-    pretrained_ckpt: "data/new_checkpoints/rgb_encoders/omnidata_DINO_02.pth"
+    pretrained_ckpt: "None" # "data/new_checkpoints/rgb_encoders/omnidata_DINO_02.pth"
   DEPTH_ENCODER:
     cnn_type: "VlnResnetDepthEncoder"
     output_size: 128

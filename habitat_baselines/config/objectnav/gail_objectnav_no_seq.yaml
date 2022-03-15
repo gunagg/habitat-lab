@@ -7,19 +7,19 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/gail/overfitting/rgb/v17_gps_full_noop/val_3/"
-VIDEO_DIR: "video_dir/objectnav/gail/overfitting/rgb/v17_gps_full_noop/val_3/"
+TENSORBOARD_DIR: "tb/objectnav/gail/overfitting/rgb/v10_5_step_noseq/"
+VIDEO_DIR: "video_dir/objectnav/gail/overfitting/rgb/v10_5_step_noseq/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/gail/overfitting/rgb/v17_gps_full_noop/ckpt.3.pth"
+EVAL_CKPT_PATH_DIR: "checkpoints/objectnav/gail/overfitting/rgb/v10_5_step_noseq/ckpt.4.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "checkpoints/objectnav/gail/overfitting/rgb/v17_gps_full_noop/"
+CHECKPOINT_FOLDER: "checkpoints/objectnav/gail/overfitting/rgb/v10_5_step_noseq/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 NUM_CHECKPOINTS: -1
-CHECKPOINT_INTERVAL: 100
+CHECKPOINT_INTERVAL: 500
 SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/gail/overfitting/rgb/{split}/{type}"
@@ -27,11 +27,11 @@ EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
 EVAL:
-  SPLIT: "single_episode"
+  SPLIT: "sample"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/gail/overfitting/rgb/v17_gps_full_noop/evaluation_meta_35k_3.json"
-NUM_UPDATES: 2
+  evaluation_meta_file: "tb/objectnav/gail/overfitting/rgb/v10_5_step_noseq/evaluation_meta_35k_3.json"
+NUM_UPDATES: 5000
 
 RL:
   SUCCESS_REWARD: 2.5
@@ -81,7 +81,6 @@ IL:
 
     hidden_size: 512
     embed_actions: False
-    force_blind_discriminator: True
 
     use_normalized_advantage: False
     reward_type: "gail"

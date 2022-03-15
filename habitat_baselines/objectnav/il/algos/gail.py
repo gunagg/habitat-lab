@@ -6,17 +6,20 @@
 
 from lib2to3.pgen2.token import OP
 from optparse import Option
+from tkinter.messagebox import NO
 from typing import Optional, Tuple
 
 import torch
 from torch import Tensor
 from torch import nn as nn
 from torch import optim as optim
+from torch.nn.utils.rnn import PackedSequence
 
 from habitat import logger
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.il_rollout_storage import ILRolloutStorage
+from habitat_baselines.rl.models.rnn_state_encoder import _build_pack_info_from_dones
 
 EPS_PPO = 1e-5
 
@@ -30,7 +33,8 @@ class GAIL(nn.Module):
         lr: Optional[float] = None,
         eps: Optional[float] = None,
         max_grad_norm: Optional[float] = None,
-        use_normalized_advantage: Optional[float] = True
+        use_normalized_advantage: Optional[float] = True,
+        no_seq_input: bool = False
     ) -> None:
 
         super().__init__()
@@ -42,6 +46,8 @@ class GAIL(nn.Module):
 
         self.max_grad_norm = max_grad_norm
         self.num_envs = num_envs
+
+        self.no_seq_input = no_seq_input
 
         self.optimizer = optim.Adam(
             list(filter(lambda p: p.requires_grad, discriminator.parameters())),
@@ -63,27 +69,11 @@ class GAIL(nn.Module):
 
         return (advantages - advantages.mean()) / (advantages.std() + EPS_PPO)
 
-    def update(self, agent_rollouts: RolloutStorage, expert_rollouts: ILRolloutStorage, num_update) -> Tuple[float, float, float]:
-        advantages = self.get_advantages(agent_rollouts)
-        avg_discr_loss = 0.0
-        avg_agent_loss = 0.0
-        avg_expert_loss = 0.0
-        avg_discr_accuracy = 0.0
-        avg_agent_accuracy = 0.0
-        avg_expert_accuracy = 0.0
+    def get_predictions(self, expert_batch, agent_batch):
+        expert_logits = None
+        agent_logits = None
 
-        profiling_wrapper.range_push("GAIL update epoch")
-        agent_sampler = agent_rollouts.recurrent_generator(
-            advantages, self.num_mini_batch
-        )
-        expert_sampler = expert_rollouts.recurrent_generator(
-            self.num_mini_batch
-        )
-        bce_loss = torch.nn.BCEWithLogitsLoss()
-        expert_hidden_states = []
-        agent_hidden_states = []
-
-        for expert_batch, agent_batch in zip(expert_sampler, agent_sampler):
+        if not self.no_seq_input:
             (
                 expert_logits,
                 expert_batch_hidden_states,
@@ -94,11 +84,6 @@ class GAIL(nn.Module):
                 expert_batch["masks"],
             )
 
-            targets = torch.ones(expert_logits.shape).to(self.device)
-            expert_loss = bce_loss(expert_logits, targets)
-            expert_preds = (torch.sigmoid(expert_logits) > 0.5).long()
-            expert_accuracy = torch.sum(expert_preds == targets) / targets.shape[0]
-
             (
                 agent_logits,
                 agent_batch_hidden_states,
@@ -108,13 +93,70 @@ class GAIL(nn.Module):
                 agent_batch["prev_actions"],
                 agent_batch["masks"],
             )
+            return (expert_logits, expert_batch_hidden_states, agent_logits, agent_batch_hidden_states)
+        else:
+            (
+                expert_logits,
+            ) = self.discriminator(
+                expert_batch["observations"],
+                expert_batch["prev_actions"],
+                expert_batch["masks"],
+            )
+            print("pass 1 done")
+
+            (
+                agent_logits,
+            ) = self.discriminator(
+                agent_batch["observations"],
+                agent_batch["prev_actions"],
+                agent_batch["masks"],
+            )
+            print("pass 2 done")
+            return (expert_logits, None, agent_logits, None)
+
+
+    def update(self, agent_rollouts: RolloutStorage, expert_rollouts: ILRolloutStorage, num_update) -> Tuple[float, float, float]:
+        advantages = self.get_advantages(agent_rollouts)
+        avg_discr_loss = 0.0
+        avg_agent_loss = 0.0
+        avg_expert_loss = 0.0
+        avg_discr_accuracy = 0.0
+        avg_agent_accuracy = 0.0
+        avg_expert_accuracy = 0.0
+
+        profiling_wrapper.range_push("GAIL update epoch")
+        agent_sampler = agent_rollouts.recurrent_generator_v2(
+            self.num_mini_batch
+        )
+        expert_sampler = expert_rollouts.recurrent_generator(
+            self.num_mini_batch
+        )
+        bce_loss = torch.nn.BCEWithLogitsLoss()
+        expert_hidden_states = []
+        agent_hidden_states = []
+
+        for expert_batch, agent_batch in zip(expert_sampler, agent_sampler):
+
+            results = self.get_predictions(expert_batch, agent_batch)
+            expert_logits = results[0]
+            agent_logits = results[2]
+
+            targets = torch.ones(expert_logits.shape).to(self.device)
+            expert_loss = bce_loss(expert_logits, targets)
+            expert_preds = (torch.sigmoid(expert_logits) > 0.5).long()
+            expert_accuracy = torch.sum(expert_preds == targets) / targets.shape[0]
+
+            # logger.info("Expert -> Hidden: {} Masks: {}".format(expert_batch["recurrent_hidden_states"].sum(), expert_batch["masks"]))
+            # logger.info("Agent -> Hidden: {} Masks: {}".format(agent_batch["discr_recurrent_hidden_states"].sum(), agent_batch["masks"]))
 
             targets = torch.zeros(agent_logits.shape).to(self.device)
             agent_loss = bce_loss(agent_logits, targets)
             agent_preds = (torch.sigmoid(agent_logits) > 0.5).long()
             agent_accuracy = torch.sum(agent_preds == targets) / targets.shape[0]
 
+            self.optimizer.zero_grad()
             total_loss = expert_loss + agent_loss
+
             self.before_backward(total_loss)
             total_loss.backward()
             self.after_backward(total_loss)
@@ -130,13 +172,17 @@ class GAIL(nn.Module):
             avg_agent_accuracy += agent_accuracy
             avg_expert_accuracy += expert_accuracy
 
-            expert_hidden_states.append(expert_batch_hidden_states)
-            agent_hidden_states.append(agent_batch_hidden_states)
+            if not self.no_seq_input:
+                expert_batch_hidden_states = results[1]
+                agent_batch_hidden_states = results[3]
+                expert_hidden_states.append(expert_batch_hidden_states)
+                agent_hidden_states.append(agent_batch_hidden_states)
 
         profiling_wrapper.range_pop()
 
-        expert_hidden_states = torch.cat(expert_hidden_states, dim=0)
-        agent_hidden_states = torch.cat(agent_hidden_states, dim=0)
+        if not self.no_seq_input:
+            expert_hidden_states = torch.cat(expert_hidden_states, dim=0)
+            agent_hidden_states = torch.cat(agent_hidden_states, dim=0)
 
         avg_discr_loss /= self.num_mini_batch
         avg_agent_loss /= self.num_mini_batch

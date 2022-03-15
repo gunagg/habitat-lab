@@ -8,7 +8,7 @@ import random
 from typing import List, Type, Union
 
 import habitat
-from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
+from habitat import Config, Env, RLEnv, VectorEnv, make_dataset, logger
 
 
 def make_env_fn(
@@ -64,22 +64,27 @@ def construct_envs(
                 "No scenes to load, multiple process logic relies on being able to split scenes uniquely between processes"
             )
 
-        if len(scenes) < num_environments:
-            raise RuntimeError(
-                "reduce the number of environments as there "
-                "aren't enough number of scenes.\n"
-                "num_environments: {}\tnum_scenes: {}".format(
-                    num_environments, len(scenes)
-                )
-            )
+        # if len(scenes) < num_environments:
+        #     raise RuntimeError(
+        #         "reduce the number of environments as there "
+        #         "aren't enough number of scenes.\n"
+        #         "num_environments: {}\tnum_scenes: {}".format(
+        #             num_environments, len(scenes)
+        #         )
+        #     )
 
         random.shuffle(scenes)
 
     scene_splits: List[List[str]] = [[] for _ in range(num_environments)]
-    for idx, scene in enumerate(scenes):
-        scene_splits[idx % len(scene_splits)].append(scene)
+    if len(scenes) > 1:
+        for idx, scene in enumerate(scenes):
+            scene_splits[idx % len(scene_splits)].append(scene)
+    else:
+        for i in range(len(scene_splits)):
+            scene_splits[i].extend(scenes)
+    logger.info("total splits: {}".format(scene_splits))
 
-    assert sum(map(len, scene_splits)) == len(scenes)
+    # assert sum(map(len, scene_splits)) == len(scenes)
 
     for i in range(num_environments):
         proc_config = config.clone()
