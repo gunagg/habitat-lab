@@ -1,10 +1,5 @@
-import math
-import sys
-from typing import Dict, Iterable, Tuple
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from gym import Space
 from habitat import Config, logger
@@ -15,16 +10,13 @@ from habitat.tasks.nav.nav import (
 from habitat.tasks.nav.object_nav_task import (
     ObjectGoalSensor
 )
-from habitat_baselines.rearrangement.models.encoders.instruction import InstructionEncoder
+from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rearrangement.models.encoders.resnet_encoders import (
-    TorchVisionResNet50,
     VlnResnetDepthEncoder,
     ResnetRGBEncoder,
 )
-from habitat_baselines.rearrangement.models.encoders.simple_cnns import SimpleDepthCNN, SimpleRGBCNN
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
-from habitat_baselines.rl.ppo.policy import Net
-from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetNet
+from habitat_baselines.rl.ppo.policy import Net, Policy
 from habitat_baselines.utils.common import CategoricalNet, CustomFixedCategorical
 
 
@@ -46,14 +38,9 @@ class Seq2SeqNet(Net):
         if not self.model_config.NO_VISION:
             # Init the depth encoder
             assert model_config.DEPTH_ENCODER.cnn_type in [
-                "SimpleDepthCNN",
                 "VlnResnetDepthEncoder",
-            ], "DEPTH_ENCODER.cnn_type must be SimpleDepthCNN or VlnResnetDepthEncoder"
-            if model_config.DEPTH_ENCODER.cnn_type == "SimpleDepthCNN":
-                self.depth_encoder = SimpleDepthCNN(
-                    observation_space, model_config.DEPTH_ENCODER.output_size
-                )
-            elif model_config.DEPTH_ENCODER.cnn_type == "VlnResnetDepthEncoder":
+            ], "DEPTH_ENCODER.cnn_type must be VlnResnetDepthEncoder"
+            if model_config.DEPTH_ENCODER.cnn_type == "VlnResnetDepthEncoder":
                 self.depth_encoder = VlnResnetDepthEncoder(
                     observation_space,
                     output_size=model_config.DEPTH_ENCODER.output_size,
@@ -64,31 +51,16 @@ class Seq2SeqNet(Net):
 
             # Init the RGB visual encoder
             assert model_config.RGB_ENCODER.cnn_type in [
-                "SimpleRGBCNN",
-                "TorchVisionResNet50",
                 "ResnetRGBEncoder",
-            ], "RGB_ENCODER.cnn_type must be either 'SimpleRGBCNN' or 'TorchVisionResNet50'."
+            ], "RGB_ENCODER.cnn_type must be either 'ResnetRGBEncoder'."
 
-            if model_config.RGB_ENCODER.cnn_type == "SimpleRGBCNN":
-                self.rgb_encoder = SimpleRGBCNN(
-                    observation_space, model_config.RGB_ENCODER.output_size
-                )
-            elif model_config.RGB_ENCODER.cnn_type == "TorchVisionResNet50":
-                device = (
-                    torch.device("cuda", model_config.TORCH_GPU_ID)
-                    if torch.cuda.is_available()
-                    else torch.device("cpu")
-                )
-                self.rgb_encoder = TorchVisionResNet50(
-                    observation_space, model_config.RGB_ENCODER.output_size, device
-                )
-            elif model_config.RGB_ENCODER.cnn_type == "ResnetRGBEncoder":
+            if model_config.RGB_ENCODER.cnn_type == "ResnetRGBEncoder":
                 self.rgb_encoder = ResnetRGBEncoder(
                     observation_space,
                     output_size=model_config.RGB_ENCODER.output_size,
                     backbone=model_config.RGB_ENCODER.backbone,
                     trainable=model_config.RGB_ENCODER.train_encoder,
-                    normalize_visual_inputs=model_config.normalize_visual_inputs,
+                    normalize_visual_inputs=model_config.RGB_ENCODER.normalize_visual_inputs,
                 )
 
             # Init the RNN state decoder
@@ -236,71 +208,32 @@ class Seq2SeqModel(nn.Module):
 
         return distribution.logits, rnn_hidden_states
 
-    # def act(
-    #     self, observations, rnn_hidden_states, prev_actions, masks
-    # ) -> CustomFixedCategorical:
 
-    #     features, rnn_hidden_states = self.net(
-    #         observations, rnn_hidden_states, prev_actions, masks
-    #     )
-    #     distribution = self.action_distribution(features)
+@baseline_registry.register_policy
+class ObjecNavRGBDPolicy(Policy):
+    def __init__(
+        self,
+        observation_space,
+        action_space,
+        model_config,
+        **kwargs
+    ):
+        super().__init__(
+            Seq2SeqNet(  # type: ignore
+                observation_space=observation_space,
+                model_config=model_config,
+                num_actions=action_space.n,
+                **kwargs,
+            ),
+            action_space.n,
+        )
 
-    #     return distribution, rnn_hidden_states
-
-
-# class ILPolicy(nn.Module, metaclass=abc.ABCMeta):
-#     def __init__(self, net, dim_actions):
-#         super().__init__()
-#         self.net = net
-#         self.dim_actions = dim_actions
-
-#         self.action_distribution = CategoricalNet(
-#             self.net.output_size, self.dim_actions
-#         )
-
-#     def forward(self, *x):
-#         raise NotImplementedError
-
-#     def evaluate_actions(
-#         self, observations, rnn_hidden_states, prev_actions, masks
-#     ):
-#         features, rnn_hidden_states = self.net(
-#             observations, rnn_hidden_states, prev_actions, masks
-#         )
-#         distribution = self.action_distribution(features)
-#         return distribution.logits, rnn_hidden_states
-
-#     @classmethod
-#     @abc.abstractmethod
-#     def from_config(cls, config, observation_space, action_space):
-#         pass
-
-
-# @baseline_registry.register_policy
-# class ObjecNavILPolicy(ILPolicy):
-#     def __init__(
-#         self,
-#         observation_space: spaces.Dict,
-#         action_space,
-#         hidden_size: int = 512,
-#         **kwargs
-#     ):
-#         super().__init__(
-#             Seq2SeqNet(  # type: ignore
-#                 observation_space=observation_space,
-#                 hidden_size=hidden_size,
-#                 num_actions=action_space.n,
-#                 **kwargs,
-#             ),
-#             action_space.n,
-#         )
-
-#     @classmethod
-#     def from_config(
-#         cls, config: Config, observation_space: spaces.Dict, action_space
-#     ):
-#         return cls(
-#             observation_space=observation_space,
-#             action_space=action_space,
-#             hidden_size=config.MODEL.hidden_size,
-#         )
+    @classmethod
+    def from_config(
+        cls, config, observation_space, action_space
+    ):
+        return cls(
+            observation_space=observation_space,
+            action_space=action_space,
+            model_config=config.MODEL,
+        )

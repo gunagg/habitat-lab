@@ -4,7 +4,7 @@
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --partition=long
+#SBATCH --partition=short
 #SBATCH --qos=ram-special
 #SBATCH --constraint=rtx_6000
 #SBATCH --output=slurm_logs/eval/eval-%j.out

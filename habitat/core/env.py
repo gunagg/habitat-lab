@@ -226,7 +226,6 @@ class Env:
         scene = self.sim.semantic_annotations()
 
         instance_id_to_label_id = {int(obj.id.split("_")[-1]): obj.category.index() for obj in scene.objects}
-        # instance_id_to_label_id = {}
         self.mapping = np.array([ instance_id_to_label_id[i] for i in range(len(instance_id_to_label_id)) ])
 
         is_rearrangement = "Rearrangement" in self._config.DATASET.TYPE

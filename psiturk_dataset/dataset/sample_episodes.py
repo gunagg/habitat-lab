@@ -3,6 +3,7 @@ import copy
 import json
 import glob
 import os
+import random
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -42,29 +43,23 @@ def load_duplicate_episodes(path="data/hit_data/duplicate_episode.json"):
     return episode_ids
 
 
-def sample_episodes(path, output_path, per_scene_limit=10):
-    data = load_dataset(path)
-
-    print("Number of episodes {}".format(len(data["episodes"])))
-
-    sample_episodes = {}
-    sample_episodes["instruction_vocab"] = data["instruction_vocab"]
-    sample_episodes["episodes"] = []
-    scene_map = {}
-    for episode in data["episodes"]:
-        scene_id = episode["scene_id"]
-
-        if scene_id not in scene_map.keys():
-            scene_map[scene_id] = 0
-        scene_map[scene_id] += 1 
-
-        if scene_map[scene_id] <= per_scene_limit:
-            sample_episodes["episodes"].append(episode)
-    
-    print("Sampled episodes: {}".format(len(sample_episodes["episodes"])))
-    
-    write_json(sample_episodes, output_path)
-    write_gzip(output_path, output_path)
+def sample_episodes(path, output_dir, per_scene_limit=0.1):
+    files = glob.glob(path)
+    total_episodes = 0
+    for f in files:
+        dataset = load_dataset(f)
+        non_thda_episodes = []
+        for episode in dataset["episodes"]:
+            if not episode.get("is_thda"):
+                non_thda_episodes.append(episode)
+        dataset["episodes"] = random.sample(non_thda_episodes, int(len(non_thda_episodes)*per_scene_limit))
+        total_episodes += len(dataset["episodes"])
+        scene_id = f.split("/")[-1].split(".")[0]
+        output_path = os.path.join(output_dir, "{}.json".format(scene_id))
+        print("Scene: {}, Filtered episodes: {}".format(scene_id, len(dataset["episodes"])))
+        write_json(dataset, output_path)
+        write_gzip(output_path, output_path)
+    print("Total episodes: {}".format(total_episodes))
 
 
 def sample_episodes_by_episode_ids(path, output_path):
@@ -249,7 +244,6 @@ def sample_objectnav_episodes_visualization(path, output_path):
             write_gzip(dest_path, dest_path)
         if episode["scene_id"].split("/")[-1] in  scene_ids:
             print("Num episodes: {} for scene: {}".format(len(episodes), episode["scene_id"]))
-
 
 def sample_coverage_episodes(path, output_path, total_episodes=1200, task="objectnav"):
     files = glob.glob(path + "/*.json.gz")
@@ -489,7 +483,7 @@ if __name__ == "__main__":
         "--output-path", type=str, default="data/episodes/sample_hits.json"
     )
     parser.add_argument(
-        "--per-scene-limit", type=int, default=10
+        "--per-scene-limit", type=float, default=0.1
     )
     parser.add_argument(
         "--limit", type=int, default=10
@@ -518,22 +512,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--check-duplicates", dest="check_duplicates", action="store_true"
     )
+    parser.add_argument(
+        "--mp3d-only", dest="mp3d_only", action="store_true"
+    )
     args = parser.parse_args()
-    # if args.sample_episodes and not args.is_objectnav and not args.per_scene:
-    #     sample_episodes_by_episode_ids(args.input_path, args.output_path)
-    # elif args.sample_episodes and args.is_objectnav:
-    #     sample_objectnav_episodes(args.input_path, args.output_path, args.prev_tasks)
-    # elif args.per_scene and args.sample_episodes:
-    #     sample_episodes_by_scene(args.input_path, args.output_path, args.limit)
-    # else:
-    #     sample_episodes(args.input_path, args.output_path, args.per_scene_limit)
-    # sample_objectnav_episodes_custom(args.input_path, args.output_path)
-    # sample_coverage_episodes(args.input_path, args.output_path)
-    # sample_stratified_objectnav_dataset(args.input_path, args.output_path, args.total_episodes)
     if args.task == "rearrangement":
         merge_object_rearrangement_episodes(args.input_path, args.output_path)
     else:
-        if args.check_duplicates:
+        if args.mp3d_only:
+            sample_episodes(args.input_path, args.output_path, args.per_scene_limit)
+        elif args.check_duplicates:
             check_duplicates(args.input_path, args.output_path)
         else:
             sample_objectnav_episodes(args.input_path, args.output_path)

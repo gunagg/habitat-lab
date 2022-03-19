@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+import sys
 import time
 from collections import defaultdict, deque
 from typing import Any, DefaultDict, Dict, List, Optional
@@ -80,7 +81,8 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic.to(self.device)
 
         self.semantic_predictor = None
-        if self.config.MODEL_CONFIG.USE_PRED_SEMANTICS:
+        self.use_pred_semantic = hasattr(self.config.MODEL, "USE_PRED_SEMANTICS") and self.config.MODEL_CONFIG.USE_PRED_SEMANTICS
+        if self.use_pred_semantic:
             self.semantic_predictor = load_rednet(
                 self.device,
                 ckpt=self.config.MODEL_CONFIG.SEMANTIC_ENCODER.rednet_ckpt,
@@ -89,6 +91,40 @@ class PPOTrainer(BaseRLTrainer):
             )
             self.semantic_predictor.eval()
 
+        if (
+            self.config.RL.DDPPO.pretrained_encoder
+            or self.config.RL.DDPPO.pretrained
+        ):
+            pretrained_state = torch.load(
+                self.config.RL.DDPPO.pretrained_weights, map_location="cpu"
+            )
+            logger.info("Loading state")
+        
+        if self.config.RL.DDPPO.pretrained:
+            missing_keys = self.actor_critic.load_state_dict(
+                {
+                    k.replace("model.", ""): v
+                    for k, v in pretrained_state["state_dict"].items()
+                }, strict=False
+            )
+            logger.info("Loading checkpoint missing keys: {}".format(missing_keys))
+
+        logger.info("Freeze encoder")
+        if hasattr(self.config.RL, "Finetune"):
+            logger.info("Start Freeze encoder")
+            if self.config.RL.Finetune.freeze_encoders:
+                for param in self.actor_critic.net.depth_encoder.parameters():
+                    param.requires_grad_(False)
+                for param in self.actor_critic.net.rgb_encoder.parameters():
+                    param.requires_grad_(False)
+            if self.config.RL.Finetune.freeze_policy:
+                for param in self.actor_critic.net.state_encoder.parameters():
+                    param.requires_grad_(False)
+
+            self.actor_finetuning_update = self.config.RL.Finetune.start_actor_finetuning_at
+            if self.config.RL.Finetune.freeze_actor:
+                for param in self.actor_critic.action_distribution.parameters():
+                    param.requires_grad_(False)
 
         self.agent = PPO(
             actor_critic=self.actor_critic,
@@ -226,7 +262,7 @@ class PPOTrainer(BaseRLTrainer):
 
         t_update_stats = time.time()
         batch = batch_obs(observations, device=self.device)
-        if self.config.MODEL.USE_PRED_SEMANTICS and self.current_update >= self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE:
+        if self.use_pred_semantic and self.current_update >= self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE:
             batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
             # Subtract 1 from class labels for THDA YCB categories
             if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
@@ -339,6 +375,11 @@ class PPOTrainer(BaseRLTrainer):
                 sum(param.numel() for param in self.agent.parameters())
             )
         )
+        logger.info(
+            "trainable agent number of parameters: {}".format(
+                sum(param.numel() if param.requires_grad else 0 for param in self.agent.parameters())
+            )
+        )
         self.current_update = 0
 
         rollouts = RolloutStorage(
@@ -347,12 +388,13 @@ class PPOTrainer(BaseRLTrainer):
             self.obs_space,
             self.envs.action_spaces[0],
             ppo_cfg.hidden_size,
+            num_recurrent_layers=self.actor_critic.net.num_recurrent_layers
         )
         rollouts.to(self.device)
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
-        if self.config.MODEL.USE_PRED_SEMANTICS and self.current_update >= self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE:
+        if self.use_pred_semantic:
             batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
             # Subtract 1 from class labels for THDA YCB categories
             if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
@@ -402,6 +444,20 @@ class PPOTrainer(BaseRLTrainer):
                 if ppo_cfg.use_linear_clip_decay:
                     self.agent.clip_param = ppo_cfg.clip_param * linear_decay(
                         update, self.config.NUM_UPDATES
+                    )
+
+                # Enable actor finetuning at update actor_finetuning_update
+                if self.current_update == self.actor_finetuning_update:
+                    for param in self.actor_critic.action_distribution.parameters():
+                        param.requires_grad_(True)
+                    for param in self.actor_critic.net.state_encoder.parameters():
+                        param.requires_grad_(True)
+                    logger.info("Start actor finetuning at: {}".format(self.current_update))
+
+                    logger.info(
+                        "updated agent number of parameters: {}".format(
+                            sum(param.numel() if param.requires_grad else 0 for param in self.agent.parameters())
+                        )
                     )
 
                 profiling_wrapper.range_push("rollouts loop")

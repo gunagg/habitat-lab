@@ -45,7 +45,7 @@ TASK:
     INFLECTION_COEF: 3.477512060914205
   INFLECTION_WEIGHT_SENSOR_UUID: "inflection_weight"
 
-  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL', 'GOAL_OBJECT_VISIBLE', 'TOP_DOWN_MAP']
+  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL', 'GOAL_OBJECT_VISIBLE']
 
   TOP_DOWN_MAP:
     DRAW_GOAL_AABBS: False
@@ -69,7 +69,7 @@ SEED: 103
 DATASET:
   TYPE: ObjectNav-v2
   SPLIT: train
-  DATA_PATH: "data/datasets/objectnav_mp3d/objectnav_mp3d_thda_70k/{split}/{split}.json.gz"
+  DATA_PATH: "data/datasets/objectnav_mp3d_v4/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
   #CONTENT_SCENES: ["2azQ1b91cZZ"] #, "oLBMNvg9in8", "EU6Fwq7SyZv"] #, "1LXtFkjw3qL", "E9uDoFAP3SH"]
 

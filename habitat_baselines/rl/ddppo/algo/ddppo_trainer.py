@@ -89,7 +89,8 @@ class DDPPOTrainer(PPOTrainer):
         self.actor_critic.to(self.device)
 
         self.semantic_predictor = None
-        if self.config.MODEL.USE_PRED_SEMANTICS:
+        self.use_pred_semantic = hasattr(self.config.MODEL, "USE_PRED_SEMANTICS") and self.config.MODEL_CONFIG.USE_PRED_SEMANTICS
+        if self.use_pred_semantic:
             self.semantic_predictor = load_rednet(
                 self.device,
                 ckpt=self.config.MODEL.SEMANTIC_ENCODER.rednet_ckpt,
@@ -105,39 +106,33 @@ class DDPPOTrainer(PPOTrainer):
             pretrained_state = torch.load(
                 self.config.RL.DDPPO.pretrained_weights, map_location="cpu"
             )
-
+            logger.info("Loading state")
+        
         if self.config.RL.DDPPO.pretrained:
-            self.actor_critic.load_state_dict(
+            missing_keys = self.actor_critic.load_state_dict(
                 {
-                    k[len("actor_critic.") :]: v
+                    k.replace("model.", ""): v
                     for k, v in pretrained_state["state_dict"].items()
                 }, strict=False
             )
-        elif self.config.RL.DDPPO.pretrained_encoder:
-            prefix = "actor_critic.net.visual_encoder."
-            self.actor_critic.net.visual_encoder.load_state_dict(
-                {
-                    k[len(prefix) :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                    if k.startswith(prefix)
-                }
-            )
+            logger.info("Loading checkpoint missing keys: {}".format(missing_keys))
 
-        if not self.config.RL.DDPPO.train_encoder:
-            self._static_encoder = True
-            for param in self.actor_critic.net.visual_encoder.parameters():
-                param.requires_grad_(False)
-        
-        self._static_vis_encoder = False
-        if hasattr(self.config, "MODEL") and self.config.MODEL.freeze_encoders:
-            self._static_vis_encoder = True
-            for param in self.actor_critic.net.depth_encoder.parameters():
-                param.requires_grad_(False)
-            for param in self.actor_critic.net.rgb_encoder.parameters():
-                param.requires_grad_(False)
-            for param in self.actor_critic.net.sem_seg_encoder.parameters():
-                param.requires_grad_(False)
+        logger.info("Freeze encoder")
+        if hasattr(self.config.RL, "Finetune"):
+            logger.info("Start Freeze encoder")
+            if self.config.RL.Finetune.freeze_encoders:
+                for param in self.actor_critic.net.depth_encoder.parameters():
+                    param.requires_grad_(False)
+                for param in self.actor_critic.net.rgb_encoder.parameters():
+                    param.requires_grad_(False)
+            if self.config.RL.Finetune.freeze_policy:
+                for param in self.actor_critic.net.state_encoder.parameters():
+                    param.requires_grad_(False)
 
+            self.actor_finetuning_update = self.config.RL.Finetune.start_actor_finetuning_at
+            if self.config.RL.Finetune.freeze_actor:
+                for param in self.actor_critic.action_distribution.parameters():
+                    param.requires_grad_(False)
         if self.config.RL.DDPPO.reset_critic:
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
@@ -231,7 +226,7 @@ class DDPPOTrainer(PPOTrainer):
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
 
-        if self.config.MODEL.USE_PRED_SEMANTICS and self.current_update >= self.config.MODEL.SWITCH_TO_PRED_SEMANTICS_UPDATE:
+        if self.use_pred_semantic:
             batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
             # Subtract 1 from class labels for THDA YCB categories
             if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
@@ -240,21 +235,6 @@ class DDPPOTrainer(PPOTrainer):
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         obs_space = self.obs_space
-        if self._static_encoder:
-            self._encoder = self.actor_critic.net.visual_encoder
-            obs_space = spaces.Dict(
-                {
-                    "visual_features": spaces.Box(
-                        low=np.finfo(np.float32).min,
-                        high=np.finfo(np.float32).max,
-                        shape=self._encoder.output_shape,
-                        dtype=np.float32,
-                    ),
-                    **obs_space.spaces,
-                }
-            )
-            with torch.no_grad():
-                batch["visual_features"] = self._encoder(batch)
 
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
@@ -362,6 +342,21 @@ class DDPPOTrainer(PPOTrainer):
                     requeue_job()
                     return
 
+                # Enable actor finetuning at update actor_finetuning_update
+                if self.current_update == self.actor_finetuning_update:
+                    for param in self.actor_critic.action_distribution.parameters():
+                        param.requires_grad_(True)
+                    for param in self.actor_critic.net.state_encoder.parameters():
+                        param.requires_grad_(True)
+                    if self.world_rank == 0:
+                        logger.info("Start actor finetuning at: {}".format(self.current_update))
+
+                        logger.info(
+                            "updated agent number of parameters: {}".format(
+                                sum(param.numel() if param.requires_grad else 0 for param in self.agent.parameters())
+                            )
+                        )
+
                 count_steps_delta = 0
                 self.agent.eval()
                 profiling_wrapper.range_push("rollouts loop")
@@ -392,13 +387,6 @@ class DDPPOTrainer(PPOTrainer):
                 num_rollouts_done_store.add("num_done", 1)
 
                 self.agent.train()
-                if self._static_encoder:
-                    self._encoder.eval()
-                
-                if self._static_vis_encoder:
-                    self.actor_critic.net.rgb_encoder.eval()
-                    self.actor_critic.net.depth_encoder.eval()
-                    self.actor_critic.net.sem_seg_encoder.eval()
 
                 (
                     delta_pth_time,
