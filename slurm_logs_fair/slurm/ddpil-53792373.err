@@ -1,0 +1,1606 @@
++ [[ env_sem == \e\n\v ]]
++ [[ env_sem == \e\n\v\_\s\e\m ]]
++ echo 'In ObjectNav Env DDP SemSeg'
++ srun /private/home/abhshkdz/.conda/envs/habitat-on-web/bin/python -u -m habitat_baselines.run --exp-config habitat_baselines/config/objectnav/il_ddp_env_objectnav_semseg.yaml --run-type train
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+    exec(code, run_globals)
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    main()
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    trainer = trainer_init(config)
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+    execute_exp(config, run_type)
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 55, in execute_exp
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    trainer = trainer_init(config)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 63, in __init__
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    interrupted_state = load_interrupted_state()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/rl/ddppo/algo/ddp_utils.py", line 164, in load_interrupted_state
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    return torch.load(filename, map_location="cpu")
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 587, in load
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/site-packages/torch/serialization.py", line 242, in __init__
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+    super(_open_zipfile_reader, self).__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: [enforce fail at inline_container.cc:145] . PytorchStreamReader failed reading zip archive: failed finding central directory
+srun: error: learnfair1448: tasks 0-7: Exited with exit code 1
+srun: launch/slurm: _step_signal: Terminating StepId=53792373.11
+srun: error: learnfair1701: tasks 120-127: Exited with exit code 1
+srun: error: learnfair1545: tasks 64-71: Exited with exit code 1
+srun: error: learnfair1693: tasks 104-111: Exited with exit code 1
+srun: error: learnfair1521: tasks 40-47: Exited with exit code 1
+srun: error: learnfair1699: tasks 112-119: Exited with exit code 1
+srun: error: learnfair1494: tasks 16-23: Exited with exit code 1
+srun: error: learnfair1668: tasks 80-87: Terminated
+srun: error: learnfair1669: tasks 88-95: Terminated
+srun: error: learnfair1515: tasks 32-39: Terminated
+srun: error: learnfair1508: tasks 24-31: Terminated
+srun: error: learnfair1549: tasks 72-79: Terminated
+srun: error: learnfair1465: tasks 8-15: Terminated
+srun: error: learnfair1541: tasks 56-63: Terminated
+srun: error: learnfair1539: tasks 48-55: Terminated
+srun: error: learnfair1691: tasks 96-103: Terminated
+srun: Force Terminated StepId=53792373.11

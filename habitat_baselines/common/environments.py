@@ -128,7 +128,6 @@ class RearrangementRLEnv(habitat.RLEnv):
     def _episode_success(self):
         return self._env.get_metrics()[self._success_measure_name]
     
-
     def _end_early(self):
         end_early = 0
         end_early += self._env.get_metrics()[AgentToObjectDistance.cls_uuid]["was_nan"]
@@ -227,3 +226,38 @@ class ExploreThenNavRLEnv(NavRLEnv):
             # print(reward)
             self._previous_view = explore_view
             return reward
+
+
+@baseline_registry.register_env(name="ObjectNavRLEnv")
+class ObjectNavRLEnv(NavRLEnv):
+    r"""
+        We want to train an agent that overfits less. We provide an exploration reward and a delayed gratification success reward.
+        This is to avoid weird shaping loss.
+        We provide quickly attenuating coverage reward, and a gradually increasing success reward.
+    """
+    def __init__(self, config, dataset=None): # add coverage to the metrics
+        super().__init__(config, dataset)
+        self.step_penalty = 1
+        self.visit_bonus = 0
+        self._previous_view = 0
+
+    def step(self, *args, **kwargs):
+        self.step_penalty *= self._rl_config.COVERAGE_ATTENUATION
+        return super().step(*args, **kwargs)
+
+    def reset(self):
+        self.step_penalty = 1
+        self._goal_was_seen = False
+        self._previous_view = 0
+        # self.visit_bonus = 0
+        return super().reset()
+
+    def get_reward_range(self):
+        old_low, old_hi = super().get_reward_range()
+        return old_low, old_hi + self._rl_config.COVERAGE_REWARD
+
+    def get_reward(self, observations):
+        reward = 0
+        if self._episode_success():
+            reward += self._rl_config.SUCCESS_REWARD
+        return reward

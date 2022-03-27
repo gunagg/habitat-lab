@@ -6,13 +6,11 @@ import glob
 import gzip
 import json
 import os
-import re
 import sys
 import zipfile
 
 from collections import defaultdict
 from tqdm import tqdm
-from habitat.datasets.utils import VocabFromText
 from psiturk_dataset.utils.utils import load_dataset
 
 
@@ -38,6 +36,7 @@ scene_map = {
     "house_8.glb": "jtcxE69GiFV.glb",
 }
 
+csv.field_size_limit(sys.maxsize)
 
 def read_csv(path, delimiter=","):
     file = open(path, "r")
@@ -258,8 +257,10 @@ def convert_to_episode(csv_reader):
 
 
 def replay_to_episode(
-    replay_path, output_path, max_episodes=16,  max_episode_length=1000, sample=False, append_dataset=False, is_thda=False,
-    is_gibson=False
+    replay_path, output_path,
+    max_episodes=16,  max_episode_length=2000,
+    sample=False, append_dataset=False, is_thda=False,
+    is_gibson=False, is_hm3d=False
 ):
     all_episodes = {
         "episodes": []
@@ -318,7 +319,7 @@ def replay_to_episode(
                     break
     print("Total duplicate episodes: {}".format(duplicates))
 
-    objectnav_dataset_path = "data/datasets/objectnav_mp3d/objectnav_mp3d_thda_40k/train/content/{}.json.gz"
+    objectnav_dataset_path = "data/datasets/objectnav_mp3d_v1/train/content/{}.json.gz"
     if "val" in output_path:
         objectnav_dataset_path = objectnav_dataset_path.replace("train", "val")
         print("Using val path")
@@ -326,14 +327,22 @@ def replay_to_episode(
         objectnav_dataset_path = "data/datasets/objectnav_mp3d_thda/train/content/{}.json.gz"
     if is_gibson:
         objectnav_dataset_path = "../Object-Goal-Navigation/data/datasets/objectnav/gibson/v1.1/train_generated/content/{}.json.gz"
+    if is_hm3d:
+        objectnav_dataset_path = "data/datasets/objectnav_hm3d_v1/train/content/{}.json.gz"
     for scene, episodes in scene_episode_map.items():
+        print(scene, len(episodes))
         scene = scene.split("/")[-1].split(".")[0]
-        # print(objectnav_dataset_path)
+        print(objectnav_dataset_path.format(scene))
         if not os.path.isfile(objectnav_dataset_path.format(scene)):
             print("Source dataset missing: {}".format(scene))
             continue
+
+        if is_hm3d:
+            for episode in episodes:
+                episode["scene_dataset_config"] = "./data/scene_datasets/hm3d/hm3d_annotated_basis.scene_dataset_config.json"
         episode_data = load_dataset(objectnav_dataset_path.format(scene))
         episode_data["episodes"] = episodes
+
 
         path = output_path + "/{}.json".format(scene)
 
@@ -415,11 +424,14 @@ def main():
     parser.add_argument(
         "--gibson", dest="is_gibson", action="store_true"
     )
+    parser.add_argument(
+        "--hm3d", dest="is_hm3d", action="store_true"
+    )
     args = parser.parse_args()
     replay_to_episode(
         args.replay_path, args.output_path, args.max_episodes,
         args.max_episode_length, append_dataset=args.append_dataset, is_thda=args.is_thda,
-        sample=args.sample, is_gibson=args.is_gibson
+        sample=args.sample, is_gibson=args.is_gibson, is_hm3d=args.is_hm3d
     )
     list_missing_episodes()
 

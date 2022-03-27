@@ -1,0 +1,3076 @@
++ [[ env_sem == \e\n\v ]]
++ [[ env_sem == \e\n\v\_\s\e\m ]]
++ echo 'In ObjectNav Env DDP SemSeg'
++ srun /private/home/abhshkdz/.conda/envs/habitat-on-web/bin/python -u -m habitat_baselines.run --exp-config habitat_baselines/config/objectnav/il_ddp_env_objectnav_semseg.yaml --run-type train
+srun: Job 48300272 step creation temporarily disabled, retrying (Requested nodes are busy)
+srun: Step created for job 48300272
+2021-10-27 21:24:46,260 config: BASE_TASK_CONFIG_PATH: configs/tasks/objectnav_mp3d_il.yaml
+CHECKPOINT_FOLDER: results/checkpoints/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg
+CHECKPOINT_INTERVAL: 500
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db
+ENV_NAME: NavRLEnv
+EVAL:
+  SPLIT: val
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/objectnav_mp3d_v2_rgbd_8node_17_seed1.ckpt
+EVAL_RESUTLS_DIR: data/objectnav_mp3d_v2/seed_1/results/
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    clip_param: 0.2
+    eps: 1e-05
+    hidden_size: 2048
+    lr: 0.001
+    max_grad_norm: 0.2
+    num_mini_batch: 2
+    num_steps: 64
+    reward_window_size: 50
+    sync_frac: 0.6
+    use_linear_clip_decay: False
+    use_linear_lr_decay: True
+  USE_IW: True
+  distrib_backend: GLOO
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  NO_VISION: False
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEMANTIC_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetSemSegEncoder
+    embedding_size: 4
+    output_size: 256
+    rednet_ckpt: data/rednet-models/rednet_semmap_mp3d_tuned.pth
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 2048
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
+  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: True
+  ablate_depth: False
+  ablate_rgb: False
+  backbone: resnet18
+  embed_goal_seg: False
+  embed_sge: True
+  force_blind_policy: False
+  hidden_size: 2048
+  inflection_weight_coef: 1.8094523687984
+  normalize_visual_inputs: False
+  num_recurrent_layers: 2
+  resnet_baseplanes: 32
+  rnn_type: GRU
+NUM_PROCESSES: 8
+NUM_UPDATES: 16000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/objectnav_mp3d_v2/seed_1
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/objectnav_mp3d_v2/seed_1/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: distance_to_goal
+  SLACK_REWARD: -0.001
+  SUCCESS_MEASURE: spl
+  SUCCESS_REWARD: 2.5
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/objectnav_mp3d_s_path_v2/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/
+    SPLIT: train
+    TYPE: ObjectNav-v2
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 500
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: v1
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 0.88
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      RADIUS: 0.18
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.5
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 640
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: False
+      ENABLE_PHYSICS: False
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 640
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 640
+    TILT_ANGLE: 30
+    TURN_ANGLE: 30
+    TYPE: Sim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: VIEW_POINTS
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_SENSOR_UUID: objectgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INCREASE_DIST: False
+    INFLECTION_WEIGHT_SENSOR:
+      INFLECTION_COEF: 1.8094523687984
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+    NUM_OBJECT_COPIES: 3
+    NUM_UNIQ_SELECTED_OBJECTS: 5
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJ_GEN_FAR_DIST: 5.0
+    OBJ_GEN_NEAR_DIST: 1.0
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR', 'DEMONSTRATION_SENSOR', 'INFLECTION_WEIGHT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.1
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.1
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: False
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: ObjectNav-v1
+TENSORBOARD_DIR: results/tb/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: ddp-objectnav-bc-env
+VIDEO_DIR: results/videos/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+VIDEO_OPTION: ['disk']
+2021-10-27 21:24:46,261 config: BASE_TASK_CONFIG_PATH: configs/tasks/objectnav_mp3d_il.yaml
+CHECKPOINT_FOLDER: results/checkpoints/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg
+CHECKPOINT_INTERVAL: 500
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db
+ENV_NAME: NavRLEnv
+EVAL:
+  SPLIT: val
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/objectnav_mp3d_v2_rgbd_8node_17_seed1.ckpt
+EVAL_RESUTLS_DIR: data/objectnav_mp3d_v2/seed_1/results/
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    clip_param: 0.2
+    eps: 1e-05
+    hidden_size: 2048
+    lr: 0.001
+    max_grad_norm: 0.2
+    num_mini_batch: 2
+    num_steps: 64
+    reward_window_size: 50
+    sync_frac: 0.6
+    use_linear_clip_decay: False
+    use_linear_lr_decay: True
+  USE_IW: True
+  distrib_backend: GLOO
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  NO_VISION: False
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEMANTIC_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetSemSegEncoder
+    embedding_size: 4
+    output_size: 256
+    rednet_ckpt: data/rednet-models/rednet_semmap_mp3d_tuned.pth
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 2048
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
+  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: True
+  ablate_depth: False
+  ablate_rgb: False
+  backbone: resnet18
+  embed_goal_seg: False
+  embed_sge: True
+  force_blind_policy: False
+  hidden_size: 2048
+  inflection_weight_coef: 1.8094523687984
+  normalize_visual_inputs: False
+  num_recurrent_layers: 2
+  resnet_baseplanes: 32
+  rnn_type: GRU
+NUM_PROCESSES: 8
+NUM_UPDATES: 16000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/objectnav_mp3d_v2/seed_1
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/objectnav_mp3d_v2/seed_1/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: distance_to_goal
+  SLACK_REWARD: -0.001
+  SUCCESS_MEASURE: spl
+  SUCCESS_REWARD: 2.5
+2021-10-27 21:24:46,261 config: BASE_TASK_CONFIG_PATH: configs/tasks/objectnav_mp3d_il.yaml
+CHECKPOINT_FOLDER: results/checkpoints/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg
+CHECKPOINT_INTERVAL: 500
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db
+ENV_NAME: NavRLEnv
+EVAL:
+  SPLIT: val
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/objectnav_mp3d_v2_rgbd_8node_17_seed1.ckpt
+EVAL_RESUTLS_DIR: data/objectnav_mp3d_v2/seed_1/results/
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    clip_param: 0.2
+    eps: 1e-05
+    hidden_size: 2048
+    lr: 0.001
+    max_grad_norm: 0.2
+    num_mini_batch: 2
+    num_steps: 64
+    reward_window_size: 50
+    sync_frac: 0.6
+    use_linear_clip_decay: False
+    use_linear_lr_decay: True
+  USE_IW: True
+  distrib_backend: GLOO
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  NO_VISION: False
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEMANTIC_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetSemSegEncoder
+    embedding_size: 4
+    output_size: 256
+    rednet_ckpt: data/rednet-models/rednet_semmap_mp3d_tuned.pth
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 2048
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
+  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: True
+  ablate_depth: False
+  ablate_rgb: False
+  backbone: resnet18
+  embed_goal_seg: False
+  embed_sge: True
+  force_blind_policy: False
+  hidden_size: 2048
+  inflection_weight_coef: 1.8094523687984
+  normalize_visual_inputs: False
+  num_recurrent_layers: 2
+  resnet_baseplanes: 32
+  rnn_type: GRU
+NUM_PROCESSES: 8
+NUM_UPDATES: 16000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/objectnav_mp3d_v2/seed_1
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/objectnav_mp3d_v2/seed_1/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: distance_to_goal
+  SLACK_REWARD: -0.001
+  SUCCESS_MEASURE: spl
+  SUCCESS_REWARD: 2.5
+2021-10-27 21:24:46,261 config: BASE_TASK_CONFIG_PATH: configs/tasks/objectnav_mp3d_il.yaml
+CHECKPOINT_FOLDER: results/checkpoints/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg
+CHECKPOINT_INTERVAL: 500
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db
+ENV_NAME: NavRLEnv
+EVAL:
+  SPLIT: val
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/objectnav_mp3d_v2_rgbd_8node_17_seed1.ckpt
+EVAL_RESUTLS_DIR: data/objectnav_mp3d_v2/seed_1/results/
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    clip_param: 0.2
+    eps: 1e-05
+    hidden_size: 2048
+    lr: 0.001
+    max_grad_norm: 0.2
+    num_mini_batch: 2
+    num_steps: 64
+    reward_window_size: 50
+    sync_frac: 0.6
+    use_linear_clip_decay: False
+    use_linear_lr_decay: True
+  USE_IW: True
+  distrib_backend: GLOO
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  NO_VISION: False
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEMANTIC_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetSemSegEncoder
+    embedding_size: 4
+    output_size: 256
+    rednet_ckpt: data/rednet-models/rednet_semmap_mp3d_tuned.pth
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 2048
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
+  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: True
+  ablate_depth: False
+  ablate_rgb: False
+  backbone: resnet18
+  embed_goal_seg: False
+  embed_sge: True
+  force_blind_policy: False
+  hidden_size: 2048
+  inflection_weight_coef: 1.8094523687984
+  normalize_visual_inputs: False
+  num_recurrent_layers: 2
+  resnet_baseplanes: 32
+  rnn_type: GRU
+NUM_PROCESSES: 8
+NUM_UPDATES: 16000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/objectnav_mp3d_v2/seed_1
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/objectnav_mp3d_v2/seed_1/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: distance_to_goal
+  SLACK_REWARD: -0.001
+  SUCCESS_MEASURE: spl
+  SUCCESS_REWARD: 2.5
+2021-10-27 21:24:46,261 config: BASE_TASK_CONFIG_PATH: configs/tasks/objectnav_mp3d_il.yaml
+CHECKPOINT_FOLDER: results/checkpoints/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg
+CHECKPOINT_INTERVAL: 500
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db
+ENV_NAME: NavRLEnv
+EVAL:
+  SPLIT: val
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/objectnav_mp3d_v2_rgbd_8node_17_seed1.ckpt
+EVAL_RESUTLS_DIR: data/objectnav_mp3d_v2/seed_1/results/
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    clip_param: 0.2
+    eps: 1e-05
+    hidden_size: 2048
+    lr: 0.001
+    max_grad_norm: 0.2
+    num_mini_batch: 2
+    num_steps: 64
+    reward_window_size: 50
+    sync_frac: 0.6
+    use_linear_clip_decay: False
+    use_linear_lr_decay: True
+  USE_IW: True
+  distrib_backend: GLOO
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  NO_VISION: False
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEMANTIC_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetSemSegEncoder
+    embedding_size: 4
+    output_size: 256
+    rednet_ckpt: data/rednet-models/rednet_semmap_mp3d_tuned.pth
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 2048
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
+  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: True
+  ablate_depth: False
+  ablate_rgb: False
+  backbone: resnet18
+  embed_goal_seg: False
+  embed_sge: True
+  force_blind_policy: False
+  hidden_size: 2048
+  inflection_weight_coef: 1.8094523687984
+  normalize_visual_inputs: False
+  num_recurrent_layers: 2
+  resnet_baseplanes: 32
+  rnn_type: GRU
+NUM_PROCESSES: 8
+NUM_UPDATES: 16000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/objectnav_mp3d_v2/seed_1
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/objectnav_mp3d_v2/seed_1/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: distance_to_goal
+  SLACK_REWARD: -0.001
+  SUCCESS_MEASURE: spl
+  SUCCESS_REWARD: 2.5
+2021-10-27 21:24:46,261 config: BASE_TASK_CONFIG_PATH: configs/tasks/objectnav_mp3d_il.yaml
+CHECKPOINT_FOLDER: results/checkpoints/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg
+CHECKPOINT_INTERVAL: 500
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db
+ENV_NAME: NavRLEnv
+EVAL:
+  SPLIT: val
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/objectnav_mp3d_v2_rgbd_8node_17_seed1.ckpt
+EVAL_RESUTLS_DIR: data/objectnav_mp3d_v2/seed_1/results/
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    clip_param: 0.2
+    eps: 1e-05
+    hidden_size: 2048
+    lr: 0.001
+    max_grad_norm: 0.2
+    num_mini_batch: 2
+    num_steps: 64
+    reward_window_size: 50
+    sync_frac: 0.6
+    use_linear_clip_decay: False
+    use_linear_lr_decay: True
+  USE_IW: True
+  distrib_backend: GLOO
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  NO_VISION: False
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEMANTIC_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetSemSegEncoder
+    embedding_size: 4
+    output_size: 256
+    rednet_ckpt: data/rednet-models/rednet_semmap_mp3d_tuned.pth
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 2048
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
+  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: True
+  ablate_depth: False
+  ablate_rgb: False
+  backbone: resnet18
+  embed_goal_seg: False
+  embed_sge: True
+  force_blind_policy: False
+  hidden_size: 2048
+  inflection_weight_coef: 1.8094523687984
+  normalize_visual_inputs: False
+  num_recurrent_layers: 2
+  resnet_baseplanes: 32
+  rnn_type: GRU
+NUM_PROCESSES: 8
+NUM_UPDATES: 16000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/objectnav_mp3d_v2/seed_1
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/objectnav_mp3d_v2/seed_1/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: distance_to_goal
+  SLACK_REWARD: -0.001
+  SUCCESS_MEASURE: spl
+  SUCCESS_REWARD: 2.5
+2021-10-27 21:24:46,261 config: BASE_TASK_CONFIG_PATH: configs/tasks/objectnav_mp3d_il.yaml
+CHECKPOINT_FOLDER: results/checkpoints/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg
+CHECKPOINT_INTERVAL: 500
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db
+ENV_NAME: NavRLEnv
+EVAL:
+  SPLIT: val
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/objectnav_mp3d_v2_rgbd_8node_17_seed1.ckpt
+EVAL_RESUTLS_DIR: data/objectnav_mp3d_v2/seed_1/results/
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    clip_param: 0.2
+    eps: 1e-05
+    hidden_size: 2048
+    lr: 0.001
+    max_grad_norm: 0.2
+    num_mini_batch: 2
+    num_steps: 64
+    reward_window_size: 50
+    sync_frac: 0.6
+    use_linear_clip_decay: False
+    use_linear_lr_decay: True
+  USE_IW: True
+  distrib_backend: GLOO
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  NO_VISION: False
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEMANTIC_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetSemSegEncoder
+    embedding_size: 4
+    output_size: 256
+    rednet_ckpt: data/rednet-models/rednet_semmap_mp3d_tuned.pth
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 2048
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
+  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: True
+  ablate_depth: False
+  ablate_rgb: False
+  backbone: resnet18
+  embed_goal_seg: False
+  embed_sge: True
+  force_blind_policy: False
+  hidden_size: 2048
+  inflection_weight_coef: 1.8094523687984
+  normalize_visual_inputs: False
+  num_recurrent_layers: 2
+  resnet_baseplanes: 32
+  rnn_type: GRU
+NUM_PROCESSES: 8
+NUM_UPDATES: 16000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/objectnav_mp3d_v2/seed_1
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/objectnav_mp3d_v2/seed_1/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: distance_to_goal
+  SLACK_REWARD: -0.001
+  SUCCESS_MEASURE: spl
+  SUCCESS_REWARD: 2.5
+2021-10-27 21:24:46,261 config: BASE_TASK_CONFIG_PATH: configs/tasks/objectnav_mp3d_il.yaml
+CHECKPOINT_FOLDER: results/checkpoints/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg
+CHECKPOINT_INTERVAL: 500
+CMD_TRAILING_OPTS: []
+DATASET_PATH: data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db
+ENV_NAME: NavRLEnv
+EVAL:
+  SPLIT: val
+  USE_CKPT_CONFIG: True
+EVAL_CKPT_PATH_DIR: data/new_checkpoints/objectnav/objectnav_env/v4_rgbd/objectnav_mp3d_v2_rgbd_8node_17_seed1.ckpt
+EVAL_RESUTLS_DIR: data/objectnav_mp3d_v2/seed_1/results/
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+FORCE_BLIND_POLICY: False
+IL:
+  BehaviorCloning:
+    clip_param: 0.2
+    eps: 1e-05
+    hidden_size: 2048
+    lr: 0.001
+    max_grad_norm: 0.2
+    num_mini_batch: 2
+    num_steps: 64
+    reward_window_size: 50
+    sync_frac: 0.6
+    use_linear_clip_decay: False
+    use_linear_lr_decay: True
+  USE_IW: True
+  distrib_backend: GLOO
+LOG_FILE: train.log
+LOG_INTERVAL: 10
+LOG_METRICS: True
+MODEL:
+  DEPTH_ENCODER:
+    backbone: resnet50
+    cnn_type: VlnResnetDepthEncoder
+    ddppo_checkpoint: data/ddppo-models/gibson-2plus-resnet50.pth
+    output_size: 128
+    trainable: False
+  NO_VISION: False
+  PROGRESS_MONITOR:
+    use: False
+  RGB_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetRGBEncoder
+    output_size: 256
+    train_encoder: True
+  SEMANTIC_ENCODER:
+    backbone: resnet18
+    cnn_type: ResnetSemSegEncoder
+    embedding_size: 4
+    output_size: 256
+    rednet_ckpt: data/rednet-models/rednet_semmap_mp3d_tuned.pth
+    train_encoder: True
+  SEQ2SEQ:
+    use_prev_action: True
+  STATE_ENCODER:
+    hidden_size: 2048
+    num_recurrent_layers: 2
+    rnn_type: GRU
+  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
+  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: True
+  ablate_depth: False
+  ablate_rgb: False
+  backbone: resnet18
+  embed_goal_seg: False
+  embed_sge: True
+  force_blind_policy: False
+  hidden_size: 2048
+  inflection_weight_coef: 1.8094523687984
+  normalize_visual_inputs: False
+  num_recurrent_layers: 2
+  resnet_baseplanes: 32
+  rnn_type: GRU
+NUM_PROCESSES: 8
+NUM_UPDATES: 16000
+ORBSLAM2:
+  ANGLE_TH: 0.2617993877991494
+  BETA: 100
+  CAMERA_HEIGHT: 1.25
+  DEPTH_DENORM: 10.0
+  DIST_REACHED_TH: 0.15
+  DIST_TO_STOP: 0.05
+  D_OBSTACLE_MAX: 4.0
+  D_OBSTACLE_MIN: 0.1
+  H_OBSTACLE_MAX: 1.25
+  H_OBSTACLE_MIN: 0.375
+  MAP_CELL_SIZE: 0.1
+  MAP_SIZE: 40
+  MIN_PTS_IN_OBSTACLE: 320.0
+  NEXT_WAYPOINT_TH: 0.5
+  NUM_ACTIONS: 3
+  PLANNER_MAX_STEPS: 500
+  PREPROCESS_MAP: True
+  SLAM_SETTINGS_PATH: habitat_baselines/slambased/data/mp3d3_small1k.yaml
+  SLAM_VOCAB_PATH: habitat_baselines/slambased/data/ORBvoc.txt
+OUTPUT_LOG_DIR: results/logs/objectnav_mp3d_v2/seed_1
+PROFILING:
+  CAPTURE_START_STEP: -1
+  NUM_STEPS_TO_CAPTURE: -1
+RESULTS_DIR: results/objectnav_mp3d_v2/seed_1/results/{split}/{type}
+RL:
+  DDPPO:
+    backbone: resnet50
+    distrib_backend: GLOO
+    num_recurrent_layers: 2
+    pretrained: False
+    pretrained_encoder: False
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    reset_critic: True
+    rnn_type: LSTM
+    sync_frac: 0.6
+    train_encoder: True
+  POLICY:
+    OBS_TRANSFORMS:
+      CENTER_CROPPER:
+        HEIGHT: 256
+        WIDTH: 256
+      CUBE2EQ:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 512
+      CUBE2FISH:
+        FOV: 180
+        HEIGHT: 256
+        PARAMS: (0.2, 0.2, 0.2)
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      ENABLED_TRANSFORMS: ()
+      EQ2CUBE:
+        HEIGHT: 256
+        SENSOR_UUIDS: []
+        WIDTH: 256
+      RESIZE_SHORTEST_EDGE:
+        SIZE: 256
+    name: PointNavBaselinePolicy
+  PPO:
+    clip_param: 0.2
+    entropy_coef: 0.01
+    eps: 1e-05
+    gamma: 0.99
+    hidden_size: 512
+    lr: 0.0007
+    max_grad_norm: 0.5
+    num_mini_batch: 16
+    num_steps: 5
+    ppo_epoch: 4
+    reward_window_size: 50
+    tau: 0.95
+    use_gae: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    use_normalized_advantage: True
+    value_loss_coef: 0.5
+  REWARD_MEASURE: distance_to_goal
+  SLACK_REWARD: -0.001
+  SUCCESS_MEASURE: spl
+  SUCCESS_REWARD: 2.5
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/objectnav_mp3d_s_path_v2/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/
+    SPLIT: train
+    TYPE: ObjectNav-v2
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 500
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: v1
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 0.88
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      RADIUS: 0.18
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.5
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 640
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: False
+      ENABLE_PHYSICS: False
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 640
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 640
+    TILT_ANGLE: 30
+    TURN_ANGLE: 30
+    TYPE: Sim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: VIEW_POINTS
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_SENSOR_UUID: objectgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INCREASE_DIST: False
+    INFLECTION_WEIGHT_SENSOR:
+      INFLECTION_COEF: 1.8094523687984
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/objectnav_mp3d_s_path_v2/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/
+    SPLIT: train
+    TYPE: ObjectNav-v2
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 500
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: v1
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 0.88
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      RADIUS: 0.18
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.5
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 640
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: False
+      ENABLE_PHYSICS: False
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 640
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 640
+    TILT_ANGLE: 30
+    TURN_ANGLE: 30
+    TYPE: Sim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: VIEW_POINTS
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_SENSOR_UUID: objectgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INCREASE_DIST: False
+    INFLECTION_WEIGHT_SENSOR:
+      INFLECTION_COEF: 1.8094523687984
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/objectnav_mp3d_s_path_v2/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/
+    SPLIT: train
+    TYPE: ObjectNav-v2
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 500
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: v1
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 0.88
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      RADIUS: 0.18
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.5
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 640
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: False
+      ENABLE_PHYSICS: False
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 640
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 640
+    TILT_ANGLE: 30
+    TURN_ANGLE: 30
+    TYPE: Sim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: VIEW_POINTS
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_SENSOR_UUID: objectgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INCREASE_DIST: False
+    INFLECTION_WEIGHT_SENSOR:
+      INFLECTION_COEF: 1.8094523687984
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/objectnav_mp3d_s_path_v2/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/
+    SPLIT: train
+    TYPE: ObjectNav-v2
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 500
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: v1
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 0.88
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      RADIUS: 0.18
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.5
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 640
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: False
+      ENABLE_PHYSICS: False
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 640
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 640
+    TILT_ANGLE: 30
+    TURN_ANGLE: 30
+    TYPE: Sim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: VIEW_POINTS
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_SENSOR_UUID: objectgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INCREASE_DIST: False
+    INFLECTION_WEIGHT_SENSOR:
+      INFLECTION_COEF: 1.8094523687984
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/objectnav_mp3d_s_path_v2/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/
+    SPLIT: train
+    TYPE: ObjectNav-v2
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 500
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: v1
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 0.88
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      RADIUS: 0.18
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.5
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 640
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: False
+      ENABLE_PHYSICS: False
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 640
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 640
+    TILT_ANGLE: 30
+    TURN_ANGLE: 30
+    TYPE: Sim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: VIEW_POINTS
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_SENSOR_UUID: objectgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INCREASE_DIST: False
+    INFLECTION_WEIGHT_SENSOR:
+      INFLECTION_COEF: 1.8094523687984
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/objectnav_mp3d_s_path_v2/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/
+    SPLIT: train
+    TYPE: ObjectNav-v2
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 500
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: v1
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 0.88
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      RADIUS: 0.18
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.5
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 640
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: False
+      ENABLE_PHYSICS: False
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 640
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 640
+    TILT_ANGLE: 30
+    TURN_ANGLE: 30
+    TYPE: Sim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: VIEW_POINTS
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_SENSOR_UUID: objectgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INCREASE_DIST: False
+    INFLECTION_WEIGHT_SENSOR:
+      INFLECTION_COEF: 1.8094523687984
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
+SHOW_TOP_DOWN_MAP: False
+SIMULATOR_GPU_ID: 0
+TASK_CONFIG:
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/datasets/objectnav_mp3d_s_path_v2/{split}/{split}.json.gz
+    SCENES_DIR: data/scene_datasets/
+    SPLIT: train
+    TYPE: ObjectNav-v2
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 500
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 105
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: v1
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 0.88
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      RADIUS: 0.18
+      SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.5
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 640
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: False
+      ENABLE_PHYSICS: False
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    RGB_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 640
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      HEIGHT: 480
+      HFOV: 79
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0.88, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 640
+    TILT_ANGLE: 30
+    TURN_ANGLE: 30
+    TYPE: Sim-v0
+  TASK:
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    ALL_OBJECT_POSITIONS:
+      TYPE: AllObjectPositions
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    DEMONSTRATION_SENSOR:
+      TYPE: DemonstrationSensor
+    DEMONSTRATION_SENSOR_UUID: demonstration
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: VIEW_POINTS
+      TYPE: DistanceToGoal
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_SENSOR_UUID: objectgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INCREASE_DIST: False
+    INFLECTION_WEIGHT_SENSOR:
+      INFLECTION_COEF: 1.8094523687984
+      TYPE: InflectionWeightSensor
+    INFLECTION_WEIGHT_SENSOR_UUID: inflection_weight
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+    NUM_OBJECT_COPIES: 3
+    NUM_UNIQ_SELECTED_OBJECTS: 5
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJ_GEN_FAR_DIST: 5.0
+    OBJ_GEN_NEAR_DIST: 1.0
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR', 'DEMONSTRATION_SENSOR', 'INFLECTION_WEIGHT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.1
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.1
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: False
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: ObjectNav-v1
+TENSORBOARD_DIR: results/tb/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: ddp-objectnav-bc-env
+VIDEO_DIR: results/videos/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+VIDEO_OPTION: ['disk']
+    NUM_OBJECT_COPIES: 3
+    NUM_UNIQ_SELECTED_OBJECTS: 5
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJ_GEN_FAR_DIST: 5.0
+    OBJ_GEN_NEAR_DIST: 1.0
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR', 'DEMONSTRATION_SENSOR', 'INFLECTION_WEIGHT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.1
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.1
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: False
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: ObjectNav-v1
+TENSORBOARD_DIR: results/tb/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: ddp-objectnav-bc-env
+VIDEO_DIR: results/videos/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+VIDEO_OPTION: ['disk']
+    NUM_OBJECT_COPIES: 3
+    NUM_UNIQ_SELECTED_OBJECTS: 5
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJ_GEN_FAR_DIST: 5.0
+    OBJ_GEN_NEAR_DIST: 1.0
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR', 'DEMONSTRATION_SENSOR', 'INFLECTION_WEIGHT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.1
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.1
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: False
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: ObjectNav-v1
+TENSORBOARD_DIR: results/tb/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: ddp-objectnav-bc-env
+VIDEO_DIR: results/videos/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+VIDEO_OPTION: ['disk']
+    NUM_OBJECT_COPIES: 3
+    NUM_UNIQ_SELECTED_OBJECTS: 5
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJ_GEN_FAR_DIST: 5.0
+    OBJ_GEN_NEAR_DIST: 1.0
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR', 'DEMONSTRATION_SENSOR', 'INFLECTION_WEIGHT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.1
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.1
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: False
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: ObjectNav-v1
+TENSORBOARD_DIR: results/tb/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: ddp-objectnav-bc-env
+VIDEO_DIR: results/videos/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+VIDEO_OPTION: ['disk']
+    NUM_OBJECT_COPIES: 3
+    NUM_UNIQ_SELECTED_OBJECTS: 5
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJ_GEN_FAR_DIST: 5.0
+    OBJ_GEN_NEAR_DIST: 1.0
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR', 'DEMONSTRATION_SENSOR', 'INFLECTION_WEIGHT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.1
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.1
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: False
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: ObjectNav-v1
+TENSORBOARD_DIR: results/tb/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: ddp-objectnav-bc-env
+VIDEO_DIR: results/videos/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+VIDEO_OPTION: ['disk']
+    NUM_OBJECT_COPIES: 3
+    NUM_UNIQ_SELECTED_OBJECTS: 5
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJ_GEN_FAR_DIST: 5.0
+    OBJ_GEN_NEAR_DIST: 1.0
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR', 'DEMONSTRATION_SENSOR', 'INFLECTION_WEIGHT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.1
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.1
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: False
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: ObjectNav-v1
+TENSORBOARD_DIR: results/tb/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: ddp-objectnav-bc-env
+VIDEO_DIR: results/videos/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+VIDEO_OPTION: ['disk']
+    NUM_OBJECT_COPIES: 3
+    NUM_UNIQ_SELECTED_OBJECTS: 5
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJ_GEN_FAR_DIST: 5.0
+    OBJ_GEN_NEAR_DIST: 1.0
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP', 'LOOK_DOWN']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR', 'DEMONSTRATION_SENSOR', 'INFLECTION_WEIGHT_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.1
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.1
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: False
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: False
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: ObjectNav-v1
+TENSORBOARD_DIR: results/tb/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+TEST_EPISODE_COUNT: -1
+TORCH_GPU_ID: 0
+TRAINER_NAME: ddp-objectnav-bc-env
+VIDEO_DIR: results/videos/objectnav_mp3d_s_path_v2/seed_1/2021_10_27_semseg/
+VIDEO_OPTION: ['disk']
+2021-10-27 21:24:48,447 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:48,473 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:48,489 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:48,517 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:48,522 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:48,538 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:48,548 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:48,549 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,025 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,025 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,026 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,026 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,027 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,027 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,028 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,030 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,030 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,086 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,223 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,259 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,293 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,293 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,294 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,300 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,304 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,308 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,314 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,340 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,340 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,355 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,356 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,360 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,364 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,365 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,376 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,391 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,393 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,396 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,399 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,399 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,405 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,416 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,431 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,437 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,443 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,453 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,462 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,514 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,522 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,542 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,582 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,593 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,637 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,656 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,676 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,691 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,693 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,769 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,787 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,794 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,803 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,814 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,831 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,847 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,898 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,981 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:55,983 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:56,054 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:56,182 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:56,190 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:56,418 Initializing dataset ObjectNav-v2
+2021-10-27 21:24:56,467 Initializing dataset ObjectNav-v2
+2021-10-27 21:29:29,641 initializing sim Sim-v0
+2021-10-27 21:29:58,378 Initializing task ObjectNav-v1
+2021-10-27 21:30:04,566 initializing sim Sim-v0
+2021-10-27 21:30:23,658 initializing sim Sim-v0
+2021-10-27 21:30:39,148 Initializing task ObjectNav-v1
+2021-10-27 21:30:39,951 initializing sim Sim-v0
+2021-10-27 21:30:44,923 initializing sim Sim-v0
+2021-10-27 21:30:45,514 Initializing task ObjectNav-v1
+2021-10-27 21:30:46,256 Initializing task ObjectNav-v1
+2021-10-27 21:30:48,345 initializing sim Sim-v0
+2021-10-27 21:31:09,608 initializing sim Sim-v0
+2021-10-27 21:31:13,907 Initializing task ObjectNav-v1
+2021-10-27 21:31:16,575 initializing sim Sim-v0
+2021-10-27 21:31:31,477 initializing sim Sim-v0
+2021-10-27 21:31:34,607 Initializing task ObjectNav-v1
+2021-10-27 21:31:40,580 initializing sim Sim-v0
+2021-10-27 21:31:43,385 Initializing task ObjectNav-v1
+2021-10-27 21:31:53,158 initializing sim Sim-v0
+2021-10-27 21:31:53,963 initializing sim Sim-v0
+2021-10-27 21:31:55,210 Initializing task ObjectNav-v1
+2021-10-27 21:32:04,293 Initializing task ObjectNav-v1
+2021-10-27 21:32:04,452 initializing sim Sim-v0
+malloc(): invalid next size (unsorted)
+2021-10-27 21:32:05,405 initializing sim Sim-v0
+2021-10-27 21:32:11,199 initializing sim Sim-v0
+2021-10-27 21:32:14,335 initializing sim Sim-v0
+2021-10-27 21:32:15,990 Initializing task ObjectNav-v1
+2021-10-27 21:32:17,748 initializing sim Sim-v0
+malloc(): invalid next size (unsorted)
+2021-10-27 21:32:18,468 initializing sim Sim-v0
+2021-10-27 21:32:29,532 Initializing task ObjectNav-v1
+2021-10-27 21:32:31,022 initializing sim Sim-v0
+Traceback (most recent call last):
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 79, in <module>
+    main()
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 40, in main
+    run_exp(**vars(args))
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 75, in run_exp
+    execute_exp(config, run_type)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/run.py", line 58, in execute_exp
+    trainer.train()
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/contextlib.py", line 52, in inner
+    return func(*args, **kwds)
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/objectnav/il/behavior_cloning_env_ddp_trainer.py", line 170, in train
+    workers_ignore_signals=True,
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat_baselines/utils/env_utils.py", line 102, in construct_envs
+    workers_ignore_signals=workers_ignore_signals,
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat/core/vector_env.py", line 157, in __init__
+    read_fn() for read_fn in self._connection_read_fns
+  File "/private/home/abhshkdz/projects/habitat-lab/habitat/core/vector_env.py", line 157, in <listcomp>
+    read_fn() for read_fn in self._connection_read_fns
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/multiprocessing/connection.py", line 250, in recv
+    buf = self._recv_bytes()
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/multiprocessing/connection.py", line 407, in _recv_bytes
+    buf = self._recv(4)
+  File "/private/home/abhshkdz/.conda/envs/habitat-on-web/lib/python3.6/multiprocessing/connection.py", line 379, in _recv
+    chunk = read(handle, remaining)
+ConnectionResetError: [Errno 104] Connection reset by peer
+2021-10-27 21:32:34,824 Initializing task ObjectNav-v1
+2021-10-27 21:32:35,685 Initializing task ObjectNav-v1
+2021-10-27 21:32:37,571 initializing sim Sim-v0
+2021-10-27 21:32:40,420 initializing sim Sim-v0
+2021-10-27 21:32:45,668 initializing sim Sim-v0
+2021-10-27 21:32:48,161 Initializing task ObjectNav-v1
+2021-10-27 21:33:01,615 initializing sim Sim-v0
+2021-10-27 21:33:02,364 Initializing task ObjectNav-v1
+2021-10-27 21:33:06,465 Initializing task ObjectNav-v1
+2021-10-27 21:33:07,752 initializing sim Sim-v0
+malloc(): invalid next size (unsorted)
+2021-10-27 21:33:09,387 initializing sim Sim-v0
+2021-10-27 21:33:11,155 initializing sim Sim-v0
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** JOB 48300272 ON learnfair5032 CANCELLED AT 2021-10-27T21:33:12 ***
+slurmstepd: error: *** STEP 48300272.1 ON learnfair5032 CANCELLED AT 2021-10-27T21:33:12 ***

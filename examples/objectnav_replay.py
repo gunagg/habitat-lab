@@ -18,7 +18,7 @@ from habitat.utils.visualizations.utils import observations_to_image, images_to_
 from PIL import Image
 
 from habitat_baselines.il.env_based.policy.rednet import load_rednet
-from habitat_baselines.il.env_based.policy.resnet_policy import SemSegSeqModel
+# from habitat_baselines.il.env_based.policy.resnet_policy import SemSegSeqModel
 from habitat.tasks.nav.object_nav_task import mapping_mpcat40_to_goal21
 
 config = habitat.get_config("configs/tasks/objectnav_mp3d_video.yaml")
@@ -313,15 +313,11 @@ def run_reference_replay(
             }
             instructions.append(data)
             step_index = 1
-            grab_count = 0
             total_reward = 0.0
             episode = env.current_episode
             ep_success = 0
             replay_data = []
-            print("ObjectGoal: {}, category: {}".format(obs["objectgoal"], env.current_episode.object_category))
 
-            if len(episode.reference_replay) > 2500:
-                continue
             for data in env.current_episode.reference_replay[step_index:]:
                 if log_action:
                     log_action_data(data, i)
@@ -330,61 +326,46 @@ def run_reference_replay(
                     action
                 )
 
-                for ii in range(1):
-                    observations = env.step(action=action)
+                observations = env.step(action=action)
 
-                    info = env.get_metrics()
-                    # sem_obs_gt_goal = get_goal_semantic(torch.Tensor(observations["semantic"]), observations["objectgoal"], task_cat2mpcat40, episode)
+                info = env.get_metrics()
+
+                frame = observations_to_image({"rgb": observations["rgb"]}, info)
+                top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
+                if semantic_predictor is not None:
+                    sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
                     
-                    frame = observations_to_image({"rgb": observations["rgb"]}, info)
-                    top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
-                    if semantic_predictor is not None:
-                        sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
-                        
-                        max_sem_id = max(max_sem_id, sem_obs.max().item())
-                        if True: # is_thda:
-                            # print("softmax {}".format(sem_obs.shape))
-                            # sem_obs = F.softmax(sem_obs, 1)
-                            sem_obs = sem_obs - 1
-                            #sem_obs = (torch.max(sem_obs, 1)[1]).float()
-                            h, w, c = observations["rgb"].shape
-                            #print("softmax {} -- {} - {} - {}".format(sem_obs.shape, h, w, c))
-                            idx = mapping_mpcat40_to_goal[
-                                task_cat2pred_cat[
-                                    torch.Tensor(observations["objectgoal"]).long().squeeze()
-                                ]
-                            ]
-                            sem_obs_goal = (sem_obs == idx)
-
-                        # sem_obs_2 = semantic_predictor_2(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
-                        # sem_obs_2 = parse_gt_semantic(env._sim, observations["semantic"])
-                        sem_obs_2 = torch.Tensor(observations["semantic"]).long().to(device)
-                        observations["predicted_sem_obs"] = sem_obs
-                        # sem_obs_goal = get_goal_semantic(sem_obs, observations["objectgoal"], task_cat2mpcat40, episode)
-                        # sem_obs_gt_goal = get_goal_semantic(sem_obs_2, observations["objectgoal"], task_cat2mpcat40, episode).detach().cpu()
+                    max_sem_id = max(max_sem_id, sem_obs.max().item())
+                    if True: # is_thda:
+                        sem_obs = sem_obs - 1
+                        h, w, c = observations["rgb"].shape
                         idx = mapping_mpcat40_to_goal[
                             task_cat2pred_cat[
                                 torch.Tensor(observations["objectgoal"]).long().squeeze()
                             ]
                         ]
-                        sem_obs_gt_goal = (sem_obs_2 == idx)
+                        sem_obs_goal = (sem_obs == idx)
 
-                        # if sem_obs_gt_goal.sum() > 0:
-                        #     print(torch.sum(sem_obs_goal))
-                        #     #print(torch.unique((sem_obs_goal.squeeze(-1).squeeze(0) * sem_obs_gt_goal)))
-                        #     print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
-                        frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
+                    sem_obs_2 = torch.Tensor(observations["semantic"]).long().to(device)
+                    observations["predicted_sem_obs"] = sem_obs
+                    idx = mapping_mpcat40_to_goal[
+                        task_cat2pred_cat[
+                            torch.Tensor(observations["objectgoal"]).long().squeeze()
+                        ]
+                    ]
+                    sem_obs_gt_goal = (sem_obs_2 == idx)
 
-                    frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
-                    replay_data.append(get_agent_pose(env._sim))
+                    frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
 
-                    if info["success"]:
-                        ep_success = 1
+                frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
+                replay_data.append(get_agent_pose(env._sim))
 
-                    observation_list.append(frame)
-                    top_down_obs_list.append(top_down_frame)
-                    if action_name == "STOP":
-                        break
+                if info["success"]:
+                    ep_success = 1
+
+                observation_list.append(frame)
+                top_down_obs_list.append(top_down_frame)
+
                 if action_name == "STOP":
                     break
                 if max_sem_id > 42:
@@ -511,7 +492,6 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
-    #cfg.DATASET.CONTENT_SCENES = ['17DRP5sb8fy', '1LXtFkjw3qL', '1pXnuDYAj8r', '29hnd4uzFmX', '5LpN3gDmAk7', '5q7pvUzZiYa', '759xd9YjKW5', '7y3sRwLe3Va', '82sE5b5pLXE', '8WUmhLawc2A', 'B6ByNegPMKs', 'D7G3Y4RVNrH', 'D7N2EKCX4Sj', 'E9uDoFAP3SH']
 
     if args.metrics:
         cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]

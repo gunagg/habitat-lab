@@ -250,7 +250,7 @@ def append_text_to_image(image: np.ndarray, text: str):
         A new image with text inserted underneath the input image
     """
     h, w, c = image.shape
-    font_size = 2.5
+    font_size = 1.0
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
     blank_image = np.zeros(image.shape, dtype=np.uint8)

@@ -1,0 +1,722 @@
+[
+    {
+        "name": "g8Xrdbe9fir.json",
+        "config": "tasks/objectnav_v2/g8Xrdbe9fir.json",
+        "scene": "g8Xrdbe9fir.glb",
+        "trainingTask": {
+            "name": "g8Xrdbe9fir_train.json",
+            "config": "tasks/objectnav_v2/g8Xrdbe9fir_train.json"
+        }
+    },
+    {
+        "name": "oEPjPNSPmzL.json",
+        "config": "tasks/objectnav_v2/oEPjPNSPmzL.json",
+        "scene": "oEPjPNSPmzL.glb",
+        "trainingTask": {
+            "name": "oEPjPNSPmzL_train.json",
+            "config": "tasks/objectnav_v2/oEPjPNSPmzL_train.json"
+        }
+    },
+    {
+        "name": "4vwGX7U38Ux.json",
+        "config": "tasks/objectnav_v2/4vwGX7U38Ux.json",
+        "scene": "4vwGX7U38Ux.glb",
+        "trainingTask": {
+            "name": "4vwGX7U38Ux_train.json",
+            "config": "tasks/objectnav_v2/4vwGX7U38Ux_train.json"
+        }
+    },
+    {
+        "name": "vLpv2VX547B.json",
+        "config": "tasks/objectnav_v2/vLpv2VX547B.json",
+        "scene": "vLpv2VX547B.glb",
+        "trainingTask": {
+            "name": "vLpv2VX547B_train.json",
+            "config": "tasks/objectnav_v2/vLpv2VX547B_train.json"
+        }
+    },
+    {
+        "name": "8wJuSPJ9FXG.json",
+        "config": "tasks/objectnav_v2/8wJuSPJ9FXG.json",
+        "scene": "8wJuSPJ9FXG.glb",
+        "trainingTask": {
+            "name": "8wJuSPJ9FXG_train.json",
+            "config": "tasks/objectnav_v2/8wJuSPJ9FXG_train.json"
+        }
+    },
+    {
+        "name": "iKFn6fzyRqs.json",
+        "config": "tasks/objectnav_v2/iKFn6fzyRqs.json",
+        "scene": "iKFn6fzyRqs.glb",
+        "trainingTask": {
+            "name": "iKFn6fzyRqs_train.json",
+            "config": "tasks/objectnav_v2/iKFn6fzyRqs_train.json"
+        }
+    },
+    {
+        "name": "oahi4u45xMf.json",
+        "config": "tasks/objectnav_v2/oahi4u45xMf.json",
+        "scene": "oahi4u45xMf.glb",
+        "trainingTask": {
+            "name": "oahi4u45xMf_train.json",
+            "config": "tasks/objectnav_v2/oahi4u45xMf_train.json"
+        }
+    },
+    {
+        "name": "5biL7VEkByM.json",
+        "config": "tasks/objectnav_v2/5biL7VEkByM.json",
+        "scene": "5biL7VEkByM.glb",
+        "trainingTask": {
+            "name": "5biL7VEkByM_train.json",
+            "config": "tasks/objectnav_v2/5biL7VEkByM_train.json"
+        }
+    },
+    {
+        "name": "j6fHrce9pHR.json",
+        "config": "tasks/objectnav_v2/j6fHrce9pHR.json",
+        "scene": "j6fHrce9pHR.glb",
+        "trainingTask": {
+            "name": "j6fHrce9pHR_train.json",
+            "config": "tasks/objectnav_v2/j6fHrce9pHR_train.json"
+        }
+    },
+    {
+        "name": "xWvSkKiWQpC.json",
+        "config": "tasks/objectnav_v2/xWvSkKiWQpC.json",
+        "scene": "xWvSkKiWQpC.glb",
+        "trainingTask": {
+            "name": "xWvSkKiWQpC_train.json",
+            "config": "tasks/objectnav_v2/xWvSkKiWQpC_train.json"
+        }
+    },
+    {
+        "name": "ggNAcMh8JPT.json",
+        "config": "tasks/objectnav_v2/ggNAcMh8JPT.json",
+        "scene": "ggNAcMh8JPT.glb",
+        "trainingTask": {
+            "name": "ggNAcMh8JPT_train.json",
+            "config": "tasks/objectnav_v2/ggNAcMh8JPT_train.json"
+        }
+    },
+    {
+        "name": "nACV8wLu1u5.json",
+        "config": "tasks/objectnav_v2/nACV8wLu1u5.json",
+        "scene": "nACV8wLu1u5.glb",
+        "trainingTask": {
+            "name": "nACV8wLu1u5_train.json",
+            "config": "tasks/objectnav_v2/nACV8wLu1u5_train.json"
+        }
+    },
+    {
+        "name": "GTV2Y73Sn5t.json",
+        "config": "tasks/objectnav_v2/GTV2Y73Sn5t.json",
+        "scene": "GTV2Y73Sn5t.glb",
+        "trainingTask": {
+            "name": "GTV2Y73Sn5t_train.json",
+            "config": "tasks/objectnav_v2/GTV2Y73Sn5t_train.json"
+        }
+    },
+    {
+        "name": "pcpn6mFqFCg.json",
+        "config": "tasks/objectnav_v2/pcpn6mFqFCg.json",
+        "scene": "pcpn6mFqFCg.glb",
+        "trainingTask": {
+            "name": "pcpn6mFqFCg_train.json",
+            "config": "tasks/objectnav_v2/pcpn6mFqFCg_train.json"
+        }
+    },
+    {
+        "name": "xAHnY3QzFUN.json",
+        "config": "tasks/objectnav_v2/xAHnY3QzFUN.json",
+        "scene": "xAHnY3QzFUN.glb",
+        "trainingTask": {
+            "name": "xAHnY3QzFUN_train.json",
+            "config": "tasks/objectnav_v2/xAHnY3QzFUN_train.json"
+        }
+    },
+    {
+        "name": "GtM3JtRvvvR.json",
+        "config": "tasks/objectnav_v2/GtM3JtRvvvR.json",
+        "scene": "GtM3JtRvvvR.glb",
+        "trainingTask": {
+            "name": "GtM3JtRvvvR_train.json",
+            "config": "tasks/objectnav_v2/GtM3JtRvvvR_train.json"
+        }
+    },
+    {
+        "name": "ACZZiU6BXLz.json",
+        "config": "tasks/objectnav_v2/ACZZiU6BXLz.json",
+        "scene": "ACZZiU6BXLz.glb",
+        "trainingTask": {
+            "name": "ACZZiU6BXLz_train.json",
+            "config": "tasks/objectnav_v2/ACZZiU6BXLz_train.json"
+        }
+    },
+    {
+        "name": "226REUyJh2K.json",
+        "config": "tasks/objectnav_v2/226REUyJh2K.json",
+        "scene": "226REUyJh2K.glb",
+        "trainingTask": {
+            "name": "226REUyJh2K_train.json",
+            "config": "tasks/objectnav_v2/226REUyJh2K_train.json"
+        }
+    },
+    {
+        "name": "b3WpMbPFB6q.json",
+        "config": "tasks/objectnav_v2/b3WpMbPFB6q.json",
+        "scene": "b3WpMbPFB6q.glb",
+        "trainingTask": {
+            "name": "b3WpMbPFB6q_train.json",
+            "config": "tasks/objectnav_v2/b3WpMbPFB6q_train.json"
+        }
+    },
+    {
+        "name": "ixTj1aTMup2.json",
+        "config": "tasks/objectnav_v2/ixTj1aTMup2.json",
+        "scene": "ixTj1aTMup2.glb",
+        "trainingTask": {
+            "name": "ixTj1aTMup2_train.json",
+            "config": "tasks/objectnav_v2/ixTj1aTMup2_train.json"
+        }
+    },
+    {
+        "name": "W9YAR9qcuvN.json",
+        "config": "tasks/objectnav_v2/W9YAR9qcuvN.json",
+        "scene": "W9YAR9qcuvN.glb",
+        "trainingTask": {
+            "name": "W9YAR9qcuvN_train.json",
+            "config": "tasks/objectnav_v2/W9YAR9qcuvN_train.json"
+        }
+    },
+    {
+        "name": "gQ3xxshDiCz.json",
+        "config": "tasks/objectnav_v2/gQ3xxshDiCz.json",
+        "scene": "gQ3xxshDiCz.glb",
+        "trainingTask": {
+            "name": "gQ3xxshDiCz_train.json",
+            "config": "tasks/objectnav_v2/gQ3xxshDiCz_train.json"
+        }
+    },
+    {
+        "name": "6imZUJGRUq4.json",
+        "config": "tasks/objectnav_v2/6imZUJGRUq4.json",
+        "scene": "6imZUJGRUq4.glb",
+        "trainingTask": {
+            "name": "6imZUJGRUq4_train.json",
+            "config": "tasks/objectnav_v2/6imZUJGRUq4_train.json"
+        }
+    },
+    {
+        "name": "E1NrAhMoqvB.json",
+        "config": "tasks/objectnav_v2/E1NrAhMoqvB.json",
+        "scene": "E1NrAhMoqvB.glb",
+        "trainingTask": {
+            "name": "E1NrAhMoqvB_train.json",
+            "config": "tasks/objectnav_v2/E1NrAhMoqvB_train.json"
+        }
+    },
+    {
+        "name": "VoVGtfYrpuQ.json",
+        "config": "tasks/objectnav_v2/VoVGtfYrpuQ.json",
+        "scene": "VoVGtfYrpuQ.glb",
+        "trainingTask": {
+            "name": "VoVGtfYrpuQ_train.json",
+            "config": "tasks/objectnav_v2/VoVGtfYrpuQ_train.json"
+        }
+    },
+    {
+        "name": "DNWbUAJYsPy.json",
+        "config": "tasks/objectnav_v2/DNWbUAJYsPy.json",
+        "scene": "DNWbUAJYsPy.glb",
+        "trainingTask": {
+            "name": "DNWbUAJYsPy_train.json",
+            "config": "tasks/objectnav_v2/DNWbUAJYsPy_train.json"
+        }
+    },
+    {
+        "name": "3CBBjsNkhqW.json",
+        "config": "tasks/objectnav_v2/3CBBjsNkhqW.json",
+        "scene": "3CBBjsNkhqW.glb",
+        "trainingTask": {
+            "name": "3CBBjsNkhqW_train.json",
+            "config": "tasks/objectnav_v2/3CBBjsNkhqW_train.json"
+        }
+    },
+    {
+        "name": "hWDDQnSDMXb.json",
+        "config": "tasks/objectnav_v2/hWDDQnSDMXb.json",
+        "scene": "hWDDQnSDMXb.glb",
+        "trainingTask": {
+            "name": "hWDDQnSDMXb_train.json",
+            "config": "tasks/objectnav_v2/hWDDQnSDMXb_train.json"
+        }
+    },
+    {
+        "name": "CthA7sQNTPK.json",
+        "config": "tasks/objectnav_v2/CthA7sQNTPK.json",
+        "scene": "CthA7sQNTPK.glb",
+        "trainingTask": {
+            "name": "CthA7sQNTPK_train.json",
+            "config": "tasks/objectnav_v2/CthA7sQNTPK_train.json"
+        }
+    },
+    {
+        "name": "qk9eeNeR4vw.json",
+        "config": "tasks/objectnav_v2/qk9eeNeR4vw.json",
+        "scene": "qk9eeNeR4vw.glb",
+        "trainingTask": {
+            "name": "qk9eeNeR4vw_train.json",
+            "config": "tasks/objectnav_v2/qk9eeNeR4vw_train.json"
+        }
+    },
+    {
+        "name": "u9rPN5cHWBg.json",
+        "config": "tasks/objectnav_v2/u9rPN5cHWBg.json",
+        "scene": "u9rPN5cHWBg.glb",
+        "trainingTask": {
+            "name": "u9rPN5cHWBg_train.json",
+            "config": "tasks/objectnav_v2/u9rPN5cHWBg_train.json"
+        }
+    },
+    {
+        "name": "MVVzj944atG.json",
+        "config": "tasks/objectnav_v2/MVVzj944atG.json",
+        "scene": "MVVzj944atG.glb",
+        "trainingTask": {
+            "name": "MVVzj944atG_train.json",
+            "config": "tasks/objectnav_v2/MVVzj944atG_train.json"
+        }
+    },
+    {
+        "name": "1S7LAXRdDqK.json",
+        "config": "tasks/objectnav_v2/1S7LAXRdDqK.json",
+        "scene": "1S7LAXRdDqK.glb",
+        "trainingTask": {
+            "name": "1S7LAXRdDqK_train.json",
+            "config": "tasks/objectnav_v2/1S7LAXRdDqK_train.json"
+        }
+    },
+    {
+        "name": "77mMEyxhs44.json",
+        "config": "tasks/objectnav_v2/77mMEyxhs44.json",
+        "scene": "77mMEyxhs44.glb",
+        "trainingTask": {
+            "name": "77mMEyxhs44_train.json",
+            "config": "tasks/objectnav_v2/77mMEyxhs44_train.json"
+        }
+    },
+    {
+        "name": "TSJmdttd2GV.json",
+        "config": "tasks/objectnav_v2/TSJmdttd2GV.json",
+        "scene": "TSJmdttd2GV.glb",
+        "trainingTask": {
+            "name": "TSJmdttd2GV_train.json",
+            "config": "tasks/objectnav_v2/TSJmdttd2GV_train.json"
+        }
+    },
+    {
+        "name": "HfMobPm86Xn.json",
+        "config": "tasks/objectnav_v2/HfMobPm86Xn.json",
+        "scene": "HfMobPm86Xn.glb",
+        "trainingTask": {
+            "name": "HfMobPm86Xn_train.json",
+            "config": "tasks/objectnav_v2/HfMobPm86Xn_train.json"
+        }
+    },
+    {
+        "name": "PPTLa8SkUfo.json",
+        "config": "tasks/objectnav_v2/PPTLa8SkUfo.json",
+        "scene": "PPTLa8SkUfo.glb",
+        "trainingTask": {
+            "name": "PPTLa8SkUfo_train.json",
+            "config": "tasks/objectnav_v2/PPTLa8SkUfo_train.json"
+        }
+    },
+    {
+        "name": "3XYAD64HpDr.json",
+        "config": "tasks/objectnav_v2/3XYAD64HpDr.json",
+        "scene": "3XYAD64HpDr.glb",
+        "trainingTask": {
+            "name": "3XYAD64HpDr_train.json",
+            "config": "tasks/objectnav_v2/3XYAD64HpDr_train.json"
+        }
+    },
+    {
+        "name": "URjpCob8MGw.json",
+        "config": "tasks/objectnav_v2/URjpCob8MGw.json",
+        "scene": "URjpCob8MGw.glb",
+        "trainingTask": {
+            "name": "URjpCob8MGw_train.json",
+            "config": "tasks/objectnav_v2/URjpCob8MGw_train.json"
+        }
+    },
+    {
+        "name": "FRQ75PjD278.json",
+        "config": "tasks/objectnav_v2/FRQ75PjD278.json",
+        "scene": "FRQ75PjD278.glb",
+        "trainingTask": {
+            "name": "FRQ75PjD278_train.json",
+            "config": "tasks/objectnav_v2/FRQ75PjD278_train.json"
+        }
+    },
+    {
+        "name": "TYDavTf8oyy.json",
+        "config": "tasks/objectnav_v2/TYDavTf8oyy.json",
+        "scene": "TYDavTf8oyy.glb",
+        "trainingTask": {
+            "name": "TYDavTf8oyy_train.json",
+            "config": "tasks/objectnav_v2/TYDavTf8oyy_train.json"
+        }
+    },
+    {
+        "name": "xgLmjqzoAzF.json",
+        "config": "tasks/objectnav_v2/xgLmjqzoAzF.json",
+        "scene": "xgLmjqzoAzF.glb",
+        "trainingTask": {
+            "name": "xgLmjqzoAzF_train.json",
+            "config": "tasks/objectnav_v2/xgLmjqzoAzF_train.json"
+        }
+    },
+    {
+        "name": "NGyoyh91xXJ.json",
+        "config": "tasks/objectnav_v2/NGyoyh91xXJ.json",
+        "scene": "NGyoyh91xXJ.glb",
+        "trainingTask": {
+            "name": "NGyoyh91xXJ_train.json",
+            "config": "tasks/objectnav_v2/NGyoyh91xXJ_train.json"
+        }
+    },
+    {
+        "name": "iigzG1rtanx.json",
+        "config": "tasks/objectnav_v2/iigzG1rtanx.json",
+        "scene": "iigzG1rtanx.glb",
+        "trainingTask": {
+            "name": "iigzG1rtanx_train.json",
+            "config": "tasks/objectnav_v2/iigzG1rtanx_train.json"
+        }
+    },
+    {
+        "name": "RaYrxWt5pR1.json",
+        "config": "tasks/objectnav_v2/RaYrxWt5pR1.json",
+        "scene": "RaYrxWt5pR1.glb",
+        "trainingTask": {
+            "name": "RaYrxWt5pR1_train.json",
+            "config": "tasks/objectnav_v2/RaYrxWt5pR1_train.json"
+        }
+    },
+    {
+        "name": "Z2DQddYp1fn.json",
+        "config": "tasks/objectnav_v2/Z2DQddYp1fn.json",
+        "scene": "Z2DQddYp1fn.glb",
+        "trainingTask": {
+            "name": "Z2DQddYp1fn_train.json",
+            "config": "tasks/objectnav_v2/Z2DQddYp1fn_train.json"
+        }
+    },
+    {
+        "name": "1UnKg1rAb8A.json",
+        "config": "tasks/objectnav_v2/1UnKg1rAb8A.json",
+        "scene": "1UnKg1rAb8A.glb",
+        "trainingTask": {
+            "name": "1UnKg1rAb8A_train.json",
+            "config": "tasks/objectnav_v2/1UnKg1rAb8A_train.json"
+        }
+    },
+    {
+        "name": "Jfyvj3xn2aJ.json",
+        "config": "tasks/objectnav_v2/Jfyvj3xn2aJ.json",
+        "scene": "Jfyvj3xn2aJ.glb",
+        "trainingTask": {
+            "name": "Jfyvj3xn2aJ_train.json",
+            "config": "tasks/objectnav_v2/Jfyvj3xn2aJ_train.json"
+        }
+    },
+    {
+        "name": "LcAd9dhvVwh.json",
+        "config": "tasks/objectnav_v2/LcAd9dhvVwh.json",
+        "scene": "LcAd9dhvVwh.glb",
+        "trainingTask": {
+            "name": "LcAd9dhvVwh_train.json",
+            "config": "tasks/objectnav_v2/LcAd9dhvVwh_train.json"
+        }
+    },
+    {
+        "name": "JptJPosx1Z6.json",
+        "config": "tasks/objectnav_v2/JptJPosx1Z6.json",
+        "scene": "JptJPosx1Z6.glb",
+        "trainingTask": {
+            "name": "JptJPosx1Z6_train.json",
+            "config": "tasks/objectnav_v2/JptJPosx1Z6_train.json"
+        }
+    },
+    {
+        "name": "NEVASPhcrxR.json",
+        "config": "tasks/objectnav_v2/NEVASPhcrxR.json",
+        "scene": "NEVASPhcrxR.glb",
+        "trainingTask": {
+            "name": "NEVASPhcrxR_train.json",
+            "config": "tasks/objectnav_v2/NEVASPhcrxR_train.json"
+        }
+    },
+    {
+        "name": "vDfkYo5VqEQ.json",
+        "config": "tasks/objectnav_v2/vDfkYo5VqEQ.json",
+        "scene": "vDfkYo5VqEQ.glb",
+        "trainingTask": {
+            "name": "vDfkYo5VqEQ_train.json",
+            "config": "tasks/objectnav_v2/vDfkYo5VqEQ_train.json"
+        }
+    },
+    {
+        "name": "XiJhRLvpKpX.json",
+        "config": "tasks/objectnav_v2/XiJhRLvpKpX.json",
+        "scene": "XiJhRLvpKpX.glb",
+        "trainingTask": {
+            "name": "XiJhRLvpKpX_train.json",
+            "config": "tasks/objectnav_v2/XiJhRLvpKpX_train.json"
+        }
+    },
+    {
+        "name": "YmWinf3mhb5.json",
+        "config": "tasks/objectnav_v2/YmWinf3mhb5.json",
+        "scene": "YmWinf3mhb5.glb",
+        "trainingTask": {
+            "name": "YmWinf3mhb5_train.json",
+            "config": "tasks/objectnav_v2/YmWinf3mhb5_train.json"
+        }
+    },
+    {
+        "name": "YHmAkqgwe2p.json",
+        "config": "tasks/objectnav_v2/YHmAkqgwe2p.json",
+        "scene": "YHmAkqgwe2p.glb",
+        "trainingTask": {
+            "name": "YHmAkqgwe2p_train.json",
+            "config": "tasks/objectnav_v2/YHmAkqgwe2p_train.json"
+        }
+    },
+    {
+        "name": "v7DzfFFEpsD.json",
+        "config": "tasks/objectnav_v2/v7DzfFFEpsD.json",
+        "scene": "v7DzfFFEpsD.glb",
+        "trainingTask": {
+            "name": "v7DzfFFEpsD_train.json",
+            "config": "tasks/objectnav_v2/v7DzfFFEpsD_train.json"
+        }
+    },
+    {
+        "name": "YMNvYDhK8mB.json",
+        "config": "tasks/objectnav_v2/YMNvYDhK8mB.json",
+        "scene": "YMNvYDhK8mB.glb",
+        "trainingTask": {
+            "name": "YMNvYDhK8mB_train.json",
+            "config": "tasks/objectnav_v2/YMNvYDhK8mB_train.json"
+        }
+    },
+    {
+        "name": "FnDDfrBZPhh.json",
+        "config": "tasks/objectnav_v2/FnDDfrBZPhh.json",
+        "scene": "FnDDfrBZPhh.glb",
+        "trainingTask": {
+            "name": "FnDDfrBZPhh_train.json",
+            "config": "tasks/objectnav_v2/FnDDfrBZPhh_train.json"
+        }
+    },
+    {
+        "name": "h6nwVLpAKQz.json",
+        "config": "tasks/objectnav_v2/h6nwVLpAKQz.json",
+        "scene": "h6nwVLpAKQz.glb",
+        "trainingTask": {
+            "name": "h6nwVLpAKQz_train.json",
+            "config": "tasks/objectnav_v2/h6nwVLpAKQz_train.json"
+        }
+    },
+    {
+        "name": "wPLokgvCnuk.json",
+        "config": "tasks/objectnav_v2/wPLokgvCnuk.json",
+        "scene": "wPLokgvCnuk.glb",
+        "trainingTask": {
+            "name": "wPLokgvCnuk_train.json",
+            "config": "tasks/objectnav_v2/wPLokgvCnuk_train.json"
+        }
+    },
+    {
+        "name": "yHLr6bvWsVm.json",
+        "config": "tasks/objectnav_v2/yHLr6bvWsVm.json",
+        "scene": "yHLr6bvWsVm.glb",
+        "trainingTask": {
+            "name": "yHLr6bvWsVm_train.json",
+            "config": "tasks/objectnav_v2/yHLr6bvWsVm_train.json"
+        }
+    },
+    {
+        "name": "HeSYRw7eMtG.json",
+        "config": "tasks/objectnav_v2/HeSYRw7eMtG.json",
+        "scene": "HeSYRw7eMtG.glb",
+        "trainingTask": {
+            "name": "HeSYRw7eMtG_train.json",
+            "config": "tasks/objectnav_v2/HeSYRw7eMtG_train.json"
+        }
+    },
+    {
+        "name": "HxmXPBbFCkH.json",
+        "config": "tasks/objectnav_v2/HxmXPBbFCkH.json",
+        "scene": "HxmXPBbFCkH.glb",
+        "trainingTask": {
+            "name": "HxmXPBbFCkH_train.json",
+            "config": "tasks/objectnav_v2/HxmXPBbFCkH_train.json"
+        }
+    },
+    {
+        "name": "QVAA6zecMHu.json",
+        "config": "tasks/objectnav_v2/QVAA6zecMHu.json",
+        "scene": "QVAA6zecMHu.glb",
+        "trainingTask": {
+            "name": "QVAA6zecMHu_train.json",
+            "config": "tasks/objectnav_v2/QVAA6zecMHu_train.json"
+        }
+    },
+    {
+        "name": "CQWES1bawee.json",
+        "config": "tasks/objectnav_v2/CQWES1bawee.json",
+        "scene": "CQWES1bawee.glb",
+        "trainingTask": {
+            "name": "CQWES1bawee_train.json",
+            "config": "tasks/objectnav_v2/CQWES1bawee_train.json"
+        }
+    },
+    {
+        "name": "U3oQjwTuMX8.json",
+        "config": "tasks/objectnav_v2/U3oQjwTuMX8.json",
+        "scene": "U3oQjwTuMX8.glb",
+        "trainingTask": {
+            "name": "U3oQjwTuMX8_train.json",
+            "config": "tasks/objectnav_v2/U3oQjwTuMX8_train.json"
+        }
+    },
+    {
+        "name": "gjhYih4upQ9.json",
+        "config": "tasks/objectnav_v2/gjhYih4upQ9.json",
+        "scene": "gjhYih4upQ9.glb",
+        "trainingTask": {
+            "name": "gjhYih4upQ9_train.json",
+            "config": "tasks/objectnav_v2/gjhYih4upQ9_train.json"
+        }
+    },
+    {
+        "name": "Wo6kuutE9i7.json",
+        "config": "tasks/objectnav_v2/Wo6kuutE9i7.json",
+        "scene": "Wo6kuutE9i7.glb",
+        "trainingTask": {
+            "name": "Wo6kuutE9i7_train.json",
+            "config": "tasks/objectnav_v2/Wo6kuutE9i7_train.json"
+        }
+    },
+    {
+        "name": "fxbzYAGkrtm.json",
+        "config": "tasks/objectnav_v2/fxbzYAGkrtm.json",
+        "scene": "fxbzYAGkrtm.glb",
+        "trainingTask": {
+            "name": "fxbzYAGkrtm_train.json",
+            "config": "tasks/objectnav_v2/fxbzYAGkrtm_train.json"
+        }
+    },
+    {
+        "name": "wsAYBFtQaL7.json",
+        "config": "tasks/objectnav_v2/wsAYBFtQaL7.json",
+        "scene": "wsAYBFtQaL7.glb",
+        "trainingTask": {
+            "name": "wsAYBFtQaL7_train.json",
+            "config": "tasks/objectnav_v2/wsAYBFtQaL7_train.json"
+        }
+    },
+    {
+        "name": "DoSbsoo4EAg.json",
+        "config": "tasks/objectnav_v2/DoSbsoo4EAg.json",
+        "scene": "DoSbsoo4EAg.glb",
+        "trainingTask": {
+            "name": "DoSbsoo4EAg_train.json",
+            "config": "tasks/objectnav_v2/DoSbsoo4EAg_train.json"
+        }
+    },
+    {
+        "name": "nS8T59Aw3sf.json",
+        "config": "tasks/objectnav_v2/nS8T59Aw3sf.json",
+        "scene": "nS8T59Aw3sf.glb",
+        "trainingTask": {
+            "name": "nS8T59Aw3sf_train.json",
+            "config": "tasks/objectnav_v2/nS8T59Aw3sf_train.json"
+        }
+    },
+    {
+        "name": "g7hUFVNac26.json",
+        "config": "tasks/objectnav_v2/g7hUFVNac26.json",
+        "scene": "g7hUFVNac26.glb",
+        "trainingTask": {
+            "name": "g7hUFVNac26_train.json",
+            "config": "tasks/objectnav_v2/g7hUFVNac26_train.json"
+        }
+    },
+    {
+        "name": "gmuS7Wgsbrx.json",
+        "config": "tasks/objectnav_v2/gmuS7Wgsbrx.json",
+        "scene": "gmuS7Wgsbrx.glb",
+        "trainingTask": {
+            "name": "gmuS7Wgsbrx_train.json",
+            "config": "tasks/objectnav_v2/gmuS7Wgsbrx_train.json"
+        }
+    },
+    {
+        "name": "QN2dRqwd84J.json",
+        "config": "tasks/objectnav_v2/QN2dRqwd84J.json",
+        "scene": "QN2dRqwd84J.glb",
+        "trainingTask": {
+            "name": "QN2dRqwd84J_train.json",
+            "config": "tasks/objectnav_v2/QN2dRqwd84J_train.json"
+        }
+    },
+    {
+        "name": "qz3829g1Lzf.json",
+        "config": "tasks/objectnav_v2/qz3829g1Lzf.json",
+        "scene": "qz3829g1Lzf.glb",
+        "trainingTask": {
+            "name": "qz3829g1Lzf_train.json",
+            "config": "tasks/objectnav_v2/qz3829g1Lzf_train.json"
+        }
+    },
+    {
+        "name": "NtnvZSMK3en.json",
+        "config": "tasks/objectnav_v2/NtnvZSMK3en.json",
+        "scene": "NtnvZSMK3en.glb",
+        "trainingTask": {
+            "name": "NtnvZSMK3en_train.json",
+            "config": "tasks/objectnav_v2/NtnvZSMK3en_train.json"
+        }
+    },
+    {
+        "name": "YJDUB7hWg9h.json",
+        "config": "tasks/objectnav_v2/YJDUB7hWg9h.json",
+        "scene": "YJDUB7hWg9h.glb",
+        "trainingTask": {
+            "name": "YJDUB7hWg9h_train.json",
+            "config": "tasks/objectnav_v2/YJDUB7hWg9h_train.json"
+        }
+    },
+    {
+        "name": "GGBvSFddQgs.json",
+        "config": "tasks/objectnav_v2/GGBvSFddQgs.json",
+        "scene": "GGBvSFddQgs.glb",
+        "trainingTask": {
+            "name": "GGBvSFddQgs_train.json",
+            "config": "tasks/objectnav_v2/GGBvSFddQgs_train.json"
+        }
+    },
+    {
+        "name": "W16Bm4ysK8v.json",
+        "config": "tasks/objectnav_v2/W16Bm4ysK8v.json",
+        "scene": "W16Bm4ysK8v.glb",
+        "trainingTask": {
+            "name": "W16Bm4ysK8v_train.json",
+            "config": "tasks/objectnav_v2/W16Bm4ysK8v_train.json"
+        }
+    }
+]

@@ -252,7 +252,8 @@ def generate_trajectories(cfg, episode_path, output_prefix="s_path", scene_id="d
                 i += 1
 
             ep_data = get_episode_json(env.current_episode, reference_replay)
-            del ep_data["_shortest_path_cache"]
+            print("Steps: {}".format(i))
+            # del ep_data["_shortest_path_cache"]
             total_success += success
             spl += info["spl"]
             total_episodes += 1
@@ -320,6 +321,8 @@ def main():
     split = objectnav_scene_splits[args.split]
     if len(split) > 1:
         cfg.DATASET.CONTENT_SCENES = split
+    if args.scene != "objectnav_round_2":
+        cfg.DATASET.CONTENT_SCENES = [args.scene]
     cfg.freeze()
 
     observations = generate_trajectories(cfg, args.episodes, scene_id=args.scene, output_path=args.output_path)

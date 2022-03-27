@@ -1,0 +1,4 @@
+In ObjectNav Env DDP
+data/datasets/objectnav_mp3d_v4/train/train.json.gz
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)

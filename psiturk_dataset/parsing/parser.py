@@ -136,6 +136,7 @@ def parse_replay_data_for_action(action, data):
     replay_data = {}
     replay_data["action"] = action
     if action == "grabReleaseObject":
+        print(data)
         replay_data["is_grab_action"] = data["actionData"]["grabAction"]
         replay_data["is_release_action"] = data["actionData"]["releaseAction"]
         replay_data["object_under_cross_hair"] = data["actionData"]["objectUnderCrosshair"]

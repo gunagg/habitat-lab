@@ -1,0 +1,36 @@
+In ObjectNav Env DDP
+data/datasets/objectnav_mp3d_10k/train/train.json.gz
+data/datasets/objectnav_mp3d_10k/train/train.json.gz
+data/datasets/objectnav_mp3d_10k/train/train.json.gz
+data/datasets/objectnav_mp3d_10k/train/train.json.gz
+data/datasets/objectnav_mp3d_10k/train/train.json.gz
+data/datasets/objectnav_mp3d_10k/train/train.json.gz
+data/datasets/objectnav_mp3d_10k/train/train.json.gz
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)
+=> loading RedNet checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth'
+=> loaded checkpoint 'data/rednet-models/rednet_semmap_mp3d_tuned.pth' (epoch 63)

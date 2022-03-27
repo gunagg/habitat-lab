@@ -4,10 +4,9 @@ import json
 import glob
 import os
 import pandas as pd
+import random
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
-import gzip
 
 from collections import defaultdict
 from psiturk_dataset.utils.utils import write_json, write_gzip, load_dataset, load_json_dataset
@@ -95,7 +94,7 @@ def sample_episodes_by_episode_ids(path, output_path):
 
 
 def sample_objectnav_episodes(path, output_path, prev_tasks=[]):
-    prev_tasks = [] # "data/datasets/objectnav_mp3d_v2/train/sampled", "data/datasets/objectnav_mp3d_v2/train/sampled_v2"]
+    prev_tasks = ["data/datasets/objectnav_hm3d_v1/sample_mar_15"] # "data/datasets/objectnav_mp3d_v2/train/sampled", "data/datasets/objectnav_mp3d_v2/train/sampled_v2"]
     prev_episode_points = {}
     for prev_path in prev_tasks:
         prev_task_files = glob.glob(prev_path + "/*.json")
@@ -125,7 +124,7 @@ def sample_objectnav_episodes(path, output_path, prev_tasks=[]):
                 num_duplicates += 1
                 continue
             object_category = episode["object_category"]
-            if object_category_map[object_category] < 3*45:
+            if object_category_map[object_category] < 25:
                 object_category_map[object_category] += 1
                 episodes.append(episode)
                 if key not in prev_episode_points.keys():
@@ -133,18 +132,19 @@ def sample_objectnav_episodes(path, output_path, prev_tasks=[]):
                 prev_episode_points[key] += 1
                 count += 1
 
+        random.shuffle(episodes)
         data["episodes"] = episodes
         dest_path = os.path.join(output_path, "{}.json".format(scene_id))
         # print(output_path)
         # print(dest_path)
         write_json(data, dest_path)
-        write_gzip(dest_path, dest_path)
+        # write_gzip(dest_path, dest_path)
 
         scene_ep_map[scene_id] = len(data['episodes'])
 
-        # data["episodes"] = episodes[:1]
-        # dest_path = os.path.join(output_path, "{}_train.json".format(scene_id))
-        # write_json(data, dest_path)
+        data["episodes"] = episodes[:1]
+        dest_path = os.path.join(output_path, "{}_train.json".format(scene_id))
+        write_json(data, dest_path)
         total_episodes += len(episodes)
 
         ep = {

@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from lib2to3.pgen2.token import OP
 import os
 from typing import Any, List, Optional
 
@@ -117,10 +118,12 @@ class ObjectGoalNavEpisode(NavigationEpisode):
     :param object_category: Category of the obect
     """
     object_category: Optional[str] = None
-    reference_replay: Optional[List[ReplayActionSpec]] = None
+    reference_replay: Optional[List[ReplayActionSpec]] = []
     scene_state: Optional[List[SceneState]] = None
     is_thda: Optional[bool] = False
     scene_dataset: Optional[str] = "mp3d"
+    scene_dataset_config: Optional[str] = ""
+    additional_obj_config_paths: Optional[list] = []
 
     @property
     def goals_key(self) -> str:

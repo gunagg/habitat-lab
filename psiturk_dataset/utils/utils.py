@@ -78,8 +78,30 @@ def prep_plt(ax=None):
     plt.rc('axes', labelsize=LARGE_SIZE)    # fontsize of the x and y labels
     plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
     plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
-    plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+    plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
     plt.style.use('seaborn-muted')
+    plt.figure(figsize=(6,4))
+    if ax is None:
+        ax = plt.gca()
+    spine_alpha = 0.3
+    ax.spines['right'].set_alpha(spine_alpha)
+    ax.spines['bottom'].set_alpha(spine_alpha)
+    ax.spines['left'].set_alpha(spine_alpha)
+    ax.spines['top'].set_alpha(spine_alpha)
+    ax.grid(alpha=0.25)
+    plt.tight_layout()
+
+
+def prep_plt_dataset_size(ax=None):
+    SMALL_SIZE = 15
+    MEDIUM_SIZE = 18
+    LARGE_SIZE = 24
+    plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+    plt.rc('axes', labelsize=LARGE_SIZE)    # fontsize of the x and y labels
+    plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
+    plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
+    plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
+    # plt.style.use('seaborn-muted')
     plt.figure(figsize=(6,4))
     if ax is None:
         ax = plt.gca()
