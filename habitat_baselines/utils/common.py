@@ -85,7 +85,31 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     Returns:
         multiplicative factor that decreases param value linearly
     """
+
     return 1 - (epoch / float(total_num_updates))
+
+
+def linear_warmup(epoch: int, start_update: int, max_updates: int, start_lr: int, end_lr: int) -> float:
+    r"""Returns a multiplicative factor for linear value decay
+
+    Args:
+        epoch: current epoch number
+        total_num_updates: total number of
+
+    Returns:
+        multiplicative factor that decreases param value linearly
+    """
+    if epoch  < start_update:
+        return 1.0
+    
+    if epoch > max_updates:
+        return end_lr
+    pct_step = (epoch - start_update) / (max_updates - start_update)
+    step_lr = (end_lr - start_lr) * pct_step + start_lr
+    if step_lr > end_lr:
+        step_lr = end_lr
+    # logger.info("{}, {}, {}, {}, {}, {}".format(epoch, start_update, max_updates, start_lr, end_lr, step_lr))
+    return step_lr
 
 
 def _to_tensor(v: Union[Tensor, ndarray]) -> torch.Tensor:

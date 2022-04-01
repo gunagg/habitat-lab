@@ -1,18 +1,18 @@
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il_rl_ft.yaml"
 CMD_TRAILING_OPTS: ["TASK_CONFIG.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS", "50000"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward_v2_2node_ft_5k/seed_1/"
+TENSORBOARD_DIR: "tb/objectnav/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/v2_lr_group_policy_warmup/seed_1/"
 ENV_NAME: "ObjectNavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward_v2_2node_ft_5k/seed_1/"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/v2_lr_group_policy_warmup/seed_1/"
 NUM_PROCESSES: 8
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward_v2_2node_ft_5k/seed_1/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/v2_lr_group_policy_warmup/seed_1/"
 TRAINER_NAME: "ddppo"
 SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
-NUM_UPDATES: 25000
+NUM_UPDATES: 5000
 LOG_INTERVAL: 10
 CHECKPOINT_INTERVAL: 500
 EVAL:
@@ -61,6 +61,7 @@ RL:
     train_encoder: True
     # Whether or not to reset the critic linear layer
     reset_critic: True
+    downsample_critic: 1
 
     # Model parameters
     backbone: resnet50
@@ -68,11 +69,13 @@ RL:
     num_recurrent_layers: 2
 
   Finetune:
+    finetune: True
     freeze_encoders: True
     freeze_actor: True
     freeze_policy: True
 
-    start_actor_finetuning_at: 5000
+    start_actor_finetuning_at: 500
+    actor_lr_warmup_update: 1000
 
 
 MODEL:

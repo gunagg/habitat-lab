@@ -255,7 +255,7 @@ class ObjectNavRLEnv(NavRLEnv):
 
     def get_reward_range(self):
         old_low, old_hi = super().get_reward_range()
-        return old_low, old_hi + self._rl_config.COVERAGE_REWARD
+        return old_low, old_hi
 
     def get_reward(self, observations):
         reward = 0

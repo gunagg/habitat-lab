@@ -43,7 +43,7 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
-from habitat_baselines.utils.common import batch_obs, linear_decay
+from habitat_baselines.utils.common import batch_obs, linear_decay, linear_warmup
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.objectnav.models.rednet import load_rednet
 
@@ -120,6 +120,7 @@ class DDPPOTrainer(PPOTrainer):
         logger.info("Freeze encoder")
         if hasattr(self.config.RL, "Finetune"):
             logger.info("Start Freeze encoder")
+            self.warm_up_critic = True
             if self.config.RL.Finetune.freeze_encoders:
                 for param in self.actor_critic.net.depth_encoder.parameters():
                     param.requires_grad_(False)
@@ -130,12 +131,18 @@ class DDPPOTrainer(PPOTrainer):
                     param.requires_grad_(False)
 
             self.actor_finetuning_update = self.config.RL.Finetune.start_actor_finetuning_at
+            self.actor_lr_warmup_update = self.config.RL.Finetune.actor_lr_warmup_update
             if self.config.RL.Finetune.freeze_actor:
                 for param in self.actor_critic.action_distribution.parameters():
                     param.requires_grad_(False)
+
         if self.config.RL.DDPPO.reset_critic:
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
+            
+            downsample_factor = self.config.RL.DDPPO.downsample_critic
+            self.actor_critic.critic.fc.weight = nn.Parameter(self.actor_critic.critic.fc.weight * downsample_factor, requires_grad=self.actor_critic.critic.fc.weight.requires_grad)
+            self.actor_critic.critic.fc.bias = nn.Parameter(self.actor_critic.critic.fc.bias * downsample_factor, requires_grad=self.actor_critic.critic.fc.bias.requires_grad)
 
         self.agent = DDPPO(
             actor_critic=self.actor_critic,
@@ -148,6 +155,7 @@ class DDPPOTrainer(PPOTrainer):
             eps=ppo_cfg.eps,
             max_grad_norm=ppo_cfg.max_grad_norm,
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
+            finetune=self.warm_up_critic,
         )
 
     @profiling_wrapper.RangeContext("train")
@@ -258,9 +266,23 @@ class DDPPOTrainer(PPOTrainer):
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
         )
+        current_episode_values = torch.zeros(
+            self.envs.num_envs, 1, device=self.device
+        )
+        current_episode_gae = dict(
+            steps=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            sum=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            min=torch.ones(self.envs.num_envs, 1, device=self.device) * 100.0,
+            max=torch.ones(self.envs.num_envs, 1, device=self.device) * -100.0,
+        )
         running_episode_stats = dict(
             count=torch.zeros(self.envs.num_envs, 1, device=self.device),
             reward=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            values=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            values_gae=torch.zeros(self.envs.num_envs, 1, device=self.device), 
+            values_mean=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            values_min=torch.zeros(self.envs.num_envs, 1, device=self.device), 
+            values_max=torch.zeros(self.envs.num_envs, 1, device=self.device), 
         )
         window_episode_stats: DefaultDict[str, deque] = defaultdict(
             lambda: deque(maxlen=ppo_cfg.reward_window_size)
@@ -276,7 +298,16 @@ class DDPPOTrainer(PPOTrainer):
 
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
-            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
+            # lr_lambda=[
+            #     lambda x: 1,  # type: ignore
+            #     lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.PPO.lr),  # type: ignore
+            #     lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.PPO.lr),  # type: ignore
+            # ]
+            lr_lambda=[
+                lambda x: 1,
+                lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.PPO.lr),
+                lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.PPO.lr),
+            ]
         )
 
         interrupted_state = load_interrupted_state()
@@ -309,6 +340,9 @@ class DDPPOTrainer(PPOTrainer):
 
                 if ppo_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore
+                    for p in self.agent.optimizer.param_groups:
+                        logger.info("param group: {}".format(p['lr']))
+                    logger.info("\n")
 
                 if ppo_cfg.use_linear_clip_decay:
                     self.agent.clip_param = ppo_cfg.clip_param * linear_decay(
@@ -347,7 +381,12 @@ class DDPPOTrainer(PPOTrainer):
                     for param in self.actor_critic.action_distribution.parameters():
                         param.requires_grad_(True)
                     for param in self.actor_critic.net.state_encoder.parameters():
-                        param.requires_grad_(True)
+                        param.requires_grad_(True)                    
+                    for i, param_group in enumerate(self.agent.optimizer.param_groups):
+                        param_group["eps"] = self.config.RL.PPO.eps
+                        if i > 0:
+                            lr_scheduler.base_lrs[i] = 1.0
+
                     if self.world_rank == 0:
                         logger.info("Start actor finetuning at: {}".format(self.current_update))
 
@@ -367,7 +406,8 @@ class DDPPOTrainer(PPOTrainer):
                         delta_env_time,
                         delta_steps,
                     ) = self._collect_rollout_step(
-                        rollouts, current_episode_reward, running_episode_stats
+                        rollouts, current_episode_reward,
+                        running_episode_stats, current_episode_values
                     )
                     pth_time += delta_pth_time
                     env_time += delta_env_time
@@ -393,7 +433,7 @@ class DDPPOTrainer(PPOTrainer):
                     value_loss,
                     action_loss,
                     dist_entropy,
-                ) = self._update_agent(ppo_cfg, rollouts)
+                ) = self._update_agent(ppo_cfg, rollouts, current_episode_gae, running_episode_stats)
                 pth_time += delta_pth_time
 
                 stats_ordering = sorted(running_episode_stats.keys())
@@ -429,9 +469,19 @@ class DDPPOTrainer(PPOTrainer):
                     }
                     deltas["count"] = max(deltas["count"], 1.0)
 
+                    lrs = {}
+                    for i, param_group in enumerate(self.agent.optimizer.param_groups):
+                        lrs["pg_{}".format(i)] = param_group["lr"]
+
                     writer.add_scalar(
                         "reward",
                         deltas["reward"] / deltas["count"],
+                        count_steps,
+                    )
+
+                    writer.add_scalars(
+                        "learning_rate",
+                        lrs,
                         count_steps,
                     )
 

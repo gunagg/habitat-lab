@@ -5,9 +5,9 @@
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
 #SBATCH --signal=USR1@300
-#SBATCH --partition=short
+#SBATCH --partition=debug
 #SBATCH --qos=ram-special
-#SBATCH --constraint=a40
+#SBATCH --constraint=rtx_6000
 #SBATCH --output=slurm_logs/ddppo-il-rl-%j.out
 #SBATCH --error=slurm_logs/ddppo-il-rl-%j.err
 #SBATCH --requeue

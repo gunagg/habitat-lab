@@ -369,9 +369,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         objects = self.habitat_config.scene_state[0]["objects"]
         obj_templates_mgr = self.get_object_template_manager()
 
-        # self.remove_all_objects()
-        # self.recompute_navmesh(self.pathfinder, self.navmesh_settings, True)
-
         self.sim_object_to_objid_mapping = {}
         self.objid_to_sim_object_mapping = {}
         self.obj_sem_id_to_sem_category_mapping = {}

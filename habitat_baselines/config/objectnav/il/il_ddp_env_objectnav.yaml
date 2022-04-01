@@ -6,22 +6,22 @@ TRAINER_NAME: "ddp-objectnav-bc-env"
 ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
-VIDEO_OPTION: []
-TENSORBOARD_DIR: "tb/objectnav/objectnav_mp3d_thda_60k/sem_seg_pred/seed_1/ckpt_23/"
-VIDEO_DIR: "video_dir/objectnav/objectnav_mp3d_thda_60k/sem_seg_pred/seed_1/ckpt_23/"
+VIDEO_OPTION: ["disk"]
+TENSORBOARD_DIR: "tb/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/"
+VIDEO_DIR: "video_dir/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_mp3d_thda_60k/sem_seg_pred/seed_1/ckpt.23.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/ckpt.24.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 8
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_mp3d_thda_60k/sem_seg_pred/seed_1/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 500
 SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
-RESULTS_DIR: "data/objectnav/results/objectnav_mp3d_thda_60k/sem_seg_pred/{split}/{type}"
+RESULTS_DIR: "data/objectnav/results/objectnav_hm3d_hd_10k/sem_seg_pred/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
@@ -29,7 +29,7 @@ EVAL:
   SPLIT: "val"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/objectnav_mp3d_thda_60k/sem_seg_pred/seed_1/val_success_sampled_replay/evaluation_meta_35k_3.json"
+  evaluation_meta_file: "tb/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/ckpt_24_splits/val_success_sampled_replay/evaluation_meta_35k_3.json"
 NUM_UPDATES: 16000
 
 IL:
@@ -41,40 +41,27 @@ IL:
     clip_param: 0.2
     num_mini_batch: 2
     max_grad_norm: 0.2
-    num_steps: 128
+    num_steps: 64
     use_linear_clip_decay: False
     use_linear_lr_decay: True
     reward_window_size: 50
     sync_frac: 0.6
-  # OBS_TRANSFORMS:
-  #   ENABLED_TRANSFORMS: RGBRandomNoise
-  #   RGBRandomNoise:
-  #     MEAN: 0.7681586
-  #     STD: 0.69570744
 
 RL:
   SUCCESS_REWARD: 2.5
   SLACK_REWARD: -1e-3
 
 MODEL:
-  ablate_depth: False
-  ablate_rgb: False
-  num_recurrent_layers: 2
-  rnn_type: "GRU"
-  backbone: "resnet18"
-  resnet_baseplanes: 32
+  is_hm3d_goal: True
   normalize_visual_inputs: False
-  force_blind_policy: False
   embed_sge: True
   embed_goal_seg: False
-  rgbd: True
   NO_VISION: False
   USE_SEMANTICS: True
   USE_PRED_SEMANTICS: True
   SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
   SEMANTIC_ENCODER:
     rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_40_v2_vince.pth"
-    # rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"
     cnn_type: "ResnetSemSegEncoder"
     output_size: 256
     backbone: "resnet18"

@@ -612,12 +612,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
-        with torch.no_grad():
-            if self.semantic_predictor is not None:
-                batch["pred_semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
-                if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
-                    batch["pred_semantic"] = batch["semantic"] - 1
-
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
         )
@@ -680,7 +674,10 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
-                batch["semantic"] = batch["pred_semantic"]
+                if self.semantic_predictor is not None:
+                    batch["semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
+                    if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
+                        batch["semantic"] = batch["semantic"] - 1
                 (
                     logits,
                     test_recurrent_hidden_states,
@@ -718,11 +715,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             batch = batch_obs(observations, device=self.device)
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
-            with torch.no_grad():
-                if self.semantic_predictor is not None:
-                    batch["pred_semantic"] = self.semantic_predictor(batch["rgb"], batch["depth"])
-                    if self.config.MODEL.SEMANTIC_ENCODER.is_thda:
-                        batch["pred_semantic"] = batch["pred_semantic"] - 1
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -765,6 +757,7 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     current_episode_reward[i] = 0
                     current_episode_steps[i] = 0
                     current_episode_cross_entropy[i] = 0
+                    logger.info("Episode: {}, Success: {}, SPL: {}".format(current_episodes[i].episode_id, episode_stats["success"], episode_stats["spl"]))
 
                     # ep_metrics = copy.deepcopy(episode_stats)
                     # if "room_visitation_map" in infos[i]:
@@ -871,10 +864,10 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             step_id,
         )
 
-        write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
-
         metrics = {k: v for k, v in aggregated_stats.items() if k not in ["reward", "pred_reward"]}
         if len(metrics) > 0:
             writer.add_scalars("eval_metrics", metrics, step_id)
+
+        write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
 
         self.envs.close()

@@ -15,6 +15,7 @@ from habitat.tasks.nav.nav import (
 from habitat.tasks.nav.object_nav_task import (
     ObjectGoalSensor,
     task_cat2mpcat40,
+    task_cat2hm3dcat40,
     mapping_mpcat40_to_goal21
 )
 from habitat_baselines.rearrangement.models.encoders.resnet_encoders import (
@@ -185,8 +186,12 @@ class SemSegSeqNet(Net):
             rnn_input_size += self.prev_action_embedding.embedding_dim
 
         self.embed_sge = model_config.embed_sge
+        self.is_hm3d_goal = model_config.is_hm3d_goal
         if self.embed_sge:
             self.task_cat2mpcat40 = torch.tensor(task_cat2mpcat40, device=device)
+            if self.is_hm3d_goal:
+                logger.info("\nSetting up HM3D goal map")
+                self.task_cat2mpcat40 = torch.tensor(task_cat2hm3dcat40, device=device)
             self.mapping_mpcat40_to_goal = np.zeros(
                 max(
                     max(mapping_mpcat40_to_goal21.keys()) + 1,

@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=ddp_onav
-#SBATCH --gres gpu:8
+#SBATCH --job-name=onav_ilrl
+#SBATCH --gres gpu:4
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
-#SBATCH --ntasks-per-node 8
+#SBATCH --ntasks-per-node 4
 #SBATCH --signal=USR1@300
-#SBATCH --partition=long
-#SBATCH --constraint=rtx_6000
+#SBATCH --partition=long,user-overcap
+#SBATCH --constraint=a40
 #SBATCH --qos=ram-special
 #SBATCH --output=slurm_logs/ddppo-il-rl-%j.out
 #SBATCH --error=slurm_logs/ddppo-il-rl-%j.err

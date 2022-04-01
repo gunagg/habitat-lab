@@ -1,13 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=ddp_onav
-#SBATCH --gres gpu:1
-#SBATCH --nodes 1
+#SBATCH --gres gpu:8
+#SBATCH --nodes 2
 #SBATCH --cpus-per-task 6
-#SBATCH --ntasks-per-node 1
+#SBATCH --ntasks-per-node 8
 #SBATCH --signal=USR1@300
-#SBATCH --partition=short
-#SBATCH --qos=ram-special
-#SBATCH --constraint=rtx_6000
+#SBATCH --partition=long
+#SBATCH --constraint=a40
 #SBATCH --output=slurm_logs/ddppo-%j.out
 #SBATCH --error=slurm_logs/ddppo-%j.err
 #SBATCH --requeue

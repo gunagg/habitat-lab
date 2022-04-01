@@ -12,6 +12,7 @@ from typing import Any, DefaultDict, Dict, List, Optional
 
 import numpy as np
 import torch
+from torch import nn as nn
 import tqdm
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -112,6 +113,7 @@ class PPOTrainer(BaseRLTrainer):
         logger.info("Freeze encoder")
         if hasattr(self.config.RL, "Finetune"):
             logger.info("Start Freeze encoder")
+            self.warm_up_critic = True
             if self.config.RL.Finetune.freeze_encoders:
                 for param in self.actor_critic.net.depth_encoder.parameters():
                     param.requires_grad_(False)
@@ -122,6 +124,7 @@ class PPOTrainer(BaseRLTrainer):
                     param.requires_grad_(False)
 
             self.actor_finetuning_update = self.config.RL.Finetune.start_actor_finetuning_at
+            self.actor_lr_warmup_update = self.config.RL.Finetune.actor_lr_warmup_update
             if self.config.RL.Finetune.freeze_actor:
                 for param in self.actor_critic.action_distribution.parameters():
                     param.requires_grad_(False)
@@ -137,6 +140,7 @@ class PPOTrainer(BaseRLTrainer):
             eps=ppo_cfg.eps,
             max_grad_norm=ppo_cfg.max_grad_norm,
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
+            finetune=self.warm_up_critic,
         )
 
     @profiling_wrapper.RangeContext("save_checkpoint")
@@ -217,7 +221,7 @@ class PPOTrainer(BaseRLTrainer):
 
     @profiling_wrapper.RangeContext("_collect_rollout_step")
     def _collect_rollout_step(
-        self, rollouts, current_episode_reward, running_episode_stats
+        self, rollouts, current_episode_reward, running_episode_stats, current_episode_values
     ):
         pth_time = 0.0
         env_time = 0.0
@@ -282,8 +286,10 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         current_episode_reward += rewards
+        current_episode_values += values.to(current_episode_values.device)
         running_episode_stats["reward"] += (1 - masks) * current_episode_reward  # type: ignore
         running_episode_stats["count"] += 1 - masks  # type: ignore
+        running_episode_stats["values"] += (1 - masks) * current_episode_values  # type: ignore
         for k, v_k in self._extract_scalars_from_infos(infos).items():
             v = torch.tensor(
                 v_k, dtype=torch.float, device=current_episode_reward.device
@@ -296,6 +302,7 @@ class PPOTrainer(BaseRLTrainer):
             running_episode_stats[k] += (1 - masks) * v  # type: ignore
 
         current_episode_reward *= masks
+        current_episode_values *= masks
 
         if self._static_encoder:
             with torch.no_grad():
@@ -316,7 +323,7 @@ class PPOTrainer(BaseRLTrainer):
         return pth_time, env_time, self.envs.num_envs
 
     @profiling_wrapper.RangeContext("_update_agent")
-    def _update_agent(self, ppo_cfg, rollouts):
+    def _update_agent(self, ppo_cfg, rollouts, current_episode_gae, running_episode_stats):
         t_update_model = time.time()
         with torch.no_grad():
             last_observation = {
@@ -329,9 +336,29 @@ class PPOTrainer(BaseRLTrainer):
                 rollouts.masks[rollouts.step],
             ).detach()
 
-        rollouts.compute_returns(
+        values_gae = rollouts.compute_returns(
             next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
         )
+
+        prev_i = 0
+        for i in range(len(values_gae)):
+            current_episode_gae["sum"] += values_gae[i]
+            current_episode_gae["steps"] += 1
+            current_episode_gae["max"].copy_(torch.maximum(values_gae[i], current_episode_gae["max"]))
+            current_episode_gae["min"].copy_(torch.minimum(values_gae[i], current_episode_gae["min"]))
+            running_episode_stats["values_gae"] += (1 - rollouts.masks[i]) * current_episode_gae["sum"] # type: ignore
+            running_episode_stats["values_mean"] += (1 - rollouts.masks[i]) * current_episode_gae["sum"] / current_episode_gae["steps"]  # type: ignore
+            running_episode_stats["values_min"] += (1 - rollouts.masks[i]) * current_episode_gae["min"] # type: ignore
+            running_episode_stats["values_max"] += (1 - rollouts.masks[i]) * current_episode_gae["max"]  # type: ignore
+            # if rollouts.masks[i] == 0 and (i - prev_i) > 0:
+            #     logger.info("i: {}".format(i))
+            #     logger.info("pred episode ends: {},  {}, {}".format(current_episode_gae["sum"] / current_episode_gae["steps"] , current_episode_gae["max"], current_episode_gae["min"]))
+            #     logger.info("episode ends: {},  {}, {}".format(sum(values_gae[prev_i:i]) / (i - prev_i +1), max(values_gae[prev_i:i]), min(values_gae[prev_i:i])))
+
+            current_episode_gae["sum"] *= rollouts.masks[i]
+            current_episode_gae["steps"] *= rollouts.masks[i]
+            current_episode_gae["max"][rollouts.masks[i] == 0] = -100.0
+            current_episode_gae["min"][rollouts.masks[i] == 0] = 100.0
 
         value_loss, action_loss, dist_entropy = self.agent.update(rollouts)
 
@@ -411,9 +438,21 @@ class PPOTrainer(BaseRLTrainer):
         observations = None
 
         current_episode_reward = torch.zeros(self.envs.num_envs, 1)
+        current_episode_values = torch.zeros(self.envs.num_envs, 1)
+        current_episode_gae = dict(
+            steps=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            sum=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            min=torch.ones(self.envs.num_envs, 1, device=self.device) * 100.0,
+            max=torch.ones(self.envs.num_envs, 1, device=self.device) * -100.0,
+        )
         running_episode_stats = dict(
             count=torch.zeros(self.envs.num_envs, 1),
             reward=torch.zeros(self.envs.num_envs, 1),
+            values=torch.zeros(self.envs.num_envs, 1),
+            values_gae=torch.zeros(self.envs.num_envs, 1, device=self.device), 
+            values_mean=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            values_min=torch.zeros(self.envs.num_envs, 1, device=self.device), 
+            values_max=torch.zeros(self.envs.num_envs, 1, device=self.device), 
         )
         window_episode_stats: DefaultDict[str, deque] = defaultdict(
             lambda: deque(maxlen=ppo_cfg.reward_window_size)
@@ -460,6 +499,9 @@ class PPOTrainer(BaseRLTrainer):
                         )
                     )
 
+                if self.current_update > self.actor_finetuning_update:
+                    lr_scheduler.step()
+
                 profiling_wrapper.range_push("rollouts loop")
                 for _step in range(ppo_cfg.num_steps):
                     (
@@ -467,7 +509,8 @@ class PPOTrainer(BaseRLTrainer):
                         delta_env_time,
                         delta_steps,
                     ) = self._collect_rollout_step(
-                        rollouts, current_episode_reward, running_episode_stats
+                        rollouts, current_episode_reward,
+                        running_episode_stats, current_episode_values
                     )
                     pth_time += delta_pth_time
                     env_time += delta_env_time
@@ -479,7 +522,7 @@ class PPOTrainer(BaseRLTrainer):
                     value_loss,
                     action_loss,
                     dist_entropy,
-                ) = self._update_agent(ppo_cfg, rollouts)
+                ) = self._update_agent(ppo_cfg, rollouts, current_episode_gae, running_episode_stats)
                 pth_time += delta_pth_time
 
                 for k, v in running_episode_stats.items():
@@ -641,6 +684,7 @@ class PPOTrainer(BaseRLTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()
+        step = 0
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -649,7 +693,7 @@ class PPOTrainer(BaseRLTrainer):
 
             with torch.no_grad():
                 (
-                    _,
+                    value,
                     actions,
                     _,
                     test_recurrent_hidden_states,
@@ -660,6 +704,12 @@ class PPOTrainer(BaseRLTrainer):
                     not_done_masks,
                     deterministic=False,
                 )
+                writer.add_scalars(
+                    "eval_values",
+                    {"values_{}".format(current_episodes[0].episode_id): value},
+                    step,
+                )
+                step += 1
 
                 prev_actions.copy_(actions)  # type: ignore
 
@@ -727,6 +777,7 @@ class PPOTrainer(BaseRLTrainer):
                         )
 
                         rgb_frames[i] = []
+                    step = 0
 
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
