@@ -43,7 +43,7 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
-from habitat_baselines.utils.common import batch_obs, linear_decay, linear_warmup
+from habitat_baselines.utils.common import batch_obs, linear_decay, linear_warmup, critic_linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
 from habitat_baselines.objectnav.models.rednet import load_rednet
 
@@ -132,17 +132,19 @@ class DDPPOTrainer(PPOTrainer):
 
             self.actor_finetuning_update = self.config.RL.Finetune.start_actor_finetuning_at
             self.actor_lr_warmup_update = self.config.RL.Finetune.actor_lr_warmup_update
+            self.critic_lr_decay_update = self.config.RL.Finetune.critic_lr_decay_update
             if self.config.RL.Finetune.freeze_actor:
                 for param in self.actor_critic.action_distribution.parameters():
                     param.requires_grad_(False)
 
         if self.config.RL.DDPPO.reset_critic:
-            nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
-            nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
+            pass
+            # nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
+            # nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
             
-            downsample_factor = self.config.RL.DDPPO.downsample_critic
-            self.actor_critic.critic.fc.weight = nn.Parameter(self.actor_critic.critic.fc.weight * downsample_factor, requires_grad=self.actor_critic.critic.fc.weight.requires_grad)
-            self.actor_critic.critic.fc.bias = nn.Parameter(self.actor_critic.critic.fc.bias * downsample_factor, requires_grad=self.actor_critic.critic.fc.bias.requires_grad)
+            # downsample_factor = self.config.RL.DDPPO.downsample_critic
+            # self.actor_critic.critic.fc.weight = nn.Parameter(self.actor_critic.critic.fc.weight * downsample_factor, requires_grad=self.actor_critic.critic.fc.weight.requires_grad)
+            # self.actor_critic.critic.fc.bias = nn.Parameter(self.actor_critic.critic.fc.bias * downsample_factor, requires_grad=self.actor_critic.critic.fc.bias.requires_grad)
 
         self.agent = DDPPO(
             actor_critic=self.actor_critic,
@@ -298,15 +300,10 @@ class DDPPOTrainer(PPOTrainer):
 
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
-            # lr_lambda=[
-            #     lambda x: 1,  # type: ignore
-            #     lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.PPO.lr),  # type: ignore
-            #     lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.PPO.lr),  # type: ignore
-            # ]
             lr_lambda=[
-                lambda x: 1,
-                lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.PPO.lr),
-                lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.PPO.lr),
+                lambda x: critic_linear_decay(x, self.actor_finetuning_update, self.critic_lr_decay_update, self.config.RL.PPO.lr, self.config.RL.Finetune.policy_ft_lr),
+                lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.Finetune.policy_ft_lr),
+                lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.Finetune.policy_ft_lr),
             ]
         )
 
@@ -340,9 +337,9 @@ class DDPPOTrainer(PPOTrainer):
 
                 if ppo_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore
-                    for p in self.agent.optimizer.param_groups:
-                        logger.info("param group: {}".format(p['lr']))
-                    logger.info("\n")
+                    # for p in self.agent.optimizer.param_groups:
+                    #     logger.info("param group: {}".format(p['lr']))
+                    # logger.info("\n")
 
                 if ppo_cfg.use_linear_clip_decay:
                     self.agent.clip_param = ppo_cfg.clip_param * linear_decay(
@@ -384,8 +381,7 @@ class DDPPOTrainer(PPOTrainer):
                         param.requires_grad_(True)                    
                     for i, param_group in enumerate(self.agent.optimizer.param_groups):
                         param_group["eps"] = self.config.RL.PPO.eps
-                        if i > 0:
-                            lr_scheduler.base_lrs[i] = 1.0
+                        lr_scheduler.base_lrs[i] = 1.0
 
                     if self.world_rank == 0:
                         logger.info("Start actor finetuning at: {}".format(self.current_update))
@@ -525,6 +521,13 @@ class DDPPOTrainer(PPOTrainer):
                                     for k, v in deltas.items()
                                     if k != "count"
                                 ),
+                            )
+                        )
+                        logger.info(
+                            "update: {}\tLR: {}\tPG_LR: {}".format(
+                                update,
+                                lr_scheduler.get_lr(),
+                                [param_group["lr"] for param_group in self.agent.optimizer.param_groups],
                             )
                         )
 

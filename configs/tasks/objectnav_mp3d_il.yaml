@@ -69,7 +69,7 @@ SEED: 103
 DATASET:
   TYPE: ObjectNav-v2
   SPLIT: train
-  DATA_PATH: "data/datasets/objectnav_hm3d_hd/{split}/{split}.json.gz"
+  DATA_PATH: "data/datasets/objectnav_hm3d_v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
-  # CONTENT_SCENES: ["QUCTc6BB5sX", "X7HyMhZNoso", "Z6MFQCViBuw"]
+  # CONTENT_SCENES: ["1S7LAXRdDqK"]
 

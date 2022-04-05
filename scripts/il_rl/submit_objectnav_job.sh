@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=onav_ilrl
-#SBATCH --gres gpu:4
+#SBATCH --gres gpu:8
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
-#SBATCH --ntasks-per-node 4
+#SBATCH --ntasks-per-node 8
 #SBATCH --signal=USR1@300
 #SBATCH --partition=long,user-overcap
 #SBATCH --constraint=a40

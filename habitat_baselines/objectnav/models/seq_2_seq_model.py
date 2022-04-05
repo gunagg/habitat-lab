@@ -226,6 +226,8 @@ class ObjecNavRGBDPolicy(Policy):
                 **kwargs,
             ),
             action_space.n,
+            mlp_critic=model_config.CRITIC.mlp_critic,
+            critic_hidden_dim=model_config.CRITIC.hidden_dim,
         )
 
     @classmethod

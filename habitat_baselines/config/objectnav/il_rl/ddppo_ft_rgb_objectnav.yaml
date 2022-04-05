@@ -1,18 +1,18 @@
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il_rl_ft.yaml"
 CMD_TRAILING_OPTS: ["TASK_CONFIG.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS", "50000"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/v2_lr_group_policy_warmup/seed_1/"
+TENSORBOARD_DIR: "tb/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/policy_warmup_critic_decay_mlp/train_split/seed_2/"
 ENV_NAME: "ObjectNavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/v2_lr_group_policy_warmup/seed_1/"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/policy_warmup_critic_decay_mlp/train_split/seed_2/"
 NUM_PROCESSES: 8
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/v2_lr_group_policy_warmup/seed_1/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/policy_warmup_critic_decay_mlp/train_split/seed_2/"
 TRAINER_NAME: "ddppo"
 SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
-NUM_UPDATES: 5000
+NUM_UPDATES: 20000
 LOG_INTERVAL: 10
 CHECKPOINT_INTERVAL: 500
 EVAL:
@@ -40,7 +40,7 @@ RL:
     gamma: 0.99
     tau: 0.95
     use_linear_clip_decay: False
-    use_linear_lr_decay: False
+    use_linear_lr_decay: True
     reward_window_size: 50
 
     use_normalized_advantage: False
@@ -74,11 +74,17 @@ RL:
     freeze_actor: True
     freeze_policy: True
 
-    start_actor_finetuning_at: 500
-    actor_lr_warmup_update: 1000
+    policy_ft_lr: 5.0e-5
+
+    start_actor_finetuning_at: 1500
+    actor_lr_warmup_update: 3000
+    critic_lr_decay_update: 3000
 
 
 MODEL:
+  CRITIC:
+    mlp_critic: True
+    hidden_dim: 512
   NO_VISION: False
   RGB_ENCODER:
     cnn_type: "ResnetRGBEncoder"

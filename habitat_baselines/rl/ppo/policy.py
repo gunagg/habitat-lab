@@ -22,7 +22,7 @@ from habitat_baselines.utils.common import CategoricalNet
 
 
 class Policy(nn.Module, metaclass=abc.ABCMeta):
-    def __init__(self, net, dim_actions):
+    def __init__(self, net, dim_actions, mlp_critic=False, critic_hidden_dim=512):
         super().__init__()
         self.net = net
         self.dim_actions = dim_actions
@@ -30,7 +30,10 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
         self.action_distribution = CategoricalNet(
             self.net.output_size, self.dim_actions
         )
-        self.critic = CriticHead(self.net.output_size)
+        if not mlp_critic:
+            self.critic = CriticHead(self.net.output_size)
+        else:
+            self.critic = MLPCriticHead(self.net.output_size, critic_hidden_dim)
 
     def forward(self, *x):
         raise NotImplementedError
@@ -90,6 +93,24 @@ class CriticHead(nn.Module):
         self.fc = nn.Linear(input_size, 1)
         nn.init.orthogonal_(self.fc.weight)
         nn.init.constant_(self.fc.bias, 0)
+
+    def forward(self, x):
+        return self.fc(x)
+
+
+class MLPCriticHead(nn.Module):
+    def __init__(self, input_size, hidden_dim=512):
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(input_size, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim,  1),
+        )
+        nn.init.orthogonal_(self.fc[0].weight)
+        nn.init.constant_(self.fc[0].bias, 0)
+
+        nn.init.orthogonal_(self.fc[2].weight)
+        nn.init.constant_(self.fc[2].bias, 0)
 
     def forward(self, x):
         return self.fc(x)

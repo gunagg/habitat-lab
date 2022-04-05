@@ -74,11 +74,17 @@ RL:
     freeze_actor: True
     freeze_policy: True
 
+    policy_ft_lr: 5.5e-5
+
     start_actor_finetuning_at: 10
     actor_lr_warmup_update: 50
+    critic_lr_decay_update: 50
 
 
 MODEL:
+  CRITIC:
+    mlp_critic: True
+    hidden_dim: 512
   NO_VISION: False
   RGB_ENCODER:
     cnn_type: "ResnetRGBEncoder"

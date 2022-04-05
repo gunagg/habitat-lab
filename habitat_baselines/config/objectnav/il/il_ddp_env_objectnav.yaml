@@ -7,14 +7,14 @@ ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/"
-VIDEO_DIR: "video_dir/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/"
+TENSORBOARD_DIR: "tb/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/"
+VIDEO_DIR: "video_dir/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/ckpt.24.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/ckpt.24.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 8
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
@@ -29,7 +29,7 @@ EVAL:
   SPLIT: "val"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_3/ckpt_24_splits/val_success_sampled_replay/evaluation_meta_35k_3.json"
+  evaluation_meta_file: "tb/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/ckpt_24_splits/val_success_sampled_replay/evaluation_meta_35k_3.json"
 NUM_UPDATES: 16000
 
 IL:
