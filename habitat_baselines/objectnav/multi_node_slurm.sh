@@ -7,7 +7,7 @@
 #SBATCH --signal=USR1@300
 #SBATCH --partition=short
 #SBATCH --qos=ram-special
-#SBATCH --constraint=rtx_6000
+#SBATCH --constraint=a40
 #SBATCH --output=slurm_logs/ddppo-%j.out
 #SBATCH --error=slurm_logs/ddppo-%j.err
 #SBATCH --requeue

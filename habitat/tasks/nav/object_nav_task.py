@@ -126,6 +126,8 @@ class ObjectGoalNavEpisode(NavigationEpisode):
     scene_state: Optional[List[SceneState]] = None
     is_thda: Optional[bool] = False
     scene_dataset: Optional[str] = "mp3d"
+    scene_dataset_config: Optional[str] = ""
+    additional_obj_config_paths: Optional[List] = []
 
     @property
     def goals_key(self) -> str:
