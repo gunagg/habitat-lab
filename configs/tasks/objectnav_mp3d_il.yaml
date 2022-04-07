@@ -71,5 +71,4 @@ DATASET:
   SPLIT: train
   DATA_PATH: "data/datasets/objectnav_mp3d_hm3d_80k/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
-  CONTENT_SCENES: ["HxpKQynjfin"] 
 
