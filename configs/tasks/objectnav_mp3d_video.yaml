@@ -65,4 +65,4 @@ DATASET:
   SPLIT: train
   DATA_PATH: "data/datasets/objectnav_mp3d_v2/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
-  #CONTENT_SCENES: ["i5noydFURQK"]
+  # CONTENT_SCENES: ["i5noydFURQK"]

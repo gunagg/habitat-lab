@@ -326,7 +326,6 @@ def run_reference_replay(
             total_reward = 0.0
             episode = env.current_episode
             ep_success = 0
-            replay_data = []
             print("ObjectGoal: {}, category: {}".format(obs["objectgoal"], env.current_episode.object_category))
 
             for data in env.current_episode.reference_replay[step_index:]:
@@ -336,67 +335,25 @@ def run_reference_replay(
                 action_name = env.task.get_action_name(
                     action
                 )
-                observations = env.step(action=action)
 
-                info = env.get_metrics()
-                # sem_obs_gt_goal = get_goal_semantic(torch.Tensor(observations["semantic"]), observations["objectgoal"], task_cat2mpcat40, episode)
+                steps = 1
                 
-                frame = observations_to_image({"rgb": observations["rgb"]}, {})
-                #top_down_frame = observations_to_image({"rgb": observations["rgb"]}, info, top_down_map_only=True)
-                if semantic_predictor is not None:
-                    sem_obs = semantic_predictor(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
-                    
-                    max_sem_id = max(max_sem_id, sem_obs.max().item())
-                    if True: # is_thda:
-                        # print("softmax {}".format(sem_obs.shape))
-                        # sem_obs = F.softmax(sem_obs, 1)
-                        sem_obs = sem_obs - 1
-                        #sem_obs = (torch.max(sem_obs, 1)[1]).float()
-                        h, w, c = observations["rgb"].shape
-                        #print("softmax {} -- {} - {} - {}".format(sem_obs.shape, h, w, c))
-                        idx = mapping_mpcat40_to_goal[
-                            task_cat2pred_cat[
-                                torch.Tensor(observations["objectgoal"]).long().squeeze()
-                            ]
-                        ]
-                        sem_obs_goal = (sem_obs == idx)
+                for ii in range(steps):
+                    observations = env.step(action=action)
 
-                    # sem_obs_2 = semantic_predictor_2(torch.Tensor(observations["rgb"]).unsqueeze(0).to(device), torch.Tensor(observations["depth"]).unsqueeze(0).to(device))
-                    # sem_obs_2 = parse_gt_semantic(env._sim, observations["semantic"])
-                    sem_obs_2 = torch.Tensor(observations["semantic"]).long().to(device)
-                    observations["predicted_sem_obs"] = sem_obs
-                    # sem_obs_goal = get_goal_semantic(sem_obs, observations["objectgoal"], task_cat2mpcat40, episode)
-                    # sem_obs_gt_goal = get_goal_semantic(sem_obs_2, observations["objectgoal"], task_cat2mpcat40, episode).detach().cpu()
-                    idx = mapping_mpcat40_to_goal[
-                        task_cat2pred_cat[
-                            torch.Tensor(observations["objectgoal"]).long().squeeze()
-                        ]
-                    ]
-                    sem_obs_gt_goal = (sem_obs_2 == idx)
+                    info = env.get_metrics()
+                    frame = observations_to_image({"rgb": observations["rgb"]}, {})
+                    # frame = append_text_to_image(frame, "Find and go to {}".format(" ".join(env.current_episode.object_category.split("_"))))
 
-                    # if sem_obs_gt_goal.sum() > 0:
-                    #     print(torch.sum(sem_obs_goal))
-                    #     #print(torch.unique((sem_obs_goal.squeeze(-1).squeeze(0) * sem_obs_gt_goal)))
-                    #     print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
-                    # frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
+                    if info["success"]:
+                        ep_success = 1
 
-                #frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
-                replay_data.append(get_agent_pose(env._sim))
+                    observation_list.append(frame)
+                    if action_name == "STOP":
+                        break
 
-                if info["success"]:
-                    ep_success = 1
-
-                observation_list.append(frame)
-                #top_down_obs_list.append(top_down_frame)
-                if action_name == "STOP":
-                    break
-
-                if max_sem_id > 42:
-                    print("found max sem id")
-                    break
                 i+=1
             make_videos([observation_list], output_prefix, ep_id)
-            #make_videos([top_down_obs_list], "{}_top_down".format(output_prefix), ep_id)
             print(info["distance_to_goal"])
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
             if len(episode.reference_replay) <= 500:
@@ -409,19 +366,6 @@ def run_reference_replay(
 
             num_episodes += 1
             avg_ep_length += len(episode.reference_replay)
-
-            ep_metrics = copy.deepcopy(info)
-            if "top_down_map" in ep_metrics.keys():
-                del ep_metrics["top_down_map"]
-            episode_meta.append({
-                "scene_id": env.current_episode.scene_id,
-                "episode_id": env.current_episode.episode_id,
-                "metrics": ep_metrics,
-                "object_category": env.current_episode.object_category
-            })
-
-            meta_f = open(meta_file, "w")
-            meta_f.write(json.dumps(episode_meta))
 
             if num_episodes % 100 == 0:
                 print("Total succes: {}, {}, {}".format(success/num_episodes, success, num_episodes))
@@ -515,8 +459,6 @@ def main():
     cfg.defrost()
     cfg.DATASET.DATA_PATH = args.replay_episode
     cfg.TASK.SUCCESS.SUCCESS_DISTANCE = args.success
-    # cfg.DATASET.CONTENT_SCENES = ['17DRP5sb8fy', '1LXtFkjw3qL', '1pXnuDYAj8r', '29hnd4uzFmX', '5LpN3gDmAk7', '5q7pvUzZiYa', '759xd9YjKW5', '7y3sRwLe3Va', '82sE5b5pLXE', '8WUmhLawc2A', 'B6ByNegPMKs', 'D7G3Y4RVNrH', 'D7N2EKCX4Sj', 'E9uDoFAP3SH']
-    #cfg.DATASET.CONTENT_SCENES = ["8WUmhLawc2A"]
 
     if args.metrics:
         cfg.TASK.MEASUREMENTS = cfg.TASK.MEASUREMENTS + ["ROOM_VISITATION_MAP", "EXPLORATION_METRICS"]
