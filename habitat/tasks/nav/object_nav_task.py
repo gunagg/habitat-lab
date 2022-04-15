@@ -137,6 +137,7 @@ class ObjectGoalNavEpisode(NavigationEpisode):
     scene_dataset: Optional[str] = "mp3d"
     scene_dataset_config: Optional[str] = ""
     additional_obj_config_paths: Optional[List] = []
+    attempts: Optional[int] = 1
 
     @property
     def goals_key(self) -> str:

@@ -1,21 +1,20 @@
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d_il_rl_ft.yaml"
 CMD_TRAILING_OPTS: ["TASK_CONFIG.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS", "50000"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_il_rl_ft/seed_1/"
+TENSORBOARD_DIR: "tb/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/policy_warmup_critic_decay_mlp/sample_split/seed_8/"
 ENV_NAME: "ObjectNavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
-TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav_il_rl_ft/seed_1/"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/policy_warmup_critic_decay_mlp/sample_split/seed_8/"
 NUM_PROCESSES: 8
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav_il_rl_ft/seed_1/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav_il_rl_ft/ddppo/rgbd/sparse_reward/policy_warmup_critic_decay_mlp/sample_split/seed_8/"
 TRAINER_NAME: "ddppo"
-SENSORS: ["DEPTH_SENSOR", "SEMANTIC_SENSOR", "RGB_SENSOR"]
-NUM_UPDATES: 10000
+SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
+NUM_UPDATES: 20000
 LOG_INTERVAL: 10
-CHECKPOINT_INTERVAL: 250
+CHECKPOINT_INTERVAL: 500
 EVAL:
   SPLIT: "val"
 
@@ -24,16 +23,16 @@ RL:
   SLACK_REWARD: -1e-3
 
   POLICY:
-    name: "SemSegILPolicy"
+    name: "ObjecNavRGBDPolicy"
 
   PPO:
     # ppo params
     clip_param: 0.2
-    ppo_epoch: 4
+    ppo_epoch: 2
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.01
-    lr: 2.5e-5
+    lr: 2.5e-4
     eps: 1e-5
     max_grad_norm: 0.2
     num_steps: 64
@@ -41,7 +40,7 @@ RL:
     gamma: 0.99
     tau: 0.95
     use_linear_clip_decay: False
-    use_linear_lr_decay: False
+    use_linear_lr_decay: True
     reward_window_size: 50
 
     use_normalized_advantage: False
@@ -53,52 +52,47 @@ RL:
     # The PyTorch distributed backend to use
     distrib_backend: NCCL
     # Visual encoder backbone
-    pretrained_weights: data/new_checkpoints/objectnav/objectnav_mp3d_35k/sem_seg_pred/seed_1/ckpt_posthoc.24.pth
+    pretrained_weights: data/new_checkpoints/objectnav/objectnav_mp3d_35k/rgbd/seed_1/ckpt.14.pth
     # Initialize with pretrained weights
-    pretrained: True #"data/new_checkpoints/objectnav/objectnav_mp3d_35k/sem_seg_pred/seed_1/ckpt_posthoc.24.pth"
+    pretrained: True 
     # Initialize just the visual encoder backbone with pretrained weights
     pretrained_encoder: False
     # Whether or not the visual encoder backbone will be trained.
     train_encoder: True
     # Whether or not to reset the critic linear layer
     reset_critic: True
+    downsample_critic: 1
 
     # Model parameters
     backbone: resnet50
     rnn_type: LSTM
     num_recurrent_layers: 2
 
+  Finetune:
+    finetune: True
+    freeze_encoders: True
+    freeze_actor: True
+    freeze_policy: True
+
+    policy_ft_lr: 1.5e-5
+
+    start_actor_finetuning_at: 1500
+    actor_lr_warmup_update: 3000
+    start_critic_warmup_at: 1000
+    critic_lr_decay_update: 2000
+
 
 MODEL:
-  ablate_depth: False
-  ablate_rgb: False
-  num_recurrent_layers: 2
-  rnn_type: "GRU"
-  backbone: "resnet18"
-  resnet_baseplanes: 32
-  normalize_visual_inputs: False
-  force_blind_policy: False
-  embed_sge: True
-  embed_goal_seg: False
+  CRITIC:
+    mlp_critic: True
+    hidden_dim: 512
   NO_VISION: False
-  USE_SEMANTICS: True
-  USE_PRED_SEMANTICS: True
-  SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
-  freeze_encoders: True
-  SEMANTIC_ENCODER:
-    rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"
-    cnn_type: "ResnetSemSegEncoder"
-    output_size: 256
-    backbone: "resnet18"
-    train_encoder: True
-    embedding_size: 4
-    is_thda: False
-    num_classes: 40
   RGB_ENCODER:
     cnn_type: "ResnetRGBEncoder"
     output_size: 256
     backbone: "resnet18"
     train_encoder: True
+    normalize_visual_inputs: False
   DEPTH_ENCODER:
     cnn_type: "VlnResnetDepthEncoder"
     output_size: 128
@@ -111,5 +105,3 @@ MODEL:
     num_recurrent_layers: 2
   SEQ2SEQ:
     use_prev_action: True
-  PROGRESS_MONITOR:
-    use: False

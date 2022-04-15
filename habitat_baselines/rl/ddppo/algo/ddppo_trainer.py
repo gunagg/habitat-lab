@@ -133,6 +133,7 @@ class DDPPOTrainer(PPOTrainer):
             self.actor_finetuning_update = self.config.RL.Finetune.start_actor_finetuning_at
             self.actor_lr_warmup_update = self.config.RL.Finetune.actor_lr_warmup_update
             self.critic_lr_decay_update = self.config.RL.Finetune.critic_lr_decay_update
+            self.start_critic_warmup_at = self.config.RL.Finetune.start_critic_warmup_at
             if self.config.RL.Finetune.freeze_actor:
                 for param in self.actor_critic.action_distribution.parameters():
                     param.requires_grad_(False)
@@ -301,7 +302,7 @@ class DDPPOTrainer(PPOTrainer):
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
             lr_lambda=[
-                lambda x: critic_linear_decay(x, self.actor_finetuning_update, self.critic_lr_decay_update, self.config.RL.PPO.lr, self.config.RL.Finetune.policy_ft_lr),
+                lambda x: critic_linear_decay(x, self.start_critic_warmup_at, self.critic_lr_decay_update, self.config.RL.PPO.lr, self.config.RL.Finetune.policy_ft_lr),
                 lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.Finetune.policy_ft_lr),
                 lambda x: linear_warmup(x, self.actor_finetuning_update, self.actor_lr_warmup_update, 0.0, self.config.RL.Finetune.policy_ft_lr),
             ]
@@ -337,9 +338,6 @@ class DDPPOTrainer(PPOTrainer):
 
                 if ppo_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore
-                    # for p in self.agent.optimizer.param_groups:
-                    #     logger.info("param group: {}".format(p['lr']))
-                    # logger.info("\n")
 
                 if ppo_cfg.use_linear_clip_decay:
                     self.agent.clip_param = ppo_cfg.clip_param * linear_decay(
@@ -391,6 +389,12 @@ class DDPPOTrainer(PPOTrainer):
                                 sum(param.numel() if param.requires_grad else 0 for param in self.agent.parameters())
                             )
                         )
+                if self.current_update == self.start_critic_warmup_at:
+                    self.agent.optimizer.param_groups[0]["eps"] = self.config.RL.PPO.eps
+                    lr_scheduler.base_lrs[0] = 1.0
+                    if self.world_rank == 0:
+                        logger.info("Set critic LR at: {}".format(self.current_update))
+
 
                 count_steps_delta = 0
                 self.agent.eval()
@@ -429,6 +433,7 @@ class DDPPOTrainer(PPOTrainer):
                     value_loss,
                     action_loss,
                     dist_entropy,
+                    grad_norm,
                 ) = self._update_agent(ppo_cfg, rollouts, current_episode_gae, running_episode_stats)
                 pth_time += delta_pth_time
 
@@ -442,7 +447,7 @@ class DDPPOTrainer(PPOTrainer):
                     window_episode_stats[k].append(stats[i].clone())
 
                 stats = torch.tensor(
-                    [value_loss, action_loss, count_steps_delta],
+                    [value_loss, action_loss, count_steps_delta, dist_entropy, grad_norm],
                     device=self.device,
                 )
                 distrib.all_reduce(stats)
@@ -495,6 +500,14 @@ class DDPPOTrainer(PPOTrainer):
                         "losses",
                         {k: l for l, k in zip(losses, ["value", "policy"])},
                         count_steps,
+                    )
+
+                    writer.add_scalar(
+                        "entropy", stats[3].item() / self.world_size, count_steps
+                    )
+
+                    writer.add_scalar(
+                        "grad_norm", stats[4].item() / self.world_size, count_steps
                     )
 
                     # log stats

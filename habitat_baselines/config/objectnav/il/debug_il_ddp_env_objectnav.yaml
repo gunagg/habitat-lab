@@ -6,22 +6,22 @@ TRAINER_NAME: "ddp-objectnav-bc-env"
 ENV_NAME: NavRLEnv
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
-VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/ckpt_30/"
-VIDEO_DIR: "video_dir/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/ckpt_30/"
+VIDEO_OPTION: []
+TENSORBOARD_DIR: "tb/objectnav/objectnav_hm3d_hd_20k/sem_seg_pred/seed_2/ckpt_31_hm3d/"
+VIDEO_DIR: "video_dir/objectnav/objectnav_hm3d_hd_20k/sem_seg_pred/seed_2/ckpt_31_hm3d/"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/ckpt.30.pth"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_20k/sem_seg_pred/seed_2/ckpt.31.pth"
 SHOW_TOP_DOWN_MAP: False
 NUM_PROCESSES: 8
-CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/"
+CHECKPOINT_FOLDER: "data/new_checkpoints/objectnav/objectnav_hm3d_hd_20k/sem_seg_pred/seed_2/ckpt_31_hm3d/"
 OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 500
 SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
-RESULTS_DIR: "data/objectnav/results/objectnav_hm3d_hd_10k/sem_seg_pred/{split}/{type}"
+RESULTS_DIR: "data/objectnav/results/objectnav_hm3d_hd_20k/sem_seg_pred/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
@@ -29,7 +29,7 @@ EVAL:
   SPLIT: "val"
   sample: False
   semantic_metrics: False
-  evaluation_meta_file: "tb/objectnav/objectnav_hm3d_hd_10k/sem_seg_pred/seed_2/ckpt_30//ckpt_24_splits/val_success_sampled_replay/evaluation_meta_35k_3.json"
+  evaluation_meta_file: "tb/objectnav/objectnav_hm3d_hd_20k/sem_seg_pred/seed_2/ckpt_31_hm3d/ckpt_31_hm3d_splits/val_success_sampled_replay/evaluation_meta_35k_3.json"
 NUM_UPDATES: 16000
 
 IL:
@@ -52,7 +52,7 @@ RL:
   SLACK_REWARD: -1e-3
 
 MODEL:
-  is_hm3d_goal: False
+  is_hm3d_goal: True
   normalize_visual_inputs: False
   embed_sge: True
   embed_goal_seg: False

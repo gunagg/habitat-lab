@@ -91,6 +91,7 @@ class PPO(nn.Module):
         value_loss_epoch = 0.0
         action_loss_epoch = 0.0
         dist_entropy_epoch = 0.0
+        avg_grad_norm = 0.0
 
         for _e in range(self.ppo_epoch):
             profiling_wrapper.range_push("PPO.update epoch")
@@ -161,6 +162,7 @@ class PPO(nn.Module):
 
                 self.before_backward(total_loss)
                 total_loss.backward()
+                avg_grad_norm += self.get_grad_norm()
                 self.after_backward(total_loss)
 
                 self.before_step()
@@ -178,8 +180,9 @@ class PPO(nn.Module):
         value_loss_epoch /= num_updates
         action_loss_epoch /= num_updates
         dist_entropy_epoch /= num_updates
+        avg_grad_norm /= num_updates
 
-        return value_loss_epoch, action_loss_epoch, dist_entropy_epoch
+        return value_loss_epoch, action_loss_epoch, dist_entropy_epoch, avg_grad_norm
 
     def before_backward(self, loss: Tensor) -> None:
         pass
@@ -194,3 +197,8 @@ class PPO(nn.Module):
 
     def after_step(self) -> None:
         pass
+    
+    def get_grad_norm(self):
+        parameters= [p for p in self.actor_critic.parameters() if p.grad is not None and p.requires_grad]
+        total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), 2).to(self.device) for p in parameters]), 2)
+        return total_norm

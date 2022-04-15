@@ -231,7 +231,7 @@ def save_top_down_map(info):
 
 
 def run_reference_replay(
-    cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None, task_cat2mpcat40=None, sem_seg=False, is_thda=False, meta_file=None
+    cfg, step_env=False, log_action=False, num_episodes=None, output_prefix=None, task_cat2mpcat40=None, sem_seg=False, is_thda=False, meta_file=None, no_video=False
 ):
     instructions = []
     possible_actions = cfg.TASK.POSSIBLE_ACTIONS
@@ -374,14 +374,6 @@ def run_reference_replay(
                         ]
                     ]
                     sem_obs_gt_goal = (sem_obs_2 == idx)
-
-                    # if sem_obs_gt_goal.sum() > 0:
-                    #     print(torch.sum(sem_obs_goal))
-                    #     #print(torch.unique((sem_obs_goal.squeeze(-1).squeeze(0) * sem_obs_gt_goal)))
-                    #     print(torch.unique((sem_obs_goal.detach().cpu() * sem_obs_gt_goal)))
-                    # frame = observations_to_image({"rgb": observations["rgb"], "semantic": sem_obs_goal, "gt_semantic": sem_obs_gt_goal}, info)
-
-                #frame = append_text_to_image(frame, "Find and go to {}".format(episode.object_category))
                 replay_data.append(get_agent_pose(env._sim))
 
                 if info["success"]:
@@ -391,11 +383,13 @@ def run_reference_replay(
                 if action_name == "STOP":
                     break
                 i+=1
-            make_videos([observation_list], output_prefix, ep_id)
+            
+            if not no_video:
+                make_videos([observation_list], output_prefix, ep_id)
 
             print(info["distance_to_goal"])
             print("Total reward for trajectory: {} - {}".format(total_reward, ep_success))
-            if len(episode.reference_replay) <= 500:
+            if len(episode.reference_replay) <= 500 and episode.attempts == 1:
                 success += ep_success
                 spl += info["spl"]
 
@@ -418,6 +412,9 @@ def run_reference_replay(
 
             meta_f = open(meta_file, "w")
             meta_f.write(json.dumps(episode_meta))
+            
+            inst_file = open("instructions.json", "w")
+            inst_file.write(json.dumps(instructions))
 
             if num_episodes % 100 == 0:
                 print("Total succes: {}, {}, {}".format(success/num_episodes, success, num_episodes))
@@ -465,12 +462,6 @@ def run_reference_replay(
         }
         stats_file = open("data/stats/stats.json", "w")
         stats_file.write(json.dumps(stats))
-
-        inst_file = open("instructions.json", "w")
-        inst_file.write(json.dumps(instructions))
-
-        meta_file = open(meta_file, "w")
-        meta_file.write(json.dumps(episode_meta))
         return obs_list
 
 
@@ -506,6 +497,9 @@ def main():
     parser.add_argument(
         "--meta-file", type=str, default="data/stats/objectnav/human_val.json"
     )
+    parser.add_argument(
+        "--no-video", dest="no_video", action="store_true"
+    )
     args = parser.parse_args()
     cfg = config
     cfg.defrost()
@@ -525,7 +519,9 @@ def main():
 
     observations = run_reference_replay(
         cfg, args.step_env, args.log_action,
-        num_episodes=1, output_prefix=args.output_prefix, task_cat2mpcat40=task_cat2mpcat40, sem_seg=args.sem_seg, is_thda=args.is_thda, meta_file=meta_file
+        num_episodes=1, output_prefix=args.output_prefix,
+        task_cat2mpcat40=task_cat2mpcat40, sem_seg=args.sem_seg,
+        is_thda=args.is_thda, meta_file=meta_file, no_video=args.no_video
     )
 
 if __name__ == "__main__":

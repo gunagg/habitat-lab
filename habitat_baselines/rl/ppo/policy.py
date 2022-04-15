@@ -113,7 +113,7 @@ class MLPCriticHead(nn.Module):
         nn.init.constant_(self.fc[2].bias, 0)
 
     def forward(self, x):
-        return self.fc(x)
+        return self.fc(x.detach())
 
 
 @baseline_registry.register_policy

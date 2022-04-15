@@ -74,11 +74,12 @@ RL:
     freeze_actor: True
     freeze_policy: True
 
-    policy_ft_lr: 5.5e-5
+    policy_ft_lr: 1.5e-5
 
-    start_actor_finetuning_at: 10
-    actor_lr_warmup_update: 50
-    critic_lr_decay_update: 50
+    start_actor_finetuning_at: 50
+    actor_lr_warmup_update: 100
+    start_critic_warmup_at: 30
+    critic_lr_decay_update: 100
 
 
 MODEL:

@@ -6,13 +6,13 @@ import glob
 import gzip
 import json
 import os
-import re
 import sys
+import random
 import zipfile
 
 from collections import defaultdict
+from io import TextIOWrapper
 from tqdm import tqdm
-from habitat.datasets.utils import VocabFromText
 from psiturk_dataset.utils.utils import load_dataset
 
 
@@ -25,17 +25,13 @@ total_episodes = 0
 excluded_ep = 0
 task_episode_map = defaultdict(list)
 
-filter_episodes = ['A3O5RKGH6VB19C:33LKR6A5KGNA8WOCNXOVC66E9LJ1TR', 'A2Q6L9LKSNU7EB:3WOKGM4L73JUOFYMVXYW4RHH5IL0OK', 'A3T5UAYFKJBVTA:3KIBXJ1WD7XW155QZQ8ENBWQJIAOK1', 'A3T5UAYFKJBVTA:3U5NZHP4LT5NKFGJ85IWZJLO157HPA', 'AOMFEAWQHU3D8:36W0OB37HYHHYJIPVEGYQHN2DFGZH3', 'A3VBNWON5XOUVS:3A1COHJ8NLY2ENH2MOGLDXQYCV28HC', 'A2TUUIV61CR0C7:3VNL7UK1XHM1YBIKUW3G18A8ASKTFW', 'A3T5UAYFKJBVTA:37TRT2X24SUH7RAZD03GGCWEXTWJBW', 'A1R0689JPSQ3OF:369J354OFFD1AD3393158JI6RZ9G67', 'A3T5UAYFKJBVTA:3Q5ZZ9ZEVQIQYUX7LMFCO0N87MG58X', 'A3T5UAYFKJBVTA:3EQHHY4HQUV5R93P4KR0GD46V5W5GG', 'A2CWA5VQZ6IWMQ:3HMVI3QICLV6PIN6X3BUKNYTOKPY1V', 'A3T5UAYFKJBVTA:33NF62TLXL5I0UETJDG9FFF4KN4JKF', 'A3T5UAYFKJBVTA:382M9COHEJIOSAXDZQ9KOMBAH67EUN', 'APGX2WZ59OWDN:3GNA64GUZG7W4YX37GWCAR881RDQ52', 'A1NSHNH3MNFRGW:3JAOYWH7VK74EOJ2I11X5LEGF4PL9R', 'AOMFEAWQHU3D8:3QRYMNZ7F0KDM3V1SKMT9DJHE5CNTD', 'A2TUUIV61CR0C7:3AZHRG4CU6N52Q50CZE4GOJ6ARP30S', 'A2TUUIV61CR0C7:3KOPY89HMA5C4W6MY7OAYTY290V3JZ', 'A1R0689JPSQ3OF:31N2WW6R9TTWZUKQFHXPJV6AGVRF3P', 'A1R0689JPSQ3OF:3Y4W8Q93L1NJDJ8D8L85EQV8V2HDVM', 'A14O8IA2LCQBDA:3Q8GYXHFER5SAXNK2YVHQMJRXCD5CD', 'A2Q6L9LKSNU7EB:317HQ483I9VNDPFQY8NPV6H812WNIM', 'A272X64FOZFYLB:3M1CVSFP628TA49K2CNTI2OUT5EQA8', 'A2TUUIV61CR0C7:3U5NZHP4LT5NKFGJ85IWZJLO15QHPT', 'AKYXQY5IP7S0Z:3ZDAD0O1T3GIYX95UQ927FAFGJ7TXO', 'A2TUUIV61CR0C7:336KAV9KYSVDE352G7B8P68YGQ3Y2C', 'A1R0689JPSQ3OF:3634BBTX0QXBPX290K4CN18ZZB4IF4', 'A2TUUIV61CR0C7:3MHW492WW2GMHDEQLE78XGI24FNMVP', 'A2CWA5VQZ6IWMQ:32SVAV9L3HC1333I41BX5UVJJD13AJ', 'A1R0689JPSQ3OF:3L4D84MIL1VRY4DLDSDC2NZCS74JHH', 'A3T5UAYFKJBVTA:3X1FV8S5JZUMP3I4AB9DKBY58TUGVU', 'A3L8LSM7V7KX3T:3VP0C6EFSIZ12NZPK6Z0LO23P2X6MH', 'A2Q6L9LKSNU7EB:31JLPPHS2WXQ57XJEKGF6PFO8U53OI', 'A2TUUIV61CR0C7:3JC6VJ2SADM4HIQMIKZQKRT3X9SA5G', 'A1R0689JPSQ3OF:3VA45EW49PQUV4J4RG2WIW0RAAKO14', 'A1R0689JPSQ3OF:3Z7ISHFUH2YO58HWSAMSD4U38MIZ8U', 'A3T5UAYFKJBVTA:3TAYZSBPLNBGIHTTH1JJ7KKXZ6W2ST', 'A3T5UAYFKJBVTA:3H7XDTSHKEUZ4SI90LE96DHJF3RGW1', 'A2TUUIV61CR0C7:3SPJ0334236DKZ3ANSH0ONUFI2XJYU', 'A2TUUIV61CR0C7:3LBXNTKX0TYZEI0RWK4LGF93KQK9XA', 'A1L3937MY09J3I:3D4CH1LGECWOSW517A4HST98H0HG9I', 'A2L26DMSVUEDP6:3IRIK4HM3CNOT1NY7H5MISXRVNB6CF', 'A2TUUIV61CR0C7:3KRVW3HTZPO6PLXMRJ23MTYV5AOSMJ', 'A2Q6L9LKSNU7EB:37UQDCYH6ZY3WA73H85JEYLC9PO7VT', 'A2TUUIV61CR0C7:3PXX5PX6LZ166Y7VJUQ3NDTV75EABH', 'A3T5UAYFKJBVTA:3R5F3LQFV4NRQ04CZRBOAQK3NQQZOZ', 'AOMFEAWQHU3D8:33LKR6A5KGNA8WOCNXOVC66EBU71TZ', 'A3T5UAYFKJBVTA:3S96KQ6I9O740R4O3Q8QD87NYHRTDC', 'A1R0689JPSQ3OF:3RSDURM96CP59JHI9R69R7HNDTNYE8', 'A3T5UAYFKJBVTA:3EKVH9QME07AGSABKBOUCLYXY3M2DZ', 'APGX2WZ59OWDN:3XXU1SWE8OY5MB4LLETE3WXCG1HA0V', 'A2TUUIV61CR0C7:37UQDCYH6ZY3WA73H85JEYLC9QVV7Q', 'A1ZE52NWZPN85P:3PWWM24LHU1YZXEK33DEQTKWPO9283', 'A2TUUIV61CR0C7:3T3IWE1XG8QYP08T8CEAD7EMHUTQTN', 'A1R0689JPSQ3OF:3B3WTRP3DD5YD2XU8VJSQPF77JX92H', 'A2TUUIV61CR0C7:3U088ZLJVMW2TO7OMJP6LLU38KDW0L', 'A3C8NUIBNZYMT2:36W0OB37HYHHYJIPVEGYQHN2B3QHZ5', 'ANLHIS7CZAZVQ:3LWJHTCVCEPO6VQSDS9LW3ZLQMBQF7', 'A3T5UAYFKJBVTA:3LOZAJ85YFGOEYFSBBP66S1PELXX2V', 'A2TUUIV61CR0C7:35USIKEBNTJ7K5KPW7E0Y3R3SCL6NX', 'A2TUUIV61CR0C7:3CN4LGXD5ZRNHHKPKLUWIL5W04ZY48', 'AIOOOO5OXWXKM:3SITXWYCNXCI2BFOU4IH7L4TAJNBXA', 'A1R0689JPSQ3OF:3GNCZX450KQ8AS852Z84IXYKOB8PA0', 'A1R0689JPSQ3OF:37UQDCYH6ZY3WA73H85JEYLC9R0V7X', 'A2TUUIV61CR0C7:34S9DKFK75S93PUV2Q9SHUBWRLONYM', 'A2TUUIV61CR0C7:3PWWM24LHU1YZXEK33DEQTKWNB1829', 'ADEMAGRRRGSPT:3DIP6YHAPEVQUDQ0WN8FSUTLKFD8EZ', 'A3T5UAYFKJBVTA:3LEIZ60CDL2OJD06X2S6D0PESR6Z9N', 'A3T5UAYFKJBVTA:3P4RDNWND79RUZO5JAVX2Z0RSJFIJ3', 'A2TUUIV61CR0C7:3U8YCDAGXRJX9RB2AAQ0TWCHKJ2Q0H', 'A2TUUIV61CR0C7:3TOK3KHVJVL86QY6GWJ5J6R4DWKO71', 'A1R0689JPSQ3OF:31T4R4OBOUJ7X113QRAEO6XNOKNC7I', 'A3T5UAYFKJBVTA:3JNQLM5FT6PTE4Y3XSMIVY627CNL2X', 'A2TUUIV61CR0C7:3R8YZBNQ9JLBR2BMV9B98BM4SX8Q7H', 'A2TUUIV61CR0C7:3X65QVEQI2Q6CMQ5ULBO7BFOJ26LCA']
-scene_map = {
-    "empty_house.glb": "29hnd4uzFmX.glb",
-    "house.glb": "q9vSo1VnCiC.glb",
-    "big_house.glb": "i5noydFURQK.glb",
-    "big_house_2.glb": "S9hNv5qa7GM.glb",
-    "bigger_house.glb": "JeFG25nYj2p.glb",
-    "house_4.glb": "zsNo4HB9uLZ.glb",
-    "house_5.glb": "TbHJrupSAjP.glb",
-    "house_6.glb": "JmbYfDe2QKZ.glb",
-    "house_8.glb": "jtcxE69GiFV.glb",
+csv.field_size_limit(sys.maxsize)
+
+scene_dataset_path = {
+    "mp3d": "data/datasets/objectnav_mp3d_v1/{}/content/{}.json.gz",
+    "gibson": "../Object-Goal-Navigation/data/datasets/objectnav/gibson/v1.1/train_generated/content/{}.json.gz",
+    "hm3d": "data/datasets/objectnav_hm3d_v1/{}/content/{}.json.gz",
+    "mp3d_thda": "data/datasets/objectnav_mp3d_thda/train/content/{}.json.gz",
 }
 
 
@@ -46,8 +42,8 @@ def read_csv(path, delimiter=","):
 
 
 def read_csv_from_zip(archive, path, delimiter=","):
-    file = archive.open(path)
-    reader = csv.reader(file, delimiter=delimiter)
+    file = archive.open(path, "r")
+    reader = csv.reader(TextIOWrapper(file, "utf-8"), delimiter=delimiter)
     return reader
 
 def write_json(data, path):
@@ -134,6 +130,10 @@ def remap_action(action):
     return "STOP"
 
 
+def is_thda_episode(scene_dataset, episode):
+    return (scene_dataset in ["mp3d_thda"] and episode.get("is_thda"))
+
+
 def parse_replay_data_for_action(action, data):
     replay_data = {}
     replay_data["action"] = action
@@ -172,6 +172,7 @@ def parse_replay_data_for_action(action, data):
 
 
 def handle_step(step, episode, unique_id, timestamp):
+    tried_submitting = False
     if step.get("event"):
         if step["event"] == "setEpisode":
             data = copy.deepcopy(step["data"]["episode"])
@@ -202,19 +203,23 @@ def handle_step(step, episode, unique_id, timestamp):
             action = remap_action(step["data"]["action"])
             data = step["data"]
             replay_data = {
-                "action": action
+                "action": action,
+                "agent_state": None
             }
-            replay_data["agent_state"] = {
-                "position": data["agentState"]["position"],
-                "rotation": data["agentState"]["rotation"],
-                "sensor_data": data["agentState"]["sensorData"]
-            }
+            if data.get("agentState") is not None:
+                replay_data["agent_state"] = {
+                    "position": data["agentState"]["position"],
+                    "rotation": data["agentState"]["rotation"],
+                    "sensor_data": data["agentState"]["sensorData"]
+                }
             episode["reference_replay"].append(replay_data)
+        elif step["event"] == "handleValidation":
+            tried_submitting = True
 
     elif step.get("type"):
         if step["type"] == "finishStep":
-            return True
-    return False
+            return True, tried_submitting
+    return False, tried_submitting
 
 
 def convert_to_episode(csv_reader):
@@ -222,6 +227,7 @@ def convert_to_episode(csv_reader):
     viewer_step = False
     start_ts = 0
     end_ts = 0
+    total_stops = 0
     for row in csv_reader:
         unique_id = row[0]
         step = row[1]
@@ -235,8 +241,11 @@ def convert_to_episode(csv_reader):
             viewer_step = is_viewer_step(data)
 
         if viewer_step:
-            is_viewer_step_finished = handle_step(data, episode, unique_id, timestamp)
+            is_viewer_step_finished, tried_submitting = handle_step(data, episode, unique_id, timestamp)
+            total_stops += int(tried_submitting)
         end_ts = int(timestamp)
+    if len(episode["reference_replay"]) == 0:
+        return None, []
 
     # Append start and stop action
     start_action = copy.deepcopy(episode["reference_replay"][0])
@@ -252,14 +261,21 @@ def convert_to_episode(csv_reader):
 
     episode_length = {
         "actual_episode_length": actual_episode_length,
-        "hit_duration": hit_duration
+        "hit_duration": hit_duration,
+        "total_stops": total_stops
     }
     return episode, episode_length
 
 
 def replay_to_episode(
-    replay_path, output_path, max_episodes=16,  max_episode_length=1000, sample=False, append_dataset=False, is_thda=False,
-    is_gibson=False
+    path,
+    output_path,
+    max_episodes=16,
+    append_dataset=False,
+    is_thda=False,
+    scene_dataset="mp3d",
+    split="train",
+    sample=None,
 ):
     all_episodes = {
         "episodes": []
@@ -268,90 +284,81 @@ def replay_to_episode(
     episode_lengths = []
     start_pos_map = {}
     episodes = []
-    if replay_path.endswith("zip"):
-        archive = zipfile.ZipFile(replay_path, "r")
-        for file_path in tqdm(archive.namelist()):
-            reader = read_csv_from_zip(archive, file_path)
+    scene_episode_map = defaultdict(list)
+    duplicates = 0
+    episode_ids = []
+    archive = zipfile.ZipFile(path, "r")
+    files = archive.namelist()
 
-            episode, counts = convert_to_episode(reader)
-            # Filter out episodes that have unstable initialization
-            if episode["episode_id"] in filter_episodes:
-                continue
-            if len(episode["reference_replay"]) <= max_episode_length:
-                episodes.append(episode)
-                episode_lengths.append(counts)
-            if sample:
-                if len(episodes) >= max_episodes:
-                    break
-    else:
-        file_paths = glob.glob(replay_path + "/*.csv")
-        scene_episode_map = defaultdict(list)
-        duplicates = 0
-        for file_path in tqdm(file_paths):
-            reader = read_csv(file_path)
+    if sample is not None:
+        files = random.sample(files, sample)
+        print("Sampling: {} episodes".format(sample))
 
-            episode, counts = convert_to_episode(reader)
+    for file_path in tqdm(files):
+        if not file_path.endswith("csv"):
+            continue
+        reader = read_csv_from_zip(archive, file_path)
 
-            episode_key = str(episode["start_position"]) + "_{}".format(episode["scene_id"])
+        episode, counts = convert_to_episode(reader)
+        episode["attempts"] = counts["total_stops"]
+        if episode is None:
+            continue
 
-            if episode_key in start_pos_map.keys():
-                duplicates += 1
-                continue
-            start_pos_map[episode_key] = 1
+        episode_key = str(episode["start_position"]) + "_{}".format(episode["scene_id"])
+        episode_ids.append({
+            "episodeId": episode["episode_id"]
+        })
 
-            if not is_gibson and "gibson" in episode["scene_id"]:
-                continue
-            if is_thda and not episode.get("is_thda"):
-                continue
-            if not is_thda and episode.get("is_thda"):
-                continue
+        if episode_key in start_pos_map.keys():
+            duplicates += 1
+            continue
+        start_pos_map[episode_key] = 1
 
-            # Filter out episodes that have unstable initialization
-            if episode["episode_id"] in filter_episodes:
-                continue
-            if len(episode["reference_replay"]) <= max_episode_length:
-                scene_episode_map[episode["scene_id"]].append(episode)
-                all_episodes["episodes"].append(episode)
-                episode_lengths.append(counts)
-            if sample:
-                if len(episode_lengths) >= max_episodes:
-                    break
+        if scene_dataset not in episode["scene_id"] or is_thda_episode(scene_dataset, episode):
+            continue
+
+        scene_episode_map[episode["scene_id"]].append(episode)
+        all_episodes["episodes"].append(episode)
+        episode_lengths.append(counts)
     print("Total duplicate episodes: {}".format(duplicates))
 
-    objectnav_dataset_path = "data/datasets/objectnav_mp3d/objectnav_mp3d_thda_40k/train/content/{}.json.gz"
-    if "val" in output_path:
-        objectnav_dataset_path = objectnav_dataset_path.replace("train", "val")
-        print("Using val path")
-    if is_thda:
-        objectnav_dataset_path = "data/datasets/objectnav_mp3d_thda/train/content/{}.json.gz"
-    if is_gibson:
-        objectnav_dataset_path = "../Object-Goal-Navigation/data/datasets/objectnav/gibson/v1.1/train_generated/content/{}.json.gz"
+    objectnav_dataset_path = scene_dataset_path[scene_dataset]
+
     for scene, episodes in scene_episode_map.items():
         scene = scene.split("/")[-1].split(".")[0]
-        # print(objectnav_dataset_path)
-        if not os.path.isfile(objectnav_dataset_path.format(scene)):
+        if not os.path.isfile(objectnav_dataset_path.format(split, scene)):
             print("Source dataset missing: {}".format(scene))
             continue
-        episode_data = load_dataset(objectnav_dataset_path.format(scene))
+
+        if scene_dataset == "hm3d":
+            for episode in episodes:
+                episode["scene_dataset_config"] = "./data/scene_datasets/hm3d/hm3d_annotated_basis.scene_dataset_config.json"
+
+        episode_data = load_dataset(objectnav_dataset_path.format(split, scene))
         episode_data["episodes"] = episodes
 
-        path = output_path + "/{}.json".format(scene)
+        path = os.path.join(output_path, "{}.json".format(scene))
 
         if append_dataset:
             existing_episodes = load_dataset(path + ".gz")
             len_before = len(episode_data["episodes"])
             episode_data["episodes"].extend(existing_episodes["episodes"])
             print("Appending new episodes to existing scene: {} -- {} -- {}".format(scene, len_before, len(episode_data["episodes"])))
-        print(path)
+
         write_json(episode_data, path)
         write_gzip(path, path)
+    
+    write_json(episode_ids, "{}/hit_meta.json".format(output_path))
+    show_average(all_episodes, episode_lengths)
 
 
 def show_average(all_episodes, episode_lengths):
     print("Total episodes: {}".format(len(all_episodes["episodes"])))
 
     total_episodes = len(all_episodes["episodes"])
+    total_submit_tries = 0
     total_hit_duration = 0
+    episode_submission_tries_gt_1 = 0
 
     total_actions = 0
     num_eps_gt_than_2k = 0
@@ -359,6 +366,8 @@ def show_average(all_episodes, episode_lengths):
         total_hit_duration += episode_length["hit_duration"]
         total_actions += episode_length["actual_episode_length"]
         num_eps_gt_than_2k += 1 if episode_length["actual_episode_length"] > 1900 else 0
+        total_submit_tries += episode_length["total_stops"]
+        episode_submission_tries_gt_1 += int(episode_length["total_stops"] > 1)
 
     print("\n\n")
     print("Average hit duration")
@@ -369,30 +378,18 @@ def show_average(all_episodes, episode_lengths):
     print("All Hits: {}, Num actions: {}, Num episodes: {}".format(round(total_actions / total_episodes, 2), total_actions, total_episodes))
 
     print("\n\n")
+    print("Average submission tries:")
+    print("All Hits: {}, Num episodes: {}".format(round(total_submit_tries / total_episodes, 2), total_episodes))
+    print("Retries greater than 1 Hits: {}, Num episodes: {}".format(round(episode_submission_tries_gt_1 / total_episodes, 2), total_episodes))
+
+    print("\n\n")
     print("Episodes greater than 1.9k actions: {}".format(num_eps_gt_than_2k))
-
-
-def list_missing_episodes():
-    missing_episode_data = {}
-    for key, categories in task_episode_map.items():
-        object_category_map = defaultdict(int)
-        for object_category in categories:
-            object_category_map[object_category] += 1
-
-        missing_episodes = {}
-        for object_category, val in object_category_map.items():
-            if val < 5:
-                missing_episodes[object_category] = 5 - val
-        missing_episode_data[key] = missing_episodes
-        
-        print("Missing episodes for scene: {} are: {}".format(key, len(list(missing_episodes))))
-    write_json(missing_episode_data, "data/hit_data/objectnav_missing_episodes.json")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--replay-path", type=str, default="data/hit_data"
+        "--path", type=str, default="data/hit_data"
     )
     parser.add_argument(
         "--output-path", type=str, default="data/episodes/data.json"
@@ -401,30 +398,32 @@ def main():
         "--max-episodes", type=int, default=1
     )
     parser.add_argument(
-        "--max-episode-length", type=int, default=15000
-    )
-    parser.add_argument(
         "--append-dataset", dest='append_dataset', action='store_true'
     )
     parser.add_argument(
         "--thda", dest="is_thda", action="store_true"
     )
     parser.add_argument(
-        "--sample", dest="sample", action="store_true"
+        "--scene-dataset", type=str, default="mp3d"
     )
     parser.add_argument(
-        "--gibson", dest="is_gibson", action="store_true"
+        "--split", type=str, default="train"
+    )
+    parser.add_argument(
+        "--sample", type=int, default=None
     )
     args = parser.parse_args()
     replay_to_episode(
-        args.replay_path, args.output_path, args.max_episodes,
-        args.max_episode_length, append_dataset=args.append_dataset, is_thda=args.is_thda,
-        sample=args.sample, is_gibson=args.is_gibson
+        args.path,
+        args.output_path,
+        args.max_episodes,
+        append_dataset=args.append_dataset,
+        is_thda=args.is_thda,
+        scene_dataset=args.scene_dataset,
+        split=args.split,
+        sample=args.sample,
     )
-    list_missing_episodes()
 
 
 if __name__ == '__main__':
     main()
-
-

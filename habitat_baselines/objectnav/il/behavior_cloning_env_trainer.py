@@ -95,7 +95,26 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             if not model_config.RGB_ENCODER.train_encoder:
                 for param in model.net.rgb_encoder.visual_encoder.backbone.parameters():
                     param.requires_grad_(False)
-        return model   
+        logger.info("pretrain: {} - {}".format(self.config.IL.BehaviorCloning.pretrained_encoder, self.config.IL.BehaviorCloning.pretrained))
+        if (
+            self.config.IL.BehaviorCloning.pretrained_encoder
+            or self.config.IL.BehaviorCloning.pretrained
+        ):
+            pretrained_state = torch.load(
+                self.config.IL.BehaviorCloning.pretrained_weights, map_location="cpu"
+            )
+            logger.info("Loading state")
+        
+        if self.config.IL.BehaviorCloning.pretrained:
+            missing_keys = model.load_state_dict(
+                {
+                    k.replace("model.", ""): v
+                    for k, v in pretrained_state["state_dict"].items()
+                }, strict=False
+            )
+            logger.info("Loading checkpoint missing keys: {}".format(missing_keys))
+        
+        return model
 
     def _setup_actor_critic_agent(self, il_cfg: Config, model_config: Config) -> None:
         r"""Sets up actor critic and agent for PPO.

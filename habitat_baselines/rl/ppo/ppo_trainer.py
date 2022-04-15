@@ -360,7 +360,7 @@ class PPOTrainer(BaseRLTrainer):
             current_episode_gae["max"][rollouts.masks[i] == 0] = -100.0
             current_episode_gae["min"][rollouts.masks[i] == 0] = 100.0
 
-        value_loss, action_loss, dist_entropy = self.agent.update(rollouts)
+        value_loss, action_loss, dist_entropy, avg_grad_norm = self.agent.update(rollouts)
 
         rollouts.after_update()
 
@@ -369,6 +369,7 @@ class PPOTrainer(BaseRLTrainer):
             value_loss,
             action_loss,
             dist_entropy,
+            avg_grad_norm,
         )
 
     @profiling_wrapper.RangeContext("train")
@@ -522,6 +523,7 @@ class PPOTrainer(BaseRLTrainer):
                     value_loss,
                     action_loss,
                     dist_entropy,
+                    grad_norm,
                 ) = self._update_agent(ppo_cfg, rollouts, current_episode_gae, running_episode_stats)
                 pth_time += delta_pth_time
 
@@ -557,6 +559,14 @@ class PPOTrainer(BaseRLTrainer):
                     "losses",
                     {k: l for l, k in zip(losses, ["value", "policy"])},
                     count_steps,
+                )
+
+                writer.add_scalar(
+                    "entropy", dist_entropy, count_steps
+                )
+
+                writer.add_scalar(
+                    "grad_norm", grad_norm, count_steps
                 )
 
                 # log stats

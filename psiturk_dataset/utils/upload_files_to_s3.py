@@ -13,16 +13,12 @@ def upload_file(file_path, bucket, dest_path):
         aws_secret_access_key=aws_secret_access_key
     )
 
-    if file_path[-1] == "/":
-        file_paths = glob.glob(file_path + "/*.mp4")
-        for file_path in file_paths:
-            file_name = file_path.split("/")[-1]
-            # print(file_path)
-            dest_file_path = os.path.join(dest_path, file_name)
-            response = client.upload_file(file_path, bucket, dest_file_path, ExtraArgs={'ACL':'public-read'})
-    else:
-        response = client.upload_file(file_path, bucket, dest_path, ExtraArgs={'ACL':'public-read'})
-        print(response)
+    file_paths = glob.glob(file_path + "*.mp4")
+    for file_path in file_paths:
+        file_name = file_path.split("/")[-1]
+        # print(file_path)
+        dest_file_path = os.path.join(dest_path, file_name)
+        response = client.upload_file(file_path, bucket, dest_file_path, ExtraArgs={'ACL':'public-read'})
 
 
 if __name__ == "__main__":
