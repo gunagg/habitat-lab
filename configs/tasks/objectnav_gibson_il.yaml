@@ -47,6 +47,6 @@ TASK:
 DATASET:
   TYPE: ObjectNav-v2
   SPLIT: train_generated_v2
-  DATA_PATH: "/srv/share3/rramrakhya6/Object-Goal-Navigation/data/datasets/objectnav/gibson/v1.1/{split}/{split}.json.gz"
-  EPISODES_DIR: "/srv/share3/rramrakhya6/Object-Goal-Navigation/data/datasets/objectnav/gibson/v1/{split}/"
-  SCENES_DIR: "/srv/share3/rramrakhya6/Object-Goal-Navigation/data/scene_datasets/"
+  DATA_PATH: "/srv/flash1/rramrakhya6/Object-Goal-Navigation/data/datasets/objectnav/gibson/v1.1/{split}/{split}.json.gz"
+  EPISODES_DIR: "/srv/flash1/rramrakhya6/Object-Goal-Navigation/data/datasets/objectnav/gibson/v1/{split}/"
+  SCENES_DIR: "/srv/flash1/rramrakhya6/Object-Goal-Navigation/data/scene_datasets/"

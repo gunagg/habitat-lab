@@ -410,12 +410,6 @@ def run_reference_replay(
                 "object_category": env.current_episode.object_category
             })
 
-            meta_f = open(meta_file, "w")
-            meta_f.write(json.dumps(episode_meta))
-            
-            inst_file = open("instructions.json", "w")
-            inst_file.write(json.dumps(instructions))
-
             if num_episodes % 100 == 0:
                 print("Total succes: {}, {}, {}".format(success/num_episodes, success, num_episodes))
                 print("Coverage: {}, {}, {}".format(total_coverage/num_episodes, total_coverage, num_episodes))
@@ -460,8 +454,6 @@ def run_reference_replay(
             "visible_area": visible_area/num_episodes,
             "num_episodes": num_episodes,
         }
-        stats_file = open("data/stats/stats.json", "w")
-        stats_file.write(json.dumps(stats))
         return obs_list
 
 

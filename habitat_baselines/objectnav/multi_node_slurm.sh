@@ -1,22 +1,23 @@
 #!/bin/bash
-#SBATCH --job-name=il_onav
+#SBATCH --job-name=ddp_onav
 #SBATCH --gres gpu:8
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 8
 #SBATCH --signal=USR1@300
-#SBATCH --partition=long
+#SBATCH --partition=long,user-overcap
 #SBATCH --constraint=a40
+#SBATCH --qos=ram-special
 #SBATCH --output=slurm_logs/ddpil-%j.out
 #SBATCH --error=slurm_logs/ddpil-%j.err
 #SBATCH --requeue
 
 #source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
-source /srv/share3/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+source /srv/flash1/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate
-conda activate habitat-3
+conda activate habitat-web
 
-cd /srv/share3/rramrakhya6/habitat-lab
+cd /srv/flash1/rramrakhya6/habitat-web/habitat-lab
 
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet

@@ -12,11 +12,11 @@
 #SBATCH --error=slurm_logs/ddppo-il-rl-%j.err
 #SBATCH --requeue
 
-source /srv/share3/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+source /srv/flash1/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate
-conda activate habitat-3
+conda activate habitat-web
 
-cd /srv/share3/rramrakhya6/habitat-lab
+cd /srv/flash1/rramrakhya6/habitat-web/habitat-lab
 
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet

@@ -3,7 +3,7 @@ source /nethome/rramrakhya6/miniconda3/etc/profile.d/conda.sh
 conda deactivate
 conda activate habitat
 
-cd /srv/share3/rramrakhya6/habitat-lab
+cd /srv/flash1/rramrakhya6/habitat-web/habitat-lab
 echo "Generate agile goal dataset"
 echo "hab sim: ${PYTHONPATH}"
 

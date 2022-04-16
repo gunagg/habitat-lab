@@ -95,25 +95,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             if not model_config.RGB_ENCODER.train_encoder:
                 for param in model.net.rgb_encoder.visual_encoder.backbone.parameters():
                     param.requires_grad_(False)
-        logger.info("pretrain: {} - {}".format(self.config.IL.BehaviorCloning.pretrained_encoder, self.config.IL.BehaviorCloning.pretrained))
-        if (
-            self.config.IL.BehaviorCloning.pretrained_encoder
-            or self.config.IL.BehaviorCloning.pretrained
-        ):
-            pretrained_state = torch.load(
-                self.config.IL.BehaviorCloning.pretrained_weights, map_location="cpu"
-            )
-            logger.info("Loading state")
-        
-        if self.config.IL.BehaviorCloning.pretrained:
-            missing_keys = model.load_state_dict(
-                {
-                    k.replace("model.", ""): v
-                    for k, v in pretrained_state["state_dict"].items()
-                }, strict=False
-            )
-            logger.info("Loading checkpoint missing keys: {}".format(missing_keys))
-        
         return model
 
     def _setup_actor_critic_agent(self, il_cfg: Config, model_config: Config) -> None:
@@ -137,6 +118,38 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         self.model = self._setup_model(
             observation_space, self.envs.action_spaces[0], model_config, self.device
         )
+
+        logger.info("pretrain: {}".format(self.config.IL.BehaviorCloning.pretrained))
+        if self.config.IL.BehaviorCloning.pretrained:
+            pretrained_state = torch.load(
+                self.config.IL.BehaviorCloning.pretrained_weights, map_location="cpu"
+            )
+            logger.info("Loading state")
+        
+        if self.config.IL.BehaviorCloning.pretrained:
+            missing_keys = self.model.load_state_dict(
+                {
+                    k.replace("model.", ""): v
+                    for k, v in pretrained_state["state_dict"].items()
+                }, strict=False
+            )
+            logger.info("Loading checkpoint missing keys: {}".format(missing_keys))
+        
+        if hasattr(self.config.IL, "Finetune"):
+            logger.info("Start Freeze encoder")
+            if self.config.IL.Finetune.freeze_encoders:
+                logger.info("Freeze encoders")
+                for param in self.model.net.depth_encoder.parameters():
+                    param.requires_grad_(False)
+                for param in self.model.net.rgb_encoder.parameters():
+                    param.requires_grad_(False)
+                for param in self.model.net.sem_seg_encoder.parameters():
+                    param.requires_grad_(False)
+            if self.config.IL.Finetune.freeze_policy:
+                logger.info("Freeze policy")
+                for param in self.model.net.state_encoder.parameters():
+                    param.requires_grad_(False)
+        
         self.model.to(self.device)
 
         self.semantic_predictor = None
@@ -157,42 +170,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
             eps=il_cfg.eps,
             max_grad_norm=il_cfg.max_grad_norm,
         )
-    
-    def _save_results(
-        self,
-        observations,
-        infos,
-        path: str,
-        env_idx: int,
-        split: str,
-        episode_id: int
-    ) -> None:
-        r"""For saving EQA-CNN-Pretrain reconstruction results.
-
-        Args:
-            gt_rgb: rgb ground truth
-            preg_rgb: autoencoder output rgb reconstruction
-            gt_seg: segmentation ground truth
-            pred_seg: segmentation output
-            gt_depth: depth map ground truth
-            pred_depth: depth map output
-            path: to write file
-        """
-        rgb_frame = observations_to_image(
-                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx]
-                    )
-        dirname = os.path.join(path.format(split=split, type="rgb"), "{}".format(episode_id.split("_")[0]))
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
-        rgb_path = os.path.join(dirname, "frame_{}".format(episode_id))
-        save_frame(rgb_frame, rgb_path)
-        if "top_down_map" in infos[env_idx]:
-            top_down_frame = observations_to_image(
-                        {"rgb": observations["rgb"][env_idx]}, infos[env_idx], top_down_map_only=True
-                    )
-            top_down_path = os.path.join(path.format(split=split, type="top_down_map"), "frame_{}".format(episode_id))
-            save_frame(top_down_frame, top_down_path)
-        
 
     def _make_results_dir(self, split="val"):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
@@ -813,14 +790,6 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                             tb_writer=writer,
                         )
 
-                        self._save_results(
-                            batch,
-                            infos,
-                            config.RESULTS_DIR,
-                            i,
-                            config.EVAL.SPLIT,
-                            current_episodes[i].episode_id,
-                        )
                         ep_actions[i] = []
                         rgb_frames[i] = []
 

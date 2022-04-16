@@ -1,8 +1,8 @@
 #!/bin/bash
-source /srv/share3/rramrakhya6/miniconda3/etc/profile.d/conda.sh
-conda activate habitat-3
+source /srv/flash1/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+conda activate habitat-web
 
-cd /srv/share3/rramrakhya6/habitat-lab
+cd /srv/flash1/rramrakhya6/habitat-web/habitat-lab
 echo "Starting video generation"
 echo "hab sim: ${PYTHONPATH}"
 
@@ -12,6 +12,8 @@ output_path=$3
 scene_dataset=$4
 
 rm sample_unapproved_hits.zip
+rm $output_path/content/*
+
 wget https://habitat-on-web.s3.amazonaws.com/data/unprocessed_hits/visualization/sample_unapproved_hits.zip
 
 if [[ $task == "objectnav" ]]; then

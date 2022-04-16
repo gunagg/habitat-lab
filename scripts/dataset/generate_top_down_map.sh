@@ -1,8 +1,8 @@
 #!/bin/bash
-source /srv/share3/rramrakhya6/miniconda3/etc/profile.d/conda.sh
-conda activate habitat-3
+source /srv/flash1/rramrakhya6/miniconda3/etc/profile.d/conda.sh
+conda activate habitat-web
 
-cd /srv/share3/rramrakhya6/habitat-lab
+cd /srv/flash1/rramrakhya6/habitat-web/habitat-lab
 echo "Starting video generation"
 echo "hab sim: ${PYTHONPATH}"
 
