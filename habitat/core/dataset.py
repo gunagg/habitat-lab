@@ -12,6 +12,7 @@ import copy
 import json
 import os
 import random
+from collections import namedtuple
 from itertools import groupby
 from typing import (
     Any,
@@ -35,6 +36,7 @@ from habitat.core.utils import not_none_validator
 
 ALL_SCENES_MASK = "*"
 
+EpisodeInfo = namedtuple("EpisodeInfo", ["episode_id", "scene_id"])
 
 @attr.s(auto_attribs=True, kw_only=True)
 class ObjectInScene:
