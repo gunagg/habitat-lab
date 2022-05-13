@@ -19,9 +19,7 @@ export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
 
 EVAL_CKPT_PATH_DIR="/srv/flash1/gaggarwal32/data/ovrl_habitat_on_web/ovrl_objectnav_rgb_fintuned_best_model.pth"
-DATA_PATH="data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz"
-ATTRIBUTE_NAV_COLOR_DATA_PATH="data/datasets/attributenav/hm3d/v1-color/{split}/{split}.json.gz"
-ATTRIBUTE_NAV_MATERIAL_DATA_PATH="data/datasets/attributenav/hm3d/v1-material/{split}/{split}.json.gz"
+ATTRIBUTE_NAV_COLOR_DATA_PATH="data/datasets/attributenav/hm3d/v2-color/{split}/{split}.json.gz"
 
 MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 export MASTER_ADDR
@@ -38,5 +36,5 @@ EVAL_CKPT_PATH_DIR $EVAL_CKPT_PATH_DIR \
 EVAL.SPLIT "val" \
 NUM_PROCESSES 20 \
 NUM_ENVS 20 \
-TASK_CONFIG.DATASET.DATA_PATH $ATTRIBUTE_NAV_COLOR_DATA_PATH \
+TASK_CONFIG.DATASET.DATA_PATH $ATTRIBUTE_NAV_MATERIAL_DATA_PATH \
 
