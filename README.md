@@ -1,4 +1,4 @@
-OVRL-habitat-on-web-objectnav
+OVRL+habitat-on-web
 ==============================
 
 1. Clone the repository and install `habitat-web-baselines` using the commands below. Note that `python=3.6` is required for working with `habitat-web-baselines`. All the development was done on `habitat-lab=0.1.6`.
@@ -69,6 +69,7 @@ OVRL-habitat-on-web-objectnav
    ```
 
 ==============================
+
 [![CircleCI](https://circleci.com/gh/facebookresearch/habitat-lab.svg?style=shield)](https://circleci.com/gh/facebookresearch/habitat-lab)
 [![codecov](https://codecov.io/gh/facebookresearch/habitat-lab/branch/master/graph/badge.svg)](https://codecov.io/gh/facebookresearch/habitat-lab)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/habitat-lab/blob/master/LICENSE)
