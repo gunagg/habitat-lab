@@ -589,7 +589,8 @@ class PPOTrainer(BaseRLTrainer):
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
         ):
-            current_episodes = self.envs.current_episodes()
+            #current_episodes = self.envs.current_episodes()
+            current_episodes_info = self.envs.current_episodes_info()
 
             with torch.no_grad():
                 (
@@ -632,13 +633,14 @@ class PPOTrainer(BaseRLTrainer):
                 rewards_l, dtype=torch.float, device=self.device
             ).unsqueeze(1)
             current_episode_reward += rewards
-            next_episodes = self.envs.current_episodes()
+            #next_episodes = self.envs.current_episodes()
+            next_episodes_info = self.envs.current_episodes_info()
             envs_to_pause = []
             n_envs = self.envs.num_envs
             for i in range(n_envs):
                 if (
-                    next_episodes[i].scene_id,
-                    next_episodes[i].episode_id,
+                    next_episodes_info[i].scene_id,
+                    next_episodes_info[i].episode_id,
                 ) in stats_episodes:
                     envs_to_pause.append(i)
 
@@ -654,8 +656,8 @@ class PPOTrainer(BaseRLTrainer):
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (
-                            current_episodes[i].scene_id,
-                            current_episodes[i].episode_id,
+                            next_episodes_info[i].scene_id,
+                            next_episodes_info[i].episode_id,
                         )
                     ] = episode_stats
 

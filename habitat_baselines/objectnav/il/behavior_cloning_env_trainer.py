@@ -691,17 +691,21 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.model.eval()
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
-        logger.info("Start eval")
-        evaluation_meta = []
-        ep_actions = [
-            [{"action": "STOP"}] for _ in range(self.config.NUM_PROCESSES)
-        ]  # type: List[List[np.ndarray]]
+        logger.info("Start eval behaviour cloning")
+        # evaluation_meta = []
+        # ep_actions = [
+        #     [{"action": "STOP"}] for _ in range(self.config.NUM_PROCESSES)
+        # ]  # type: List[List[np.ndarray]]
         possible_actions = self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+        episodes_done = 0 
+        success_count = 0
+        spl_rate = 0
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
         ):
-            current_episodes = self.envs.current_episodes()
+            #current_episodes = self.envs.current_episodes()
+            current_episodes_info = self.envs.current_episodes_info()
 
             with torch.no_grad():
                 if self.semantic_predictor is not None:
@@ -755,13 +759,14 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                 rewards_l, dtype=torch.float, device=self.device
             ).unsqueeze(1)
             current_episode_reward += rewards
-            next_episodes = self.envs.current_episodes()
+            #next_episodes = self.envs.current_episodes()
+            next_episodes_info = self.envs.current_episodes_info()
             envs_to_pause = []
             n_envs = self.envs.num_envs
             for i in range(n_envs):
                 if (
-                    next_episodes[i].scene_id,
-                    next_episodes[i].episode_id,
+                    next_episodes_info[i].scene_id,
+                    next_episodes_info[i].episode_id,
                 ) in stats_episodes:
                     envs_to_pause.append(i)
 
@@ -770,39 +775,48 @@ class ObjectNavBCEnvTrainer(BaseRLTrainer):
                     pbar.update()
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
-                    if "human_val" in config.TASK_CONFIG.DATASET.SPLIT:
-                        divide_by = len(current_episodes[i].reference_replay)
-                        if divide_by > current_episode_steps[i].item():
-                            logitss = torch.zeros_like(logits[i]).unsqueeze(0)
-                            logitss[0] = 1.0
-                            cross_entropy = cross_entropy_loss(logitss, gt_actions[i].unsqueeze(0))
-                            missing_steps = (divide_by - current_episode_steps[i].item())
-                            current_episode_cross_entropy[i] += missing_steps * cross_entropy
-                    episode_stats["cross_entropy"] = current_episode_cross_entropy[i].item() / current_episode_steps[i].item()
+                    # if "human_val" in config.TASK_CONFIG.DATASET.SPLIT:
+                    #     divide_by = len(current_episodes[i].reference_replay)
+                    #     if divide_by > current_episode_steps[i].item():
+                    #         logitss = torch.zeros_like(logits[i]).unsqueeze(0)
+                    #         logitss[0] = 1.0
+                    #         cross_entropy = cross_entropy_loss(logitss, gt_actions[i].unsqueeze(0))
+                    #         missing_steps = (divide_by - current_episode_steps[i].item())
+                    #         current_episode_cross_entropy[i] += missing_steps * cross_entropy
+                    # episode_stats["cross_entropy"] = current_episode_cross_entropy[i].item() / current_episode_steps[i].item()
+                    
                     episode_stats.update(
                         self._extract_scalars_from_info(infos[i])
                     )
                     current_episode_reward[i] = 0
                     current_episode_steps[i] = 0
                     current_episode_cross_entropy[i] = 0
+                    episodes_done += 1
+                    if episode_stats['success'] == 1.0:
+                        success_count += 1
+                        spl_rate += episode_stats['spl']
+                    if episodes_done % 10 == 0:
+                        success_rate = success_count/episodes_done
+                        spl_final = spl_rate / episodes_done
+                        logger.info(f"After {episodes_done} episodes: success rate : {success_rate}, spl : {spl_final}")
 
-                    ep_metrics = copy.deepcopy(episode_stats)
-                    if "room_visitation_map" in infos[i]:
-                        ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
-                    if "exploration_metrics" in infos[i]:
-                        ep_metrics["exploration_metrics"] = infos[i]["exploration_metrics"]
-                    evaluation_meta.append({
-                        "scene_id": current_episodes[i].scene_id,
-                        "episode_id": current_episodes[i].episode_id,
-                        "metrics": ep_metrics,
-                        "object_category": current_episodes[i].object_category
-                    })
+                    # ep_metrics = copy.deepcopy(episode_stats)
+                    # if "room_visitation_map" in infos[i]:
+                    #     ep_metrics["room_visitation_map"] = infos[i]["room_visitation_map"]
+                    # if "exploration_metrics" in infos[i]:
+                    #     ep_metrics["exploration_metrics"] = infos[i]["exploration_metrics"]
+                    # evaluation_meta.append({
+                    #     "scene_id": current_episodes[i].scene_id,
+                    #     "episode_id": current_episodes[i].episode_id,
+                    #     "metrics": ep_metrics,
+                    #     "object_category": current_episodes[i].object_category
+                    # })
                     # write_json(evaluation_meta, self.config.EVAL.evaluation_meta_file)
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (
-                            current_episodes[i].scene_id,
-                            current_episodes[i].episode_id,
+                            current_episodes_info[i].scene_id,
+                            current_episodes_info[i].episode_id,
                         )
                     ] = episode_stats
 

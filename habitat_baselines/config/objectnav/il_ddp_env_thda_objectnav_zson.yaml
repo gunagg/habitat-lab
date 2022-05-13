@@ -19,7 +19,7 @@ OUTPUT_LOG_DIR: data/objectnav/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 500
-SENSORS: ['RGB_SENSOR', 'SEMANTIC_SENSOR', 'DEPTH_SENSOR']
+SENSORS: ['RGB_SENSOR']
 DATASET_PATH: "/srv/flash1/rramrakhya6/habitat-lab/data/datasets/objectnav_mp3d_v2/{split}/{scene_split}.db"
 RESULTS_DIR: "data/objectnav/results/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
@@ -63,8 +63,8 @@ MODEL:
   embed_sge: True
   embed_goal_seg: False
   NO_VISION: False
-  USE_SEMANTICS: True
-  USE_PRED_SEMANTICS: True
+  USE_SEMANTICS: False
+  USE_PRED_SEMANTICS: False
   SWITCH_TO_PRED_SEMANTICS_UPDATE: 0
   SEMANTIC_ENCODER:
     #rednet_ckpt: "data/rednet-models/rednet_semmap_mp3d_tuned.pth"
@@ -79,10 +79,10 @@ MODEL:
   RGB_ENCODER:
     cnn_type: "ResnetRGBEncoder"
     output_size: 256
-    backbone: "resnet18"
-    train_encoder: True
+    backbone: "resnet50"
+    train_encoder: False
   DEPTH_ENCODER:
-    cnn_type: "VlnResnetDepthEncoder"
+    cnn_type: "None"
     output_size: 128
     backbone: "resnet50"
     trainable: False
