@@ -1,5 +1,6 @@
 OVRL+habitat-on-web
-=========Follow till step 6 for evaluation only setup.
+=========
+
 1. Clone the repository and install `habitat-web-baselines` using the commands below. Note that `python=3.6` is required for working with `habitat-web-baselines`. All the development was done on `habitat-lab=0.1.6`.
 
     ```bash
